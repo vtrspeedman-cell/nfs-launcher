@@ -1,8 +1,8 @@
 # NFS Launcher — Windows 10/11 e Android
 
 App que abre **só** os jogos do catálogo (`pc/src/main/config.js`), numa janela própria com cara de jogo instalado:
-- **NFSU2** em <https://nfsu2.xyz> (com dicas e guias);
-- **NFSU2 Modded** em <https://nfsu2mod.xyz> (o mesmo jogo com carros e mods a mais; Texturas HD como no NFSU2 e cópia dos saves própria; no PC, também dicas e guias; desde a PC 3.0.8 e a Android 1.6.7);
+- **NFSU2** em <https://nfsu2.xyz>;
+- **NFSU2 Modded** em <https://nfsu2mod.xyz> (o mesmo jogo com carros e mods a mais; Texturas HD como no NFSU2 e cópia dos saves própria; desde a PC 3.0.8 e a Android 1.6.7);
 - **Most Wanted** em <https://web.nfsmwo.com>;
 - **Carbon** em <https://nfscrb.xyz>.
 
@@ -43,7 +43,7 @@ node node_modules\electron\install.js
   - Em janela, tem uma barra própria de 32 px. Na tela cheia, os botões só aparecem com o mouse no meio do topo.
 - **Teclas do jogo:**
   - F5, as teclas de função, Ctrl+W e Alt+Espaço vão para o jogo.
-  - Atalhos do app: `Ctrl+F` ou `Alt+Enter` (tela cheia), `Ctrl+Alt+O` (configurações), `Ctrl+Alt+I` (dicas), `Ctrl+Alt+Shift+P` (sair do modo protegido).
+  - Atalhos do app: `Ctrl+F` ou `Alt+Enter` (tela cheia), `Ctrl+Alt+O` (configurações), `Ctrl+Alt+Shift+P` (sair do modo protegido).
 - **Modo protegido** (tela cheia pedida pelo app):
   - Bloqueia Alt+F4, F11 e minimizar.
   - Desligar o Windows nunca é bloqueado.
@@ -78,7 +78,6 @@ node node_modules\electron\install.js
   - **Atualizações:** `mobile/atualizacao.json`; no Wi-Fi o APK baixa sozinho (dados móveis: só pelo botão), e "Atualizar agora" o entrega ao instalador do Android (`AppUpdate.java`).
   - **Ligado por padrão:** "Preparar o jogo ao carregar" (para todos, uma vez).
   - **START:** lembra de pôr o app no modo jogo do celular (Game Turbo, Game Booster, Game Space) e de baixar o jogo inteiro antes (no NFSU2, aba Game > "Game data on this device"), com "Não lembrar mais".
-  - **Bolha:** opcional, desligada por padrão; a permissão de sobrepor só é pedida ao ligá-la (Configurações ou Dicas).
 
 ## Publicar uma versão
 
@@ -106,9 +105,9 @@ node node_modules\electron\install.js
 
 ```
 pc/src/main/   main.js e a lógica pura coberta por testes (config, settings, profileLock, saveCopy, gpuFallback, imageFilter, discord…)
-pc/src/renderer/  ui.html/css/js, i18n.js (inglês), tips.js (dicas), guide.* e panel.* (guia flutuante), bg/ e games/ (fundos e CDs)
+pc/src/renderer/  ui.html/css/js, i18n.js (inglês), bg/ e games/ (fundos e CDs)
 pc/build/      ícones, installer.nsh e imagens do instalador
-pc/scripts/    verify.js, manifestos.js, releases.js e conferir-github.js (publicar no GitHub), export-guides.js, make-discs.ps1, make-icons.ps1, make-installer-art.ps1
+pc/scripts/    verify.js, manifestos.js, releases.js e conferir-github.js (publicar no GitHub), export-catalog.js (catálogo do celular), make-discs.ps1, make-icons.ps1, make-installer-art.ps1
 pc/arte/       imagens de origem dos CDs e do fundo
 pc/motor/      compilação do motor próprio do PC (código em C:\e)
 pc/test/       testes (node:test)
