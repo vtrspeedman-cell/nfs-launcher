@@ -1,10 +1,10 @@
 {
-  "versao": "1.6.8",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.6.8/NFS-Launcher-Android-1.6.8.apk",
-  "tamanho": 255456633,
-  "sha256": "d60b4f3fea129f24401862ec358e27e065587b5a368ed274eea9646f99a6b2ff",
+  "versao": "1.6.9",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.6.9/NFS-Launcher-Android-1.6.9.apk",
+  "tamanho": 255401635,
+  "sha256": "a21af2022e58efb337dec63d7ae25e83da7a57222306fdc31756083831380163",
   "novidades": {
-    "pt": "O convite da equipe U2BR aparece no máximo 2 vezes.",
-    "en": "Small fixes."
+    "pt": "Saíram as dicas, os guias e a bolha: o jogo foi corrigido e eles não fazem mais falta. O app ficou mais leve.",
+    "en": "Tips, guides and the bubble were removed: the game was fixed and they are no longer needed. The app is lighter."
   }
 }

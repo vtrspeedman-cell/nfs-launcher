@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.12",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.12/NFS-Launcher-Setup-3.0.12.exe",
-  "tamanho": 105643551,
-  "sha256": "fd6afa0dd5ad26696b9e86c29602d87f4dcff1eb5c962afe42135dec9a2bac52",
+  "versao": "3.0.13",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.13/NFS-Launcher-Setup-3.0.13.exe",
+  "tamanho": 105622490,
+  "sha256": "c47f04b5ba5b14b84fbfe8e55eb10c218a9265138a049b2b6e334fdc7285538e",
   "novidades": {
-    "pt": "Last.fm nas músicas do NFSU2: o botão Conectar agora abre o login do Last.fm no próprio app e liga a sua conta ao jogo. O link do .fmbot abre no navegador.",
-    "en": "Last.fm in NFSU2 music settings: the Connect button now opens the Last.fm login inside the app and links your account to the game. The .fmbot link opens in your browser."
+    "pt": "Saíram as dicas, os guias e o painel lateral: o jogo foi corrigido e eles não fazem mais falta. O app ficou mais leve.",
+    "en": "Tips, guides and the side panel were removed: the game was fixed and they are no longer needed. The app is lighter."
   }
 }

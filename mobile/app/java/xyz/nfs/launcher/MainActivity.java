@@ -117,10 +117,10 @@ public class MainActivity extends Activity {
             if (list.length > 0) GAMES = list;
         } catch (Exception ignored) { }
         if (GAMES.length == 0) {
-            GAMES = new Game[]{ new Game("nfsu2", "NFSU2", "Need for Speed: Underground 2", "https://nfsu2.xyz", "https://nfsu2.xyz/#crew=U2BR", "games/nfsu2.png", true, true) };
+            GAMES = new Game[]{ new Game("nfsu2", "NFSU2", "Need for Speed: Underground 2", "https://nfsu2.xyz", "https://nfsu2.xyz/#crew=U2BR", "games/nfsu2.png", true) };
         }
     }
-    static final String VERSION = "1.6.8"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
+    static final String VERSION = "1.6.9"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
     static final long LOW_DISK_BYTES = 3L * 1024 * 1024 * 1024; // o maior jogo baixa cerca de 3 GB
     // Tela de entrada do motor (o mesmo pacote deste app). Pelo nome exato: o motor não recebe links de fora.
     static final String MOTOR_ENTRY = "com.google.android.apps.chrome.IntentDispatcher";
