@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.11",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.11/NFS-Launcher-Setup-3.0.11.exe",
-  "tamanho": 105642871,
-  "sha256": "86a68340958393b1c1c9a51b64dd2eb45515a2a9ad7952d9a11454efdb15b769",
+  "versao": "3.0.12",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.12/NFS-Launcher-Setup-3.0.12.exe",
+  "tamanho": 105643551,
+  "sha256": "fd6afa0dd5ad26696b9e86c29602d87f4dcff1eb5c962afe42135dec9a2bac52",
   "novidades": {
-    "pt": "O botão do Spotify nas músicas do NFSU2 agora funciona: abre a playlist oficial no navegador, e dá para ouvir junto com o jogo.",
-    "en": "The Spotify button in NFSU2 music settings now works: it opens the official playlist in your browser, so you can listen while you play."
+    "pt": "Last.fm nas músicas do NFSU2: o botão Conectar agora abre o login do Last.fm no próprio app e liga a sua conta ao jogo. O link do .fmbot abre no navegador.",
+    "en": "Last.fm in NFSU2 music settings: the Connect button now opens the Last.fm login inside the app and links your account to the game. The .fmbot link opens in your browser."
   }
 }
