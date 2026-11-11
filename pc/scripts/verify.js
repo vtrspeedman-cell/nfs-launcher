@@ -249,7 +249,9 @@ check('Internet só para o jogo e para o GitHub do app (atualização e texturas
   assert(opens.length === 2 && [...opens].sort().join() === 'github.RELEASES_URL,url', `openExternal inesperado: ${opens.join(', ')}`);
   // O segundo é só o link de nova aba do jogo que passa por isExternalUrl (hoje só open.spotify.com, 11/11).
   assert(/else if \(isExternalUrl\(url\)\) shell\.openExternal\(url\)/.test(m), 'openExternal(url) sem isExternalUrl');
-  assert(JSON.stringify(require('../src/main/config').EXTERNAL_HOSTS) === '["open.spotify.com"]', 'EXTERNAL_HOSTS mudou');
+  assert(JSON.stringify(require('../src/main/config').EXTERNAL_HOSTS) === '["open.spotify.com","fm.bot"]', 'EXTERNAL_HOSTS mudou');
+  assert(JSON.stringify(require('../src/main/config').LOGIN_HOSTS) === '["www.last.fm","last.fm"]', 'LOGIN_HOSTS mudou');
+  assert((m.match(/action: 'allow'/g) || []).length === 1 && m.includes("if (isLoginUrl(url)) return { action: 'allow'"), 'janela nova liberada fora do login do Last.fm');
   const fetches = [...m.matchAll(/net\.fetch\(([\w.]+(?:\(\))?)/g)].map((x) => x[1].trim());
   assert(fetches.every((f) => ['gameUrl()', 'url'].includes(f)), `net.fetch inesperado: ${fetches.join(', ')}`);
   // net.fetch(url) só em fetchJson, e fetchJson só com os dois arquivos do repositório. Os downloads passam pelo

@@ -55,7 +55,8 @@ function isAllowedUrl(u, gameId) {
 }
 // Links que o jogo abre em nova aba e que vão para o navegador do Windows (nunca dentro do app).
 // open.spotify.com: botão "Open the official playlist" das músicas do NFSU2 (pedido do Bruno, 11/11).
-const EXTERNAL_HOSTS = Object.freeze(['open.spotify.com']);
+// fm.bot: link ".fmbot" (estatísticas do Last.fm no Discord), embaixo do Last.fm nas músicas do NFSU2 (11/11).
+const EXTERNAL_HOSTS = Object.freeze(['open.spotify.com', 'fm.bot']);
 function isExternalUrl(u) {
   try {
     const x = new URL(u);
@@ -86,4 +87,17 @@ const PARTITIONS = Object.freeze([...new Set(GAME_IDS.map((id) => GAMES[id].part
 // Jogos com Texturas HD (o pacote do app passa só pelo site deles) e com cópia do save (zip em "NFS Launcher Saves").
 const TEX_GAMES = Object.freeze(GAME_IDS.filter((id) => GAMES[id].textures));
 const SAVE_GAMES = Object.freeze(GAME_IDS.filter((id) => GAMES[id].saves));
-module.exports = { SECURE_DNS, GAMES, GAME_IDS, DEFAULT_GAME, ALLOWED_HOSTS, isAllowedUrl, EXTERNAL_HOSTS, isExternalUrl, gameOf, startUrlOf, CREW_MAX, PARTITION, PARTITIONS, TEX_GAMES, SAVE_GAMES };
+// Login do Last.fm (botão "Conectar" nas músicas do NFSU2): abre numa janelinha do próprio app, na mesma partição do
+// jogo, porque a volta (lastfm.html do site) grava o resultado no armazenamento do site e fecha a janela sozinha.
+// No navegador do Windows a volta cairia lá e o jogo nunca saberia.
+const LOGIN_HOSTS = Object.freeze(['www.last.fm', 'last.fm']);
+function isLoginUrl(u) {
+  try {
+    const x = new URL(u);
+    return x.protocol === 'https:' && !x.username && !x.password && !x.port && LOGIN_HOSTS.includes(x.hostname);
+  } catch {
+    return false;
+  }
+}
+
+module.exports = { LOGIN_HOSTS, isLoginUrl, SECURE_DNS, GAMES, GAME_IDS, DEFAULT_GAME, ALLOWED_HOSTS, isAllowedUrl, EXTERNAL_HOSTS, isExternalUrl, gameOf, startUrlOf, CREW_MAX, PARTITION, PARTITIONS, TEX_GAMES, SAVE_GAMES };

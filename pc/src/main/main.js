@@ -8,7 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
-const { GAMES, GAME_IDS, isAllowedUrl, isExternalUrl, gameOf, startUrlOf, PARTITION, PARTITIONS, TEX_GAMES, SAVE_GAMES } = require('./config');
+const { GAMES, GAME_IDS, isAllowedUrl, isExternalUrl, isLoginUrl, gameOf, startUrlOf, PARTITION, PARTITIONS, TEX_GAMES, SAVE_GAMES } = require('./config');
 const settings = require('./settings');
 const combo = require('./combo');
 const { toChromeUA } = require('./ua');
@@ -1401,6 +1401,23 @@ function wireUiContents(wc) {
   if (DEV) wc.openDevTools({ mode: 'detach' });
 }
 
+// Janelinha do login do Last.fm (isLoginUrl): fica sobre o app, só navega no Last.fm e na volta para o site do jogo
+// (lastfm.html, que se fecha sozinha). Mesma partição do jogo, herdada de quem abriu.
+function loginWindowOptions() {
+  return {
+    parent: win, width: 480, height: 720, minimizable: false, fullscreenable: false, autoHideMenuBar: true,
+    backgroundColor: '#111111', icon: ICON, webPreferences: { devTools: DEV },
+  };
+}
+function wireLoginWindow(child) {
+  child.setMenu(null);
+  const cwc = child.webContents;
+  cwc.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const guard = (e, url) => { if (!isLoginUrl(url) && !isAllowedUrl(url, currentGame)) e.preventDefault(); };
+  cwc.on('will-navigate', guard);
+  cwc.on('will-redirect', guard);
+}
+
 function wireGameContents(wc) {
   // A view escondida (a do outro jogo, em branco) não mexe no carregamento, nos erros nem no filtro do jogo aberto.
   const mine = () => !!gameView && gameView.webContents === wc;
@@ -1416,10 +1433,12 @@ function wireGameContents(wc) {
 
   // Navegação só dentro do site do jogo aberto (o login/cadastro pode passar por outro endereço do mesmo site).
   wc.setWindowOpenHandler(({ url }) => {
+    if (isLoginUrl(url)) return { action: 'allow', overrideBrowserWindowOptions: loginWindowOptions() };
     if (isAllowedUrl(url, currentGame)) wc.loadURL(url);
     else if (isExternalUrl(url)) shell.openExternal(url).catch(() => {});
     return { action: 'deny' };
   });
+  wc.on('did-create-window', wireLoginWindow);
   const guard = (e, url) => { if (!isAllowedUrl(url, currentGame)) e.preventDefault(); };
   wc.on('will-navigate', guard);
   wc.on('will-redirect', guard);
