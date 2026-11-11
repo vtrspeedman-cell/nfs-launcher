@@ -84,14 +84,13 @@ button:active:not([disabled]) { transform: translateY(1px); }
 .warn { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 36px; font-weight: 800; background: #3a2a08; color: var(--amber); border: 2px solid var(--amber); }
 #err-detail { max-width: 520px; }
 /* Dicas: idioma, abas e conteúdo */
-.tips-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.tips-head h2 { margin: 0; }
+.screen-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.screen-head h2 { margin: 0; }
 .lang { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
 .lang button { border: 0; border-radius: 0; padding: 6px 12px; background: #151932; color: var(--mut); }
 .lang button[aria-pressed="true"] { background: #102a2a; color: var(--neon); }
 /* Dica de tela cheia: os botões ficam no alto, centralizados, e a faixa pisca logo abaixo deles. */
-body.hinting .corner { inset: 0 auto auto 50%; width: 308px; height: 40px; transform: translateX(-50%); opacity: 1; }
-body.hinting .corner.discover { width: 408px; }
+body.hinting .corner { inset: 0 auto auto 50%; width: 272px; height: 40px; transform: translateX(-50%); opacity: 1; }
 .fs-hint { position: absolute; left: 0; right: 0; top: 48px; height: 36px; display: flex; align-items: center; justify-content: center;
   padding: 0 14px; border-radius: 10px; background: rgba(6, 30, 40, .92); border: 1px solid var(--neon); color: #eafffa; font-weight: 700;
   font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 0 18px rgba(0, 255, 200, .45);
@@ -118,17 +117,6 @@ button.disc[aria-pressed="true"] .disc-name { color: var(--neon); }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .tabs button { padding: 7px 14px; }
 .tabs button[aria-selected="true"] { border-color: var(--neon); color: var(--neon); background: #102a2a; }
-.tips-tools { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-/* Letra das dicas: var(--fs) vem do botão A−/A+ (padrão 1,2 = 20% maior que o original). */
-.tips-body { font-size: calc(14px * var(--fs, 1.2)); }
-.tips-body h3 { margin-top: 20px; font-size: calc(13px * var(--fs, 1.2)); }
-.tips-body p, .tips-body li { line-height: 1.55; }
-.tips-body ol, .tips-body ul { padding-left: 22px; margin: 6px 0 10px; } .tips-body li { margin: 4px 0; }
-.tips-body .kvt { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: calc(13px * var(--fs, 1.2)); }
-.tips-body .kvt th { text-align: left; font-weight: 600; color: var(--mut); width: 38%; padding: 6px 10px 6px 0; vertical-align: top; }
-.tips-body .kvt td { padding: 6px 0; }
-.tips-body .kvt tr + tr { border-top: 1px solid var(--line); }
-.tips-body .note { padding: 9px 12px; border-left: 3px solid var(--amber); background: #221c0c; border-radius: 6px; margin: 8px 0 12px; }
 .corner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 6px; background: rgba(10, 12, 24, .72); border: 1px solid rgba(255, 255, 255, .12); border-radius: 12px; opacity: .55; }
 .corner:hover { opacity: 1; }
 .corner button { background: transparent; border: 0; padding: 6px; border-radius: 8px; display: grid; place-items: center; }
@@ -138,18 +126,12 @@ button.disc[aria-pressed="true"] .disc-name { color: var(--neon); }
 .corner #c-image.on { color: var(--neon); }
 .corner #c-tex:not([hidden]) { display: flex; align-items: center; gap: 4px; }
 .corner #c-tex.on { color: var(--neon); }
-/* Nome "Texturas HD" só na barra da janela; na tela cheia, só o ícone (ao lado de Dicas). */
+/* Nome "Texturas HD" só na barra da janela; na tela cheia, só o ícone . */
 .corner .tex-name { display: none; font-size: 11px; line-height: 1; white-space: nowrap; color: inherit; }
 body.windowed .corner .tex-name { display: inline; }
 .corner .image-name { width: 76px; font-size: 11px; line-height: 1; text-align: left; white-space: nowrap; color: inherit; }
 /* Janela estreita: o nome do modo encostaria no nome do jogo. Fica só o ícone (colorido se ligado), com o modo na dica do mouse. */
 @media (max-width: 1060px) { body.windowed .corner .image-name, body.windowed .corner .tex-name { display: none; } }
-/* Modo descoberta: fixo, mais visível, com rótulo; brilha algumas vezes e fica parado (sem animação contínua sobre o jogo). */
-.corner.discover { opacity: 1; }
-.corner.discover #c-tips { display: flex; align-items: center; gap: 6px; padding: 5px 10px; color: #04121a; font-weight: 700; font-size: 13px;
-  background: linear-gradient(90deg, #00d9a8, #00a0ff); box-shadow: 0 0 14px rgba(0, 220, 200, .55); animation: nudge 1.2s ease-in-out 5; }
-.corner.discover .label { display: inline; white-space: nowrap; }
-@keyframes nudge { 50% { transform: scale(1.07); box-shadow: 0 0 22px rgba(0, 255, 200, .9); } }
 /* Em janela, .corner é a barra do topo, com 32 px; à direita ficam os botões do Windows (138 px), desenhados por cima.
    Na tela cheia, volta a ser o botão discreto acima. */
 .bar-title, .bar-gap { display: none; }

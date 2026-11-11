@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..751fea468bb9a 100644
+index 4e773273b1667..76cf45f23bc6d 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..751fea468bb9a 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,212 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,211 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -19,7 +19,6 @@ index 4e773273b1667..751fea468bb9a 100644
 +        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 +        nfsVisible = true;
 +        nfsShowLoading();
-+        nfsBubble(true);
 +        nfsGameState(true);
 +    }
 +
@@ -223,12 +222,11 @@ index 4e773273b1667..751fea468bb9a 100644
      }
  
      @Override
-@@ -338,12 +545,62 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +544,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
 +        nfsVisible = false;
-+        nfsBubble(false);
 +        nfsGameState(false);
 +    }
 +
@@ -249,17 +247,6 @@ index 4e773273b1667..751fea468bb9a 100644
 +                                    : android.app.GameState.MODE_NONE));
 +        } catch (Exception ignored) {
 +            // Celular sem o serviço de jogos: segue normal.
-+        }
-+    }
-+
-+    /** NFS Launcher: mostra/esconde a bolha de dicas (só se ela já estiver ligada). */
-+    private void nfsBubble(boolean show) {
-+        try {
-+            startService(
-+                    new Intent(show ? "xyz.nfs.SHOW" : "xyz.nfs.HIDE")
-+                            .setClassName(getPackageName(), "xyz.nfs.launcher.BubbleService"));
-+        } catch (Exception ignored) {
-+            // App já em segundo plano: o Android não deixa; a bolha se ajusta na próxima vez.
 +        }
      }
  

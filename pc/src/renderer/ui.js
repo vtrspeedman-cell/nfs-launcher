@@ -7,28 +7,26 @@
   let capturingFor = null;
   let gpuResult = null;
 
-  // Idioma do app (PT/EN): vem das preferências (settings.json) e é o mesmo das dicas e dos guias.
+  // Idioma do app (PT/EN): vem das preferências (settings.json).
   // Textos fixos: i18n.js troca os do ui.html. Textos montados aqui: t('português', 'english').
   let lang = 'pt';
   const t = (pt, en) => (lang === 'en' ? en : pt);
+  const LANGS = ['pt', 'en'];
   const LANG_NAMES = { pt: 'Português', en: 'English' };
   function chooseLang(l) {
-    if (!window.Tips.LANGS.includes(l) || l === lang) return;
-    window.Tips.setLang(l); // a janela do guia acompanha
+    if (!LANGS.includes(l) || l === lang) return;
     api.setSetting('lang', l); // o processo principal (avisos, confirmações) também; o estado novo chega por onState
   }
   function useLang(l) {
-    lang = window.Tips.LANGS.includes(l) ? l : 'pt';
-    if (window.Tips.getLang() !== lang) window.Tips.setLang(lang);
+    lang = LANGS.includes(l) ? l : 'pt';
     window.I18n.apply(lang);
     renderLangPickers();
     renderChip();
-    if (state && state.screen === 'tips') renderTips();
     if (state && state.screen === 'settings') renderGpuDetail();
   }
   function renderLangPickers() {
     for (const id of ['home-lang', 'set-lang']) {
-      $(id).replaceChildren(...window.Tips.LANGS.map((l) => {
+      $(id).replaceChildren(...LANGS.map((l) => {
         const b = el('button', '', LANG_NAMES[l]);
         b.setAttribute('aria-pressed', String(l === lang));
         b.onclick = () => chooseLang(l);
@@ -36,17 +34,6 @@
       }));
     }
   }
-  // O idioma também pode ser trocado na janela do guia: as páginas locais compartilham a preferência.
-  window.addEventListener('storage', (e) => {
-    if (e.key === window.Tips.FONT_KEY) window.Tips.applyFont(document, window.Tips.getFont()); // A−/A+ no guia
-    if (e.key !== window.Tips.LANG_KEY) return;
-    const l = window.Tips.getLang();
-    if (l !== lang) api.setSetting('lang', l);
-  });
-  // Tamanho da letra das dicas (o mesmo do guia flutuante).
-  window.Tips.applyFont(document, window.Tips.getFont());
-  $('tf-dn').onclick = () => window.Tips.applyFont(document, window.Tips.setFont(window.Tips.getFont() - window.Tips.FONT.step));
-  $('tf-up').onclick = () => window.Tips.applyFont(document, window.Tips.setFont(window.Tips.getFont() + window.Tips.FONT.step));
 
   // Teste real de WebGPU: pede um adaptador de alto desempenho e cria um dispositivo.
   async function testWebGPU() {
@@ -126,56 +113,11 @@
   }
 
 
-  // Tela de dicas: abas montadas a partir de tips.js (só texto; nada vira HTML), no idioma do app.
-  let tipsTab = 'ae86';
   function el(tag, cls, text) {
     const n = document.createElement(tag);
     if (cls) n.className = cls;
     if (text !== undefined) n.textContent = text;
     return n;
-  }
-  function renderTips() {
-    const C = window.Tips.build(lang);
-    const tabs = C.TABS;
-    $('tips-h').textContent = C.UI.tips;
-    $('tips-hint').textContent = C.UI.keysHint;
-    $('t-back').textContent = C.UI.back;
-    $('tips-lang').title = C.UI.language;
-    $('tips-lang').replaceChildren(...window.Tips.LANGS.map((l) => {
-      const b = el('button', '', LANG_NAMES[l]);
-      b.setAttribute('aria-pressed', String(l === lang));
-      b.onclick = () => chooseLang(l);
-      return b;
-    }));
-    $('tips-tabs').replaceChildren(...tabs.map((tb) => {
-      const b = el('button', '', tb.title);
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-selected', String(tb.id === tipsTab));
-      b.onclick = () => { tipsTab = tb.id; renderTips(); $('tips').scrollTop = 0; };
-      return b;
-    }));
-    const tab = tabs.find((x) => x.id === tipsTab) || tabs[0];
-    const out = [];
-    for (const b of tab.blocks) {
-      if (b.h) out.push(el('h3', '', b.h));
-      else if (b.p) out.push(el('p', '', b.p));
-      else if (b.note) out.push(el('p', 'note', b.note));
-      else if (b.guide) {
-        const btn = el('button', 'primary small', C.UI.openGuide);
-        btn.onclick = () => api.openGuide(b.guide);
-        out.push(btn);
-      }
-      else if (b.ul || b.ol) {
-        const list = el(b.ul ? 'ul' : 'ol');
-        list.append(...(b.ul || b.ol).map((x) => el('li', '', x)));
-        out.push(list);
-      } else if (b.kv) {
-        const tb = el('table', 'kvt');
-        tb.append(...b.kv.map(([k, v]) => { const tr = el('tr'); tr.append(el('th', '', k), el('td', '', v)); return tr; }));
-        out.push(tb);
-      }
-    }
-    $('tips-body').replaceChildren(...out);
   }
 
   // Catálogo (tela inicial): um CD por jogo. Clicar escolhe; START abre o escolhido.
@@ -451,8 +393,6 @@
     $('c-image').setAttribute('aria-label', imageTip);
     const open = s.gameStarted && gameInfo(s.game);
     $('bar-name').textContent = open ? open.name : 'NFS Launcher';
-    // Até a primeira vez nas dicas: botão de dicas fixo, com rótulo e um brilho curto (só ele no modo protegido).
-    $('corner').classList.toggle('discover', s.cornerMode === 'discover');
     // No modo protegido o botão de tela cheia continua (é por ele que o jogador sai); só as configurações somem.
     $('c-set').hidden = s.locked || !s.gameStarted;
     const fsTip = t(`Entrar e sair da tela cheia: ${s.settings.toggleCombo}`, `Enter and leave fullscreen: ${s.settings.toggleCombo}`);
@@ -467,10 +407,7 @@
         `To leave fullscreen: ${s.settings.toggleCombo} (or the ⛶ button up here)`);
     }
     const was = document.body.dataset.shown;
-    for (const id of ['launcher', 'settings', 'error', 'loading', 'tips', 'textures']) $(id).hidden = s.screen !== id;
-    if (s.screen === 'tips') {
-      if (was !== 'tips') renderTips();
-    }
+    for (const id of ['launcher', 'settings', 'error', 'loading', 'textures']) $(id).hidden = s.screen !== id;
     // Janela de texturas: rascunho novo a cada vez que abre (o que não foi aplicado some ao voltar).
     if (s.screen === 'textures') { if (was !== 'textures') texDraft = null; renderTexScreen(s); } else texDraft = null;
     document.body.dataset.shown = s.screen;
@@ -479,7 +416,6 @@
       const target = { launcher: 'btn-start', error: 'e-retry' }[s.screen];
       if (target) $(target).focus({ preventScroll: true });
       if (s.screen === 'settings') $('settings').scrollTop = 0;
-      if (s.screen === 'tips') $('tips').scrollTop = 0;
     }
     $('btn-fs').textContent = s.fullscreen ? t('Sair da tela cheia', 'Leave fullscreen') : t('Tela cheia', 'Fullscreen');
     renderGames(s);
@@ -487,10 +423,7 @@
     document.body.dataset.game = (s.screen === 'launcher' ? selGame : (s.game || selGame)) || 'nfsu2';
     applyCustomBg();
     $('btn-start').textContent = s.gameStarted && selGame === s.game ? t('VOLTAR AO JOGO', 'BACK TO GAME') : 'START';
-    // Dicas e guias são do NFSU2: somem com outro jogo escolhido/aberto.
-    $('btn-tips').hidden = !(gameInfo(selGame) || {}).tips;
     $('btn-saves').hidden = !(gameInfo(selGame) || {}).saves; // só os NFSU2 têm cópia do save
-    $('c-tips').hidden = !s.tipsOn || !s.gameStarted;
     // Texturas melhores: só com o NFSU2 aberto e o pacote presente. Colorido quando ligado.
     $('c-tex').hidden = !(s.gameStarted && (gameInfo(s.game) || {}).textures); // também sem mods: a janela é onde se baixa
     $('c-tex').classList.toggle('on', !!s.settings.hdTextures);
@@ -533,7 +466,7 @@
   window.addEventListener('keydown', async (e) => {
     if (!capturingFor) {
       // Esc nas configurações volta (para o jogo, se ele já foi iniciado).
-      if (e.code === 'Escape' && state && ['settings', 'tips', 'textures'].includes(state.screen) && !e.ctrlKey && !e.altKey) { e.preventDefault(); api.back(); }
+      if (e.code === 'Escape' && state && ['settings', 'textures'].includes(state.screen) && !e.ctrlKey && !e.altKey) { e.preventDefault(); api.back(); }
       return;
     }
     e.preventDefault(); e.stopPropagation();
@@ -554,12 +487,9 @@
   $('c-fs').onclick = () => (state && state.locked ? api.exitProtected() : api.toggleFullscreen());
   $('c-set').onclick = () => api.openSettings();
   $('c-image').onclick = () => api.nextImageMode();
-  $('c-tips').onclick = () => api.openTips();
   $('c-tex').onclick = () => api.openTextures();
   $('c-home').onclick = () => api.goHome(); // fecha o jogo aberto e volta aos CDs
   $('c-reload').onclick = () => api.reloadAsk(); // só por clique: as teclas são do jogo
-  $('btn-tips').onclick = () => api.openTips();
-  $('t-back').onclick = () => api.back();
   $('b-back').onclick = () => api.back();
   $('b-reload').onclick = () => api.reloadAsk();
   $('b-gpu-test').onclick = async () => { gpuResult = null; renderChip(); gpuResult = await testWebGPU(); renderChip(); renderGpuDetail(); };

@@ -21,10 +21,6 @@
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
       <span id="c-image-name" class="image-name"></span>
     </button>
-    <button id="c-tips" title="Dicas (Ctrl+Alt+I)" aria-label="Dicas" data-tt="cTipsT" data-ta="cTipsA">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>
-      <span class="label" data-t="cTipsA">Dicas</span>
-    </button>
     <button id="c-tex" hidden>
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
       <span class="tex-name" data-t="cTexN">Texturas HD</span>
@@ -51,7 +47,6 @@
     <button id="btn-start" class="primary">START</button>
     <div class="row">
       <button id="btn-fs">Tela cheia</button>
-      <button id="btn-tips" data-t="cTipsA">Dicas</button>
       <button id="btn-saves" data-t="mySaves">Meus saves</button>
       <button id="btn-settings" data-t="settings">Configurações</button>
       <button id="btn-quit" data-t="close">Fechar</button>
@@ -176,27 +171,10 @@
 
   <div id="toast" class="toast" role="status" hidden></div>
 
-  <main id="tips" class="screen" hidden>
-    <div class="panel">
-      <div class="tips-head"><h2 id="tips-h">Dicas</h2>
-        <div class="tips-tools">
-          <div class="lang" role="group"><button id="tf-dn" title="Diminuir a letra" data-tt="fontDown">A−</button><button id="tf-up" title="Aumentar a letra" data-tt="fontUp">A+</button></div>
-          <div id="tips-lang" class="lang" role="group"></div>
-        </div>
-      </div>
-      <nav id="tips-tabs" class="tabs" role="tablist"></nav>
-      <div id="tips-body" class="tips-body"></div>
-      <div class="row right footer">
-        <span id="tips-hint" class="muted small">Ctrl+Alt+I abre e fecha · Esc volta</span>
-        <button id="t-back" class="primary small">Voltar</button>
-      </div>
-    </div>
-  </main>
-
-  <!-- Texturas HD (NFSU2): janela de sistema como a das dicas. Várias trocas, depois "Aplicar" pede para reiniciar. -->
+  <!-- Texturas HD (NFSU2): janela de sistema. Várias trocas, depois "Aplicar" pede para reiniciar. -->
   <main id="textures" class="screen" hidden>
     <div class="panel">
-      <div class="tips-head"><h2 data-t="texTitle">Texturas HD</h2></div>
+      <div class="screen-head"><h2 data-t="texTitle">Texturas HD</h2></div>
       <p class="muted small" data-t="texDlNote">Os mods ficam no seu PC depois de baixar. O mapa detalhado do site vem junto com o primeiro.</p>
       <div id="x-dl" class="tex-parts"></div>
       <p id="x-dl-status" class="muted small" hidden></p>
@@ -235,7 +213,6 @@
   </main>
 
   <script src="../main/combo.js"></script>
-  <script src="tips.js"></script>
   <script src="i18n.js"></script>
   <script src="sounds.js"></script>
   <script src="ui.js"></script>

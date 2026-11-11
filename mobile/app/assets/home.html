@@ -21,7 +21,6 @@
     <div id="games" class="games" role="group"></div>
     <button id="btn-start" class="primary">START</button>
     <div class="row">
-      <button id="btn-tips"></button>
       <button id="btn-saves"></button>
       <button id="btn-settings"></button>
       <button id="btn-quit"></button>
@@ -58,7 +57,6 @@
     </section>
     <section>
       <h3 id="set-game-h"></h3>
-      <label class="switch"><input type="checkbox" id="s-bubble"><span id="s-bubble-l"></span></label>
     </section>
     <section>
       <h3 id="set-custom-h"></h3>
@@ -99,19 +97,6 @@
     <div class="footer"><button id="s-back" class="primary small"></button></div>
   </main>
 
-  <main id="tips" class="screen panel-screen" hidden>
-    <div class="tips-head">
-      <h2 id="tips-h">Dicas</h2>
-      <div class="tips-tools">
-        <div class="lang" role="group"><button id="tf-dn">A−</button><button id="tf-up">A+</button></div>
-        <div id="tips-lang" class="lang" role="group"></div>
-      </div>
-    </div>
-    <nav id="tips-tabs" class="tabs" role="tablist"></nav>
-    <div id="tips-body" class="tips-body"></div>
-    <div class="footer"><button id="t-bubble" class="small" hidden></button><button id="t-back" class="primary small"></button></div>
-  </main>
-
   <main id="loading" class="screen center" hidden>
     <img id="loading-disc" class="load-disc" src="games/nfsu2.png" alt="" width="120" height="120">
     <h2 id="loading-h"></h2>
@@ -132,7 +117,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="tips.js"></script>
   <script src="sounds.js"></script>
   <script src="home.js"></script>
 </body>

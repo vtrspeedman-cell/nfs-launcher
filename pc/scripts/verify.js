@@ -178,19 +178,6 @@ check('Prioridade e teclado: processo de GPU intocado, teclas do jogo sem trabal
   assert(regs.length === 2 && regs.includes('accel'), `globalShortcut.register inesperado: ${regs.join(', ')}`);
   assert(/win\.on\('blur', \(\) => \{\s*syncAltSpaceCatch\(\);/.test(m), 'Alt+Espaço não é liberado quando a janela perde o foco');
 });
-check('Janela flutuante (guia): arquivos, isolamento e não roubam o teclado do jogo', () => {
-  for (const f of ['guide.html']) {
-    const html = read(`src/renderer/${f}`);
-    assert(/Content-Security-Policy/.test(html) && !/<script(?![^>]*\bsrc=)[^>]*>/.test(html) && !/\sstyle="/.test(html), `${f} sem CSP ou com inline`);
-    for (const m of html.matchAll(/(?:src|href)="([^"#]+)"/g)) assert(fs.existsSync(path.join(p('src/renderer'), m[1])), `${f}: não encontrado ${m[1]}`);
-  }
-  const m = read('src/main/main.js');
-  const block = m.slice(m.indexOf('function openPanel'), m.indexOf('function closePanel'));
-  assert(/focusable: false/.test(block), 'janela flutuante focável (tiraria o teclado do jogo)');
-  assert(/sandbox: true/.test(block) && /contextIsolation: true/.test(block) && !/nodeIntegration: true/.test(block), 'janela flutuante sem isolamento');
-  const pre = read('src/main/panelPreload.js');
-  assert(!/require\((?!'electron')/.test(pre), 'preload das janelas flutuantes carrega algo além do electron');
-});
 check('Relatório de diagnóstico sem dados pessoais', () => {
   const d = read('src/main/diagnostics.js') + read('src/main/main.js');
   assert(!/os\.(hostname|userInfo)\(/.test(d), 'nome do PC ou do usuário no relatório');

@@ -11,7 +11,6 @@
 const { fromEvent } = require('./combo');
 
 const SETTINGS_COMBO = 'Ctrl+Alt+O'; // abre/fecha as configurações (fora do modo protegido)
-const TIPS_COMBO = 'Ctrl+Alt+I';     // abre/fecha as dicas (também no modo protegido: não mexe na proteção)
 const MODIFIER_CODES = new Set(['ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'ShiftLeft', 'ShiftRight', 'MetaLeft', 'MetaRight']);
 
 // Filtro rápido: cada tecla do jogo passa pelo processo principal antes de chegar à página, então a grande
@@ -32,7 +31,6 @@ function decideKey(input, ctx) {
   // Segurar o Enter repete a tecla: só a primeira vale, senão a tela cheia ficaria abrindo e fechando.
   if (isAltEnter(input)) return input.isAutoRepeat ? 'block' : ctx.locked ? 'exit-protected' : 'toggle-fullscreen';
   const combo = fromEvent(input);
-  if (combo === TIPS_COMBO) return 'open-tips';
   if (ctx.locked) {
     // O atalho de tela cheia (padrão Ctrl+F) também tira da tela cheia no modo protegido.
     if (combo && (combo === ctx.exitCombo || combo === ctx.toggleCombo)) return 'exit-protected';
@@ -62,4 +60,4 @@ function wantAltSpaceCatch({ win32, blockAltSpace, focused, playing, capturing }
   return !!(win32 && blockAltSpace && focused && playing && !capturing);
 }
 
-module.exports = { mayBeShortcut, decideKey, shouldCancelClose, wantAltSpaceCatch, ALT_SPACE_ACCELS, SETTINGS_COMBO, TIPS_COMBO };
+module.exports = { mayBeShortcut, decideKey, shouldCancelClose, wantAltSpaceCatch, ALT_SPACE_ACCELS, SETTINGS_COMBO };

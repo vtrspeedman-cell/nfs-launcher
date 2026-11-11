@@ -24,8 +24,6 @@ contextBridge.exposeInMainWorld('launcher', {
   toggleFullscreen: () => call('window:toggle-fullscreen'),
   exitProtected: () => call('window:exit-protected'),
   openSettings: () => call('screen:settings'),
-  openTips: () => call('screen:tips'),
-  openGuide: (id) => call('guide:open', id),
   back: () => call('screen:back'),
   setSetting: (key, value) => call('settings:set', key, value),
   setCapturing: (on) => call('capture:set', !!on),

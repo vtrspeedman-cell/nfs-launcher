@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Montagem rápida: aplica patches, ícones e o app (tela inicial/bolha/guia) e recompila em out/Motor só o que mudou
+# Montagem rápida: aplica patches, ícones e o app (tela inicial) e recompila em out/Motor só o que mudou
 # (Java, manifesto, telas, idiomas: minutos; o libchrome.so já compilado é reaproveitado). Registro em ~/motor-quick.log.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJ="$(dirname "$HERE")"

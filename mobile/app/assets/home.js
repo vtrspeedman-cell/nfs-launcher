@@ -1,16 +1,13 @@
 (() => {
   'use strict';
-  // Tela inicial do app de celular. Fala com o app pela ponte `launcher` (Java). Os textos das dicas e os sons vêm do
-  // app de PC (os mesmos arquivos), e o idioma/letra ficam no armazenamento das páginas locais, como no PC.
+  // Tela inicial do app de celular. Fala com o app pela ponte `launcher` (Java). Os sons vêm do app de PC (o mesmo arquivo).
   const $ = (id) => document.getElementById(id);
   const api = window.launcher;
-  const T = window.Tips;
   let st = JSON.parse(api.state());
   let lang = st.lang;
   let sel = st.game;
   let screen = 'home';
-  let tipsTab = 'ae86';
-  const SCREENS = ['home', 'settings', 'tips', 'loading', 'error'];
+  const SCREENS = ['home', 'settings', 'loading', 'error'];
   const t = (pt, en) => (lang === 'en' ? en : pt);
   const NAMES = { pt: 'Português', en: 'English' };
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -20,9 +17,10 @@
     const n = $('toast'); n.textContent = msg; n.hidden = false;
     clearTimeout(toast.t); toast.t = setTimeout(() => { n.hidden = true; }, 3500);
   }
-  function chooseLang(l) { if (l === lang) return; T.setLang(l); api.setLang(l); }
+  const LANGS = ['pt', 'en'];
+  function chooseLang(l) { if (l === lang) return; api.setLang(l); }
   function langButtons(box) {
-    box.replaceChildren(...T.LANGS.map((l) => {
+    box.replaceChildren(...LANGS.map((l) => {
       const b = el('button', '', NAMES[l]);
       b.setAttribute('aria-pressed', String(l === lang));
       b.onclick = () => chooseLang(l);
@@ -77,8 +75,6 @@
     }
     applyBg();
     $('btn-start').textContent = 'START';
-    $('btn-tips').textContent = t('Dicas', 'Tips');
-    $('btn-tips').hidden = !info(sel).tips;
     $('btn-saves').textContent = t('Meus saves', 'My saves');
     $('btn-saves').hidden = !info(sel).textures; // só os NFSU2 têm cópia do save (a pasta é a mesma)
     $('btn-settings').textContent = t('Configurações', 'Settings');
@@ -229,9 +225,6 @@
     $('set-h').textContent = t('Configurações', 'Settings');
     langButtons($('set-lang'));
     $('set-game-h').textContent = t('Jogo', 'Game');
-    $('s-bubble').checked = !!st.bubble;
-    $('s-bubble-l').textContent = t('Bolha por cima do jogo (guia, reiniciar e voltar ao início). Ao ligar, o Android pede a permissão de sobrepor a outros apps. Desligada = o mais leve possível.',
-      'Bubble over the game (guide, restart and back to home). When you turn it on, Android asks for the display over other apps permission. Off = as light as possible.');
     $('set-custom-h').textContent = t('Personalização', 'Personalization');
     $('custom-note').textContent = t('Troque o fundo da tela inicial e a capa (o CD) de cada jogo por uma imagem PNG ou JPG do seu celular. A capa fica redonda: o app usa o quadrado do meio da imagem. “Padrão” volta à imagem original.',
       'Change the home background and the cover (the CD) of each game to a PNG or JPG image from your phone. The cover is round: the app uses the square in the middle of the image. “Default” goes back to the original image.');
@@ -268,39 +261,6 @@
     $('s-back').textContent = t('Voltar', 'Back');
     renderCustom();
     renderUpdate();
-  }
-
-  function renderTips() {
-    const C = T.build(lang);
-    $('tips-h').textContent = C.UI.tips;
-    $('t-back').textContent = C.UI.back;
-    $('tf-dn').title = C.UI.fontDown; $('tf-up').title = C.UI.fontUp;
-    langButtons($('tips-lang'));
-    const tabs = C.TABS;
-    $('tips-tabs').replaceChildren(...tabs.map((tb) => {
-      const b = el('button', '', tb.title);
-      b.setAttribute('aria-selected', String(tb.id === tipsTab));
-      b.onclick = () => { tipsTab = tb.id; renderTips(); window.scrollTo(0, 0); };
-      return b;
-    }));
-    const tab = tabs.find((x) => x.id === tipsTab) || tabs[0];
-    const out = [];
-    for (const b of tab.blocks) {
-      if (b.h) out.push(el('h3', '', b.h));
-      else if (b.p) out.push(el('p', '', b.p));
-      else if (b.note) out.push(el('p', 'note', b.note));
-      else if (b.guide) { const btn = el('button', 'primary small', C.UI.openGuide); btn.onclick = () => api.openGuide(b.guide); out.push(btn); }
-      else if (b.ul || b.ol) { const list = el(b.ul ? 'ul' : 'ol'); list.append(...(b.ul || b.ol).map((x) => el('li', '', x))); out.push(list); }
-      else if (b.kv) {
-        const tb = el('table', 'kvt');
-        tb.append(...b.kv.map(([k, v]) => { const tr = el('tr'); tr.append(el('th', '', k), el('td', '', v)); return tr; }));
-        out.push(tb);
-      }
-    }
-    $('tips-body').replaceChildren(...out);
-    // A bolha é opcional: só quem quiser os guias por cima do jogo a liga (e aí o Android pede a permissão).
-    $('t-bubble').hidden = !!st.bubble;
-    $('t-bubble').textContent = t('Ver os guias durante o jogo', 'See the guides during the game');
   }
 
   // Carregando: o CD do jogo girando, igual à tela que continua por cima do jogo até ele aparecer.
@@ -354,7 +314,7 @@
   // Chamadas pelo app (Java): estado novo, abrindo o jogo, voltando, botão "voltar" do Android.
   window.refresh = () => {
     st = JSON.parse(api.state());
-    if (st.lang !== lang) { lang = st.lang; if (T.getLang() !== lang) T.setLang(lang); }
+    if (st.lang !== lang) lang = st.lang;
     document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
     window.Sounds.setEnabled(st.sounds);
     loadCustom();
@@ -362,7 +322,6 @@
     if (!st.error && screen === 'error') { screen = 'home'; for (const id of SCREENS) $(id).hidden = id !== 'home'; }
     renderHome();
     if (screen === 'settings') renderSettings();
-    if (screen === 'tips') renderTips();
     if (screen === 'loading') renderLoading();
     if (screen === 'error') renderError();
   };
@@ -370,22 +329,19 @@
   window.showHome = () => { if (screen === 'loading') setScreen('home'); };
   window.goBack = () => {
     if (screen === 'error') { api.clearError(); return 'ok'; }
-    if (screen === 'tips' || screen === 'settings') { setScreen('home'); return 'ok'; }
+    if (screen === 'settings') { setScreen('home'); return 'ok'; }
     return 'exit';
   };
   // App em segundo plano ou com o jogo aberto: sem áudio local (o mesmo cuidado do PC).
   window.audioOn = (on) => { window.Sounds.setEnabled(on && st.sounds); };
 
   $('btn-start').onclick = () => api.start(sel);
-  $('btn-tips').onclick = () => setScreen('tips');
   const openSaves = () => { api.openSaves(); toast(t('Só restaure se perdeu o save: no jogo, Jogos salvos > Restaurar.', 'Only restore if you lost your save: in the game, Saved games > Restore.')); };
   $('btn-saves').onclick = openSaves;
   $('b-saves-open').onclick = openSaves;
   $('btn-settings').onclick = () => { texWant = true; setScreen('settings'); };
   $('update-get').onclick = () => ((st.update || {}).status === 'ready' ? api.installUpdate() : api.downloadUpdate());
-  $('t-bubble').onclick = () => api.setOption('bubble', true);
   $('btn-quit').onclick = () => api.quit();
-  $('t-back').onclick = () => window.goBack();
   $('s-back').onclick = () => window.goBack();
   $('b-update').onclick = () => api.checkUpdate();
   $('b-update-open').onclick = () => api.openUpdates();
@@ -394,18 +350,12 @@
   $('e-retry').onclick = () => api.retry();
   $('e-dns').onclick = () => api.trySecureDns();
   $('e-home').onclick = () => api.clearError();
-  for (const key of ['bubble', 'prepareGame', 'hdTextures']) {
+  for (const key of ['prepareGame', 'hdTextures']) {
     $(`s-${key}`).onchange = (e) => {
       api.setOption(key, e.target.checked);
-      if (key !== 'bubble') toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.'));
+      toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.'));
     };
   }
-  // A letra vale para as dicas daqui e para o guia nativo (bolha), que lê a preferência do app.
-  const font = (d) => { const f = T.setFont(T.getFont() + d); T.applyFont(document, f); api.setFont(f); };
-  $('tf-dn').onclick = () => font(-T.FONT.step);
-  $('tf-up').onclick = () => font(T.FONT.step);
-  T.applyFont(document, T.getFont());
-  if (T.getLang() !== lang) T.setLang(lang); // a preferência do app vale também para os guias
   window.Sounds.attach(document);
   window.refresh();
   startIntro();

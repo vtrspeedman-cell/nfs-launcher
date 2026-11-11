@@ -1,7 +1,6 @@
 'use strict';
 // Configuração fixa do app (não é preferência do usuário).
-// Catálogo de jogos: cada um abre o próprio site. As dicas/guias e a seção de qualidade (settings.ini)
-// são só do NFSU2 (`tips`). Para acrescentar um jogo: id + site + hosts + imagem do CD em src/renderer/games/.
+// Catálogo de jogos: cada um abre o próprio site. Para acrescentar um jogo: id + site + hosts + imagem do CD em src/renderer/games/.
 // App "NFS Launcher" no Discord Developer Portal (só o Application ID, que é público). Vazio = não aparece no Discord.
 const DISCORD_APP = '1566579761193426986';
 const GAMES = Object.freeze({
@@ -9,7 +8,7 @@ const GAMES = Object.freeze({
     id: 'nfsu2', short: 'NFSU2', name: 'Need for Speed: Underground 2',
     // startUrl: só o START usa (convite da equipe; o site tira o "#" e pergunta se quer entrar). Recarregar usa `url`:
     // com a página aberta, o mesmo endereço com "#" só muda o "#", não recarrega nada e deixaria o "Carregando" preso.
-    url: 'https://nfsu2.xyz', startUrl: 'https://nfsu2.xyz/#crew=U2BR', hosts: ['nfsu2.xyz', 'www.nfsu2.xyz'], disc: 'games/nfsu2.png', tips: true,
+    url: 'https://nfsu2.xyz', startUrl: 'https://nfsu2.xyz/#crew=U2BR', hosts: ['nfsu2.xyz', 'www.nfsu2.xyz'], disc: 'games/nfsu2.png',
     textures: true, saves: true, partition: 'persist:nfsu2',
     discordId: DISCORD_APP,
   }),
@@ -18,20 +17,20 @@ const GAMES = Object.freeze({
   // linha "ui_textures" procuram um arquivo só por pasta). Sem convite de equipe: não se sabe se as equipes são as mesmas.
   nfsu2mod: Object.freeze({
     id: 'nfsu2mod', short: 'NFSU2 Modded', name: 'Need for Speed: Underground 2 Modded',
-    url: 'https://nfsu2mod.xyz', hosts: ['nfsu2mod.xyz', 'www.nfsu2mod.xyz'], disc: 'games/nfsu2mod.png', tips: true,
+    url: 'https://nfsu2mod.xyz', hosts: ['nfsu2mod.xyz', 'www.nfsu2mod.xyz'], disc: 'games/nfsu2mod.png',
     textures: true, saves: true, partition: 'persist:nfsu2mod', savesDir: 'NFSU2 Modded',
     discordId: DISCORD_APP,
   }),
   nfsmw: Object.freeze({
     id: 'nfsmw', short: 'NFSMW', name: 'Need for Speed: Most Wanted',
     // ".nfsmwo.com" = qualquer subdomínio (o cadastro/login pode passar por outro endereço do mesmo site e voltar).
-    url: 'https://web.nfsmwo.com', hosts: ['nfsmwo.com', '.nfsmwo.com'], disc: 'games/nfsmw.png', tips: false, partition: 'persist:nfsu2',
+    url: 'https://web.nfsmwo.com', hosts: ['nfsmwo.com', '.nfsmwo.com'], disc: 'games/nfsmw.png', partition: 'persist:nfsu2',
     discordId: DISCORD_APP,
   }),
   // Carbon (pedido do Bruno, 05/11): canvas #canvas, como o Most Wanted. Sem convite de equipe: o site não tem `#crew=`.
   nfsc: Object.freeze({
     id: 'nfsc', short: 'NFSC', name: 'Need for Speed: Carbon',
-    url: 'https://nfscrb.xyz', hosts: ['nfscrb.xyz', '.nfscrb.xyz'], disc: 'games/nfsc.png', tips: false, partition: 'persist:nfsu2',
+    url: 'https://nfscrb.xyz', hosts: ['nfscrb.xyz', '.nfscrb.xyz'], disc: 'games/nfsc.png', partition: 'persist:nfsu2',
     discordId: DISCORD_APP,
   }),
 });

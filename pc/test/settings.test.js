@@ -16,9 +16,6 @@ require('node:test')('idioma do app: pt por padrão, só pt/en aceitos', () => {
   for (const g of Object.values(GAMES)) {
     assert.ok(fs.existsSync(require('path').join(__dirname, '..', 'src', 'renderer', g.disc)), `CD ausente: ${g.disc}`);
   }
-  assert.equal(GAMES.nfsu2.tips, true);
-  assert.equal(GAMES.nfsmw.tips, false, 'dicas do NFSU2 não aparecem no NFSMW');
-  assert.equal(GAMES.nfsc.tips, false, 'dicas do NFSU2 não aparecem no Carbon');
   assert.equal(s.sanitize({ game: 'nfsc' }).game, 'nfsc');
   for (const g of Object.values(GAMES)) {
     assert.ok(fs.existsSync(require('path').join(__dirname, '..', 'src', 'renderer', 'bg', `${g.id}.jpg`)), `fundo ausente: ${g.id}`);

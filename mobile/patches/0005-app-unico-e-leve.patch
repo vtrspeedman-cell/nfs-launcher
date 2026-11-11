@@ -28,7 +28,7 @@ index 6b9413f634e59..182ed6c30115f 100644
      }
  
      deps += [ "//chrome/android:base_module_java" ]
-+    deps += [ "//chrome/android/nfs:java" ]  # NFS Launcher (tela inicial, bolha, guia)
++    deps += [ "//chrome/android/nfs:java" ]  # NFS Launcher (tela inicial)
      if (defined(invoker.deps)) {
        deps += invoker.deps
      }

@@ -15,7 +15,6 @@ const { toChromeUA } = require('./ua');
 const imageFilter = require('./imageFilter');
 const gpuFallback = require('./gpuFallback');
 const { inTopZone } = require('./corner');
-const dock = require('./dock');
 const { mayBeShortcut, decideKey, shouldCancelClose, wantAltSpaceCatch, ALT_SPACE_ACCELS } = require('./lockPolicy');
 const { allowPermission } = require('./permissions');
 const diagnostics = require('./diagnostics');
@@ -97,9 +96,7 @@ const RENDERER_DIR = path.join(__dirname, '..', 'renderer');
 const ICON = path.join(RENDERER_DIR, 'icon.png');
 const UI_FILE = path.join(RENDERER_DIR, 'ui.html');
 const PRELOAD = path.join(__dirname, 'preload.js');
-const GUIDE_FILE = path.join(RENDERER_DIR, 'guide.html');
-const PANEL_PRELOAD = path.join(__dirname, 'panelPreload.js');
-const CORNER = { w: 308, h: 40, margin: 10, discover: 408 }; // início, recarregar, filtro com o nome do modo, dicas, tela cheia, configurações
+const CORNER = { w: 272, h: 40, margin: 10 }; // início, recarregar, filtro com o nome do modo, tela cheia, configurações
 const TITLE_H = 32;
 const HINT = { w: 520, h: 86, ms: 6000 }; // faixa "como sair da tela cheia" embaixo dos botões do topo
 
@@ -145,8 +142,6 @@ function logCrash(kind, details = {}) {
 }
 
 const gameUrl = () => gameOf(currentGame || cfg.game).url;
-// Dicas e guias são do NFSU2: com outro jogo aberto, ficam fora (botão, atalho e janelas).
-const tipsBlocked = () => gameStarted && !gameOf(currentGame).tips;
 const isFullscreen = () => !!win && !win.isDestroyed() && win.isFullScreen();
 const locked = () => isFullscreen() && wantFullscreen && cfg.protectFullscreen && gameStarted;
 // Em janela o topo é a nossa barra; o jogo fica logo abaixo dela. Na tela cheia a barra sai e o jogo ocupa tudo.
@@ -245,9 +240,7 @@ function buildState() {
     update: updateInfo,
     saveCopies: saveCopyInfo,
     lowDiskGb: lowDiskGb(),
-    cornerMode: cfg.tipsDiscovered || tipsBlocked() ? 'normal' : 'discover',
     game: currentGame,  // jogo aberto (null antes do START); o último iniciado fica em settings.game
-    tipsOn: !tipsBlocked(),
     texturesAvail: !!modsOn, // pacote de texturas carregado (baixado ou pasta de mods)
     texDl: texDlState(),     // o que dá para baixar e o que já está no PC (janela Texturas HD)
     // Partes das texturas (texPack.js): o que cada parte oferece e o que vale agora. null = nenhum mod baixado.
@@ -256,9 +249,8 @@ function buildState() {
       mods: texPack.MODS.filter((m) => texSources[m.id]).map((m) => ({ id: m.id, name: m.name })),
       choice: texPack.effectiveChoice(cfg.texParts, texAvail),
     } : null,
-    games: GAME_IDS.map((id) => { const g = GAMES[id]; return { id, short: g.short, name: g.name, disc: g.disc, tips: g.tips, textures: !!g.textures, saves: !!g.saves, host: new URL(g.url).host }; }),
+    games: GAME_IDS.map((id) => { const g = GAMES[id]; return { id, short: g.short, name: g.name, disc: g.disc, textures: !!g.textures, saves: !!g.saves, host: new URL(g.url).host }; }),
     fsHint: hintOn, // dica piscando no topo: "para sair da tela cheia: <atalho>"
-    guideOpen: panelOpen('guide'),
     // "Preparar o jogo" e "aliviar o processador" só valem ao reabrir (as flags são lidas antes do app iniciar).
     restartNeeded: !SAFE_MODE && (cfg.prepareGame !== PREPARE_ON || cfg.lighterGpu !== LIGHTER_ON || cfg.unblockGpu !== UNBLOCK_ON || (cfg.newDrawing && !cfg.unblockGpu) !== NEW_DRAWING_ON),
     versions: { app: app.getVersion(), electron: process.versions.electron, chrome: process.versions.chrome },
@@ -682,9 +674,8 @@ function layout() {
   if (screen === 'none' && bar) {
     uiView.setBounds({ x: 0, y: 0, width, height: bar }); // só a barra: nada fica por cima do jogo
   } else if (screen === 'none') {
-    // Modo descoberta: barra mais larga com o rótulo "Dicas".
     // Com a dica de tela cheia piscando, a área cresce para caber a faixa de texto embaixo dos botões.
-    const w = hintOn ? HINT.w : !cfg.tipsDiscovered && !tipsBlocked() ? CORNER.discover : CORNER.w;
+    const w = hintOn ? HINT.w : CORNER.w;
     const h = hintOn ? HINT.h : CORNER.h;
     // No meio do topo: o jogo limita o mouse e ele não chega aos cantos da tela.
     uiView.setBounds({ x: Math.round((width - w) / 2), y: CORNER.margin, width: w, height: h });
@@ -717,10 +708,8 @@ function refresh() {
   const isLocked = locked();
   // Em janela, os botões ficam na barra do topo. Na tela cheia:
   // botão discreto, que aparece só com o cursor no meio do topo (também no modo protegido, para sair da tela cheia).
-  // Exceções: até o jogador abrir as dicas uma vez, o botão de dicas fica fixo para ele descobrir que existe; e a dica
-  // de como sair da tela cheia pisca alguns segundos quando ele sai do jogo (tecla Windows, Alt+Tab) e quando volta.
-  const discover = !cfg.tipsDiscovered && !tipsBlocked();
-  const showUi = !NO_UI && (screen !== 'none' || (gameStarted && (titleH() > 0 || discover || hintOn || (cfg.showCorner && cornerHot))));
+  // Exceção: a dica de como sair da tela cheia pisca alguns segundos quando ele sai do jogo (tecla Windows, Alt+Tab) e quando volta.
+  const showUi = !NO_UI && (screen !== 'none' || (gameStarted && (titleH() > 0 || hintOn || (cfg.showCorner && cornerHot))));
   gameView.setVisible(gameStarted);
   uiView.setVisible(showUi);
   syncIdentity();
@@ -746,12 +735,6 @@ function syncIdentity() {
 }
 function focusedView() { return NO_UI || screen === 'none' ? gameView : uiView; }
 function setScreen(s) { screen = s; refresh(); }
-// Abrir as dicas por qualquer caminho conta como "descobriu o botão": ele deixa de ficar fixo na tela.
-function openTips() {
-  if (tipsBlocked()) return;
-  if (!cfg.tipsDiscovered) { cfg.tipsDiscovered = true; saveCfg(); }
-  setScreen('tips');
-}
 // Janela de texturas aberta pelas Configurações volta para elas; pelo botão da barra, para o jogo.
 const texBackScreen = () => (texReturn === 'settings' ? 'settings' : backScreen());
 // Para onde "Voltar" leva: o jogo (ou o erro/carregamento dele) se já foi iniciado, senão a tela inicial.
@@ -786,161 +769,6 @@ function checkCorner() {
   if (!win || win.isDestroyed() || win.isMinimized() || !win.isVisible()) return;
   const hot = inTopZone(displays.getCursorScreenPoint(), win.getContentBounds());
   if (hot !== cornerHot) { cornerHot = hot; refresh(); }
-}
-
-// ───────────────────────── Janela flutuante (guia do Dyno) ─────────────────────────
-// Janelas próprias, sem moldura, presas à janela do jogo: arrastar pela barra, redimensionar pelas bordas.
-// São "não focáveis": clicar nelas não tira o teclado do jogo. Fechadas (ou recolhidas), nada fica por cima do jogo.
-// Nunca saem da área do jogo: abrem dentro dela, param na borda ao arrastar e acompanham a janela do jogo.
-// Recolher: a janela some, uma faixa pisca na borda do jogo mais próxima e, ao passar o mouse ali, ela volta.
-const PANELS = {
-  // O guia ajusta a própria altura ao texto de cada passo (panel:fit).
-  guide: { file: GUIDE_FILE, title: 'Guia do Dyno', size: { width: 360, height: 210 }, min: [260, 140], boundsKey: 'guideBounds', opacityKey: 'guideOpacity', fitsText: true },
-};
-const panelLoad = (id, hash) => ({ ...(hash !== undefined ? { hash } : {}), query: { op: String(cfg[PANELS[id].opacityKey]) } });
-// Janela sem moldura mostrada com showInactive: o Windows só liberava o redimensionar pelas bordas depois de a janela
-// ser movida uma vez. Reaplicar o "redimensionável" e mexer 1 px no tamanho faz o Windows recalcular as bordas na hora.
-function refreshResizeFrame(w) {
-  if (!w || w.isDestroyed()) return;
-  w.setResizable(false);
-  w.setResizable(true);
-  const b = w.getBounds();
-  w.setBounds({ ...b, width: b.width + 1 });
-  w.setBounds(b);
-}
-// Tamanho pedido pela própria janela (alça de redimensionar ou ajuste automático do guia), limitado à área do jogo.
-// A alça para na borda; o guia que cresceu com o texto sobe para caber.
-function sizePanel(id, width, height) {
-  if (!panelAlive(id) || docked[id]) return;
-  const w = panelWins[id];
-  const b = w.getBounds();
-  const area = gameRect();
-  const [minW, minH] = PANELS[id].min;
-  const maxW = Math.min(area.width * 0.9, area.x + area.width - b.x);
-  const maxH = PANELS[id].fitsText ? area.height * 0.85 : Math.min(area.height * 0.85, area.y + area.height - b.y);
-  const nw = Number.isFinite(width) ? Math.round(Math.max(Math.min(width, maxW), minW)) : b.width;
-  const nh = Number.isFinite(height) ? Math.round(Math.max(Math.min(height, maxH), minH)) : b.height;
-  if (Math.abs(nw - b.width) > 1 || Math.abs(nh - b.height) > 1) w.setBounds(dock.fitInside({ x: b.x, y: b.y, width: nw, height: nh }, area));
-}
-// Arrastar: o Windows avisa antes de cada passo e a janela escorrega pela borda do jogo.
-// O retângulo avisado inclui a moldura invisível (mais larga que a janela): usar o tamanho dele faria a janela crescer.
-function holdInGame(w, event, next) {
-  if (!win || win.isDestroyed()) return;
-  const cur = w.getBounds();
-  const want = { x: next.x + Math.round((next.width - cur.width) / 2), y: next.y, width: cur.width, height: cur.height };
-  const inside = dock.fitInside(want, gameRect());
-  if (inside.x === want.x && inside.y === want.y) return;
-  event.preventDefault();
-  w.setBounds(inside);
-}
-// A janela do jogo mudou (mover, redimensionar, tela cheia): as flutuantes, recolhidas ou não, vão junto e continuam dentro.
-let gameArea = null;
-function followGame() {
-  if (!win || win.isDestroyed() || win.isMinimized()) return;
-  const area = gameRect();
-  const from = gameArea;
-  gameArea = area;
-  if (!from || (from.x === area.x && from.y === area.y && from.width === area.width && from.height === area.height)) return;
-  for (const id of Object.keys(PANELS)) {
-    if (!panelAlive(id)) continue;
-    const b = panelWins[id].getBounds();
-    const next = dock.fitInside({ ...b, x: b.x + area.x - from.x, y: b.y + area.y - from.y }, area);
-    panelWins[id].setBounds(next);
-    cfg[PANELS[id].boundsKey] = next; // reabrir volta aqui; vai para o disco no próximo salvamento
-    if (docked[id]) {
-      const { rect, hover } = dock.dockSpot(next, area);
-      docked[id] = { ...docked[id], rect, area: hover };
-    }
-  }
-}
-const panelWins = { guide: null };
-const docked = {}; // id -> { rect, area, ticks }
-const panelAlive = (id) => !!panelWins[id] && !panelWins[id].isDestroyed();
-const panelOpen = (id) => panelAlive(id) && !docked[id];
-
-function openPanel(id, hash) {
-  if (NO_UI || !win || win.isDestroyed()) return;
-  const spec = PANELS[id];
-  if (panelAlive(id)) {
-    if (hash !== undefined) panelWins[id].loadFile(spec.file, panelLoad(id, hash));
-    undockPanel(id);
-    panelWins[id].showInactive();
-    return;
-  }
-  const pb = gameRect();
-  gameArea = pb;
-  const b = dock.fitInside(cfg[spec.boundsKey] || { x: pb.x + 24, y: pb.y + 24, ...spec.size }, pb);
-  const w = new BrowserWindow({
-    ...b, parent: win, frame: false, resizable: true, minimizable: false, maximizable: false, fullscreenable: false,
-    focusable: false, skipTaskbar: true, show: false, backgroundColor: '#06111f', title: spec.title, icon: ICON,
-    webPreferences: { preload: PANEL_PRELOAD, contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: false, devTools: DEV },
-  });
-  panelWins[id] = w;
-  w.setMinimumSize(...spec.min);
-  w.setOpacity(cfg[spec.opacityKey]);
-  w.removeMenu();
-  const wc = w.webContents;
-  wc.on('will-navigate', (e) => e.preventDefault());
-  wc.setWindowOpenHandler(() => ({ action: 'deny' }));
-  wc.once('did-finish-load', () => { if (panelOpen(id)) { w.showInactive(); refreshResizeFrame(w); } });
-  const keep = () => { if (panelAlive(id)) { cfg[spec.boundsKey] = w.getBounds(); saveCfg(); } };
-  w.on('will-move', (e, next) => holdInGame(w, e, next));
-  w.on('moved', keep);
-  // Puxar uma borda para fora do jogo: ao soltar, corta o que passou, sem mexer no lado oposto.
-  w.on('resized', () => { if (win && !win.isDestroyed()) w.setBounds(dock.clipInside(w.getBounds(), gameRect())); keep(); });
-  w.on('closed', () => { panelWins[id] = null; delete docked[id]; syncDockPoller(); sendState(); });
-  w.loadFile(spec.file, panelLoad(id, hash));
-  sendState();
-}
-function closePanel(id) { if (panelAlive(id)) panelWins[id].close(); }
-
-function dockPanel(id) {
-  if (!panelAlive(id) || docked[id]) return;
-  const w = panelWins[id];
-  const b = w.getBounds();
-  const { rect, hover } = dock.dockSpot(b, gameRect());
-  docked[id] = { rect, area: hover, ticks: 0 }; // pisca em `rect`; reabre com o mouse em `area` (maior, para dentro)
-  w.hide();
-  flashSpot(rect);
-  syncDockPoller();
-  sendState();
-}
-function undockPanel(id) {
-  if (!docked[id]) return;
-  delete docked[id];
-  if (panelAlive(id)) { panelWins[id].showInactive(); refreshResizeFrame(panelWins[id]); }
-  syncDockPoller();
-  sendState();
-}
-// A "piscada": uma faixa colorida na borda, 3 vezes, e some. Não é focável nem aparece na barra de tarefas.
-function flashSpot(rect) {
-  if (!win || win.isDestroyed()) return;
-  const f = new BrowserWindow({
-    ...rect, parent: win, frame: false, resizable: false, movable: false, focusable: false, skipTaskbar: true,
-    show: false, backgroundColor: '#5ad1ff', hasShadow: false,
-    webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, devTools: false },
-  });
-  f.setIgnoreMouseEvents(true);
-  const seq = [1, 0.15, 1, 0.15, 1, 0];
-  f.setOpacity(0);
-  f.showInactive();
-  seq.forEach((o, i) => setTimeout(() => { if (!f.isDestroyed()) f.setOpacity(o); }, 140 * (i + 1)));
-  setTimeout(() => { if (!f.isDestroyed()) f.destroy(); }, 140 * (seq.length + 1));
-}
-// Cursor parado ~0,3 s no ponto recolhido reabre a janela (mesmo polling leve do botão discreto).
-let dockTimer = null;
-function syncDockPoller() {
-  const need = Object.keys(docked).length > 0;
-  if (need && !dockTimer) dockTimer = setInterval(checkDocks, 150);
-  if (!need && dockTimer) { clearInterval(dockTimer); dockTimer = null; }
-}
-function checkDocks() {
-  if (!win || win.isDestroyed() || win.isMinimized()) return;
-  const p = displays.getCursorScreenPoint();
-  for (const [id, d] of Object.entries(docked)) {
-    d.ticks = dock.inRect(p, d.area) ? d.ticks + 1 : 0;
-    if (d.ticks >= 2) undockPanel(id);
-  }
 }
 
 // ───────────────────────── Ações ─────────────────────────
@@ -1085,7 +913,6 @@ function startGame(gameId) {
   if (cfg.game !== id) { cfg.game = id; saveCfg(); }
   if (gameStarted && id !== currentGame) {
     // Troca de jogo: o site atual pode pedir confirmação (partida aberta) antes de sair.
-    if (!gameOf(id).tips) closePanel('guide');
     currentGame = id;
     playingSince = Date.now();
     connError = null;
@@ -1121,7 +948,6 @@ async function goHome() {
   try { await wc.loadURL('about:blank'); } catch { /* cancelado pelo jogador (ou já em branco) */ }
   leavingGame = false;
   if (wc.isDestroyed() || wc.getURL() !== 'about:blank') return; // cancelou: segue no jogo
-  closePanel('guide');
   gameStarted = false;
   currentGame = null;
   connError = null;
@@ -1293,7 +1119,6 @@ function onInput(event, input, fromGame = false) {
     case 'block-notify': event.preventDefault(); notifyLocked(); break;
     case 'toggle-fullscreen': event.preventDefault(); toggleFullscreen(); break;
     case 'exit-protected': event.preventDefault(); exitProtected(); break;
-    case 'open-tips': event.preventDefault(); if (NO_UI || tipsBlocked()) break; if (screen === 'tips') setScreen(backScreen()); else openTips(); break;
     case 'open-settings': event.preventDefault(); if (NO_UI) break; if (screen === 'settings') setScreen(backScreen()); else setScreen('settings'); break;
     default: break;
   }
@@ -1349,8 +1174,6 @@ function createWindow() {
     refresh();
   });
   win.on('resize', layout);
-  win.on('resize', followGame);
-  win.on('move', followGame);
   win.on('maximize', refresh);
   win.on('unmaximize', refresh);
   win.on('focus', () => {
@@ -1663,30 +1486,6 @@ function registerIpc() {
       return { ok: true, name: path.basename(filePath) };
     } catch (err) { return { ok: false, error: String(err.message || err) }; }
   });
-  handle('screen:tips', () => { openTips(); return { ok: true }; });
-  handle('guide:open', (gid) => {
-    if (typeof gid !== 'string' || !/^[gt]\d{1,2}$/.test(gid)) return { ok: false, error: 'Guia inválido.' };
-    if (tipsBlocked()) return { ok: false, error: 'Dicas só para o NFSU2.' };
-    openPanel('guide', gid);
-    return { ok: true };
-  });
-  // Mensagens das janelas flutuantes (só delas, identificadas pelo remetente): fechar, recolher, transparência.
-  const panelOf = (event) => Object.keys(panelWins).find((id) => panelAlive(id) && event.sender === panelWins[id].webContents);
-  ipcMain.on('panel:close', (event) => { const id = panelOf(event); if (id) closePanel(id); });
-  ipcMain.on('panel:dock', (event) => { const id = panelOf(event); if (id) dockPanel(id); });
-  ipcMain.on('panel:tips', (event) => { if (panelOf(event) && !NO_UI && screen !== 'tips') openTips(); });
-  ipcMain.on('panel:opacity', (event, v) => {
-    const id = panelOf(event);
-    const op = settings.OPACITY(v, null);
-    if (!id || op === null) return;
-    panelWins[id].setOpacity(op);
-    cfg[PANELS[id].opacityKey] = op; // lembrada na próxima vez que a janela abrir
-    saveCfg();
-  });
-  ipcMain.on('panel:size', (event, s) => {
-    const id = panelOf(event);
-    if (id && s && typeof s === 'object') sizePanel(id, Number(s.width), Number(s.height));
-  });
   handle('app:restart', () => {
     relaunchApp();
     return { ok: true };
@@ -1803,7 +1602,6 @@ if (gotLock) {
     if (psbId !== null && powerSaveBlocker.isStarted(psbId)) powerSaveBlocker.stop(psbId);
     stopRetry();
     if (cornerTimer) clearInterval(cornerTimer);
-    if (dockTimer) clearInterval(dockTimer);
     if (updateTimer) clearInterval(updateTimer);
     clearTimeout(loadingTimer);
   });

@@ -1,7 +1,7 @@
 # NFS Launcher para Android
 
 Um app só (`xyz.nfs.launcher`, Android 12+, arm64): o Chromium 156 compilado por nós (o "motor") com a tela inicial,
-a bolha e o guia do NFS Launcher dentro dele.
+o NFS Launcher dentro dele.
 
 **Por que um motor próprio:** o navegador embutido dos apps de Android (WebView) não deixa a página ficar "isolada", e
 o jogo exige isso (erro PAGE-NOT-ISOLATED). O Chromium completo deixa. O START abre o jogo como "Trusted Web
@@ -15,8 +15,8 @@ Activity" no próprio app, sem barra nenhuma e em tela cheia.
   `android/` na raiz (fora do repositório; **nunca apagar**: sem ela a equipe não atualiza por cima).
 
 ## Arquivos
-- `app/`: Java (`MainActivity`, `Textures`, `AppUpdate`, `Downloads`, `BubbleService`, `GuideView`, `SaveCopy`,
-  `GameSettings`), telas (`assets/home.*`) e `setup.py`, que copia tudo para `chrome/android/nfs` (dicas, sons, CDs e
+- `app/`: Java (`MainActivity`, `Textures`, `AppUpdate`, `Downloads`, `SaveCopy`,
+  `GameSettings`), telas (`assets/home.*`) e `setup.py`, que copia tudo para `chrome/android/nfs` (sons, CDs e
   fundos vêm de `pc/src/renderer`).
 - `patches/0001`–`0007`: mudanças no Chromium, geradas por `make-patches.py` (com o código do Chromium limpo; não
   rodar com compilação em andamento). `nfs_texturas.cc` é o código do patch 0007.

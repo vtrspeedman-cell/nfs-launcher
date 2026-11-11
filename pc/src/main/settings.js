@@ -36,9 +36,6 @@ const DEFAULTS = Object.freeze({
   exitCombo: 'Ctrl+Alt+Shift+P',
   bounds: null,
   maximized: false,
-  guideBounds: null,        // posição/tamanho da janela do guia do Dyno
-  guideOpacity: 0.75,       // os guias começam com 75% de opacidade (pedido do usuário)
-  tipsDiscovered: false,    // o botão de dicas fica fixo na tela até o jogador usar as dicas uma vez
   lang: 'pt',               // idioma do app e das dicas ('pt' ou 'en'), escolhido na tela inicial ou nas configurações
   game: 'nfsu2',            // último jogo iniciado (vem selecionado na tela inicial; 1ª vez: NFSU2)
   crewInvites: 0,           // quantas vezes o START abriu com o convite da equipe (config.CREW_MAX)
@@ -49,7 +46,7 @@ const LANGS = ['pt', 'en'];
 const USER_BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures'];
 // Sempre ligadas e fora das configurações (pedido do Bruno): vale também para quem tinha desligado antes.
 const ALWAYS_ON = ['showHome', 'protectFullscreen', 'blockAltSpace', 'showCorner', 'sounds', 'discord'];
-const BOOLS = [...USER_BOOLS, 'maximized', 'tipsDiscovered', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod'];
+const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod'];
 const OPACITY = (v, d) => (Number.isFinite(v) && v >= 0.3 && v <= 1 ? Math.round(v * 100) / 100 : d);
 
 function sanitizeBounds(b, minW = 640, minH = 360) {
@@ -69,8 +66,6 @@ function sanitize(raw) {
   if (combo.validate(r.exitCombo).ok) out.exitCombo = r.exitCombo;
   if (out.toggleCombo === out.exitCombo) { out.toggleCombo = DEFAULTS.toggleCombo; out.exitCombo = DEFAULTS.exitCombo; }
   out.bounds = sanitizeBounds(r.bounds);
-  out.guideBounds = sanitizeBounds(r.guideBounds, 200, 140);
-  out.guideOpacity = OPACITY(r.guideOpacity, DEFAULTS.guideOpacity);
   if (LANGS.includes(r.lang)) out.lang = r.lang;
   if (MODE_IDS.includes(r.imageMode)) out.imageMode = r.imageMode;
   if (GAME_IDS.includes(r.game)) out.game = r.game;
@@ -82,10 +77,9 @@ function sanitize(raw) {
   for (const k of ['gameReg', 'gameRegMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && /^[\w-]+([\\/][\w.-]+)*$/.test(r[k]) && !r[k].includes('..')) out[k] = r[k];
   // NFSU2 Modded (09/11): quem já estava no modo DirectX 11 recebe os gráficos mínimos nele também, uma vez.
   if (typeof r.dx11GameMinMod !== 'boolean' && out.unblockGpu) out.dx11GameMinMod = true;
-  // Preferências de antes da versão 4 guardavam os padrões antigos: opacidade do guia 50% -> 75% e
+  // Preferências de antes da versão 4 guardavam os padrões antigos: 
   // tela cheia Ctrl+Alt+F -> Ctrl+F (só se a pessoa não tinha trocado o atalho).
   if (!(Number(r.version) >= 4)) {
-    out.guideOpacity = DEFAULTS.guideOpacity;
     if (out.toggleCombo === 'Ctrl+Alt+F' && out.exitCombo !== DEFAULTS.toggleCombo) out.toggleCombo = DEFAULTS.toggleCombo;
   }
   // Antes da versão 6, o arquivo guardava Graphite e Delegated separados, ou desligados só por serem o padrão antigo:

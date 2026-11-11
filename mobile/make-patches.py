@@ -131,13 +131,10 @@ def patch_manifest(t):
             sys.exit(f'{name}: exported="true" não achado')
         t = t[:a] + head.replace('android:exported="true"', 'android:exported="false"') + t[b:]
 
-    # 4) App único: a tela inicial do NFS Launcher (ícone na lista de apps) e a bolha, num processo próprio
-    #    (":nfs"), longe do processo do navegador/jogo. "Sobrepor a outros apps" é só para a bolha.
-    t = sub1(t, '''    <uses-permission android:name="android.permission.INTERNET"/>\n''',
-             '''    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>\n''')
+    # 4) App único: a tela inicial do NFS Launcher (ícone na lista de apps), num processo próprio
+    #    (":nfs"), longe do processo do navegador/jogo.
     t = sub1(t, '''      {% block base_application_definitions %}
-      {% endblock %}''', '''      <!-- NFS Launcher: tela inicial e bolha de dicas. -->
+      {% endblock %}''', '''      <!-- NFS Launcher: tela inicial. -->
       <activity android:name="xyz.nfs.launcher.MainActivity"
           android:process=":nfs"
           android:label="NFS Launcher"
@@ -151,7 +148,6 @@ def patch_manifest(t):
               <category android:name="android.intent.category.LAUNCHER" />
           </intent-filter>
       </activity>
-      <service android:name="xyz.nfs.launcher.BubbleService" android:process=":nfs" android:exported="false" />
       <!-- Modo de jogo do Android 13+: o app cuida do próprio desempenho; o sistema não reduz resolução nem FPS. -->
       <meta-data android:name="android.game_mode_config" android:resource="@xml/nfs_game_mode_config" />
 
@@ -168,7 +164,7 @@ def patch_manifest(t):
 def patch_apk_deps(t):
     t = sub1(t, '''    deps += [ "//chrome/android:base_module_java" ]\n''',
              '''    deps += [ "//chrome/android:base_module_java" ]
-    deps += [ "//chrome/android/nfs:java" ]  # NFS Launcher (tela inicial, bolha, guia)\n''')
+    deps += [ "//chrome/android/nfs:java" ]  # NFS Launcher (tela inicial)\n''')
     return sub1(t, '''    asset_deps = [ "//chrome/android:chrome_public_non_pak_assets" ]\n''',
                 '''    asset_deps = [ "//chrome/android:chrome_public_non_pak_assets" ]
     asset_deps += [ "//chrome/android/nfs:assets" ]  # NFS Launcher (assets/nfs/)\n''')
@@ -245,7 +241,7 @@ def patch_textures(t):
 
 def patch_game_activity(t):
     # A tela do jogo (Trusted Web Activity):
-    # - aberta: tela não apaga e a bolha aparece; minimizada: a bolha some (o jogo continua lá);
+    # - aberta: tela não apaga; minimizada: o jogo continua lá;
     # - fechada de vez (voltar, "Voltar ao início", outro jogo, tirada da lista de apps abertos): encerra o
     #   navegador INTEIRO (página, GPU, áudio), para nada ficar rodando e o próximo jogo abrir limpo;
     # - ao abrir: CD girando até o jogo aparecer e recarga sem cache (versão nova do site, login e saves ficam);
@@ -265,7 +261,6 @@ def patch_game_activity(t):
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         nfsVisible = true;
         nfsShowLoading();
-        nfsBubble(true);
         nfsGameState(true);
     }
 
@@ -476,7 +471,6 @@ def patch_game_activity(t):
         super.onStop();
         if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
         nfsVisible = false;
-        nfsBubble(false);
         nfsGameState(false);
     }
 
@@ -497,17 +491,6 @@ def patch_game_activity(t):
                                     : android.app.GameState.MODE_NONE));
         } catch (Exception ignored) {
             // Celular sem o serviço de jogos: segue normal.
-        }
-    }
-
-    /** NFS Launcher: mostra/esconde a bolha de dicas (só se ela já estiver ligada). */
-    private void nfsBubble(boolean show) {
-        try {
-            startService(
-                    new Intent(show ? "xyz.nfs.SHOW" : "xyz.nfs.HIDE")
-                            .setClassName(getPackageName(), "xyz.nfs.launcher.BubbleService"));
-        } catch (Exception ignored) {
-            // App já em segundo plano: o Android não deixa; a bolha se ajusta na próxima vez.
         }
     }''')
     return sub1(t, '''    protected void onDestroyInternal() {

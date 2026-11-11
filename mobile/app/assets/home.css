@@ -17,7 +17,7 @@ body[data-game="nfsc"] { --bgimg: url("bg/nfsc.jpg"); }
 h1 { margin: 26px 0 0; font-size: 34px; letter-spacing: 2px; font-weight: 800; }
 h1 span { color: var(--neon); font-weight: 600; }
 h2 { margin: 0; font-size: 22px; }
-h3 { margin: 18px 0 8px; font-size: calc(13px * var(--fs, 1.2)); color: var(--neon); text-transform: uppercase; letter-spacing: 1.2px; }
+h3 { margin: 18px 0 8px; font-size: 16px; color: var(--neon); text-transform: uppercase; letter-spacing: 1.2px; }
 .muted { color: var(--mut); margin: 0; } .small { font-size: 12px; }
 #home > h1, #home > .muted, #home footer, .disc-name, #loading h2, #loading p, #error h2, #error p { text-shadow: 0 1px 6px rgba(0, 0, 0, .95), 0 0 2px rgba(0, 0, 0, .9); }
 button { font: inherit; color: var(--txt); background: #1b1f38; border: 1px solid var(--line); border-radius: 12px; padding: 11px 18px; min-height: 44px; }
@@ -69,18 +69,6 @@ code { background: #0c0f1e; border: 1px solid var(--line); padding: 6px 10px; bo
 .panel-screen { align-items: stretch; text-align: left; background: rgba(8, 10, 20, .86); }
 .panel-screen section { margin: 0; }
 .panel-screen h3 { margin-top: 10px; }
-.tips-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.tips-tools { display: flex; gap: 8px; flex-wrap: wrap; }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tabs button[aria-selected="true"] { border-color: var(--neon); color: var(--neon); background: #102a2a; }
-.tips-body { font-size: calc(14px * var(--fs, 1.2)); }
-.tips-body p, .tips-body li { line-height: 1.55; }
-.tips-body ol, .tips-body ul { padding-left: 22px; margin: 6px 0 10px; } .tips-body li { margin: 4px 0; }
-.tips-body .kvt { width: 100%; border-collapse: collapse; margin: 4px 0 10px; font-size: calc(13px * var(--fs, 1.2)); }
-.tips-body .kvt th { text-align: left; font-weight: 600; color: var(--mut); width: 38%; padding: 6px 10px 6px 0; vertical-align: top; }
-.tips-body .kvt td { padding: 6px 0; }
-.tips-body .kvt tr + tr { border-top: 1px solid var(--line); }
-.tips-body .note { padding: 9px 12px; border-left: 3px solid var(--amber); background: #221c0c; border-radius: 6px; }
 
 /* Personalização: uma linha por jogo, com miniatura do fundo e da capa. */
 .custom-list { display: grid; gap: 10px; margin-top: 8px; }

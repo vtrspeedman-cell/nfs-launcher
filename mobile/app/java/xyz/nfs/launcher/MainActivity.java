@@ -24,7 +24,6 @@ import android.os.Process;
 import android.os.SystemClock;
 import android.provider.Settings;
 import android.util.Base64;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -69,19 +68,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * NFS Launcher para Android, app ÚNICO: esta tela fica dentro do próprio navegador do app (o "motor", Chromium
  * compilado para o NFS Launcher). Roda num processo separado (":nfs") para não pesar no processo do jogo.
- * - Tela inicial local (assets/nfs/home.html): abertura, CDs, START, Português/English, Dicas (só NFSU2),
+ * - Tela inicial local (assets/nfs/home.html): abertura, CDs, START, Português/English,
  *   Configurações e a versão nova (baixada do GitHub, AppUpdate) e as texturas HD (Textures).
  * - START abre o site do jogo no motor do próprio app como Trusted Web Activity: tela cheia, sem barra nenhuma.
- * - Bolha por cima do jogo (BubbleService, permissão "Sobrepor a outros apps"): Guia (NFSU2), Reiniciar e Voltar ao início.
- * - Guia nativo leve (GuideView); sem mapa no celular.
+ * - Sem dicas, guias, bolha nem mapa no celular (o jogo foi corrigido, 11/11).
  */
 public class MainActivity extends Activity {
 
     static final class Game {
         final String id, shortName, name, url, startUrl, disc; // startUrl: o START com o convite da equipe; em inglês, url
-        final boolean tips, textures; // textures: Texturas HD (os dois NFSU2: nfsu2.xyz e o Modded)
-        Game(String id, String shortName, String name, String url, String startUrl, String disc, boolean tips, boolean textures) {
-            this.id = id; this.shortName = shortName; this.name = name; this.url = url; this.startUrl = startUrl; this.disc = disc; this.tips = tips;
+        final boolean textures; // textures: Texturas HD (os dois NFSU2: nfsu2.xyz e o Modded)
+        Game(String id, String shortName, String name, String url, String startUrl, String disc, boolean textures) {
+            this.id = id; this.shortName = shortName; this.name = name; this.url = url; this.startUrl = startUrl; this.disc = disc;
             this.textures = textures;
         }
         String host() { return Uri.parse(url).getHost(); }
@@ -113,7 +111,7 @@ public class MainActivity extends Activity {
             for (int i = 0; i < a.length(); i++) {
                 JSONObject g = a.getJSONObject(i);
                 list[i] = new Game(g.getString("id"), g.getString("short"), g.getString("name"), g.getString("url"),
-                        g.optString("startUrl", g.getString("url")), g.getString("disc"), g.optBoolean("tips"),
+                        g.optString("startUrl", g.getString("url")), g.getString("disc"),
                         g.optBoolean("textures", "nfsu2".equals(g.getString("id"))));
             }
             if (list.length > 0) GAMES = list;
@@ -135,7 +133,6 @@ public class MainActivity extends Activity {
     private FrameLayout root;
     private WebView home;
     private boolean homeGone;          // a página da tela inicial foi fechada pelo Android e precisa ser refeita
-    private GuideView guide;           // guia aberto dentro do app (fora do jogo)
     private String pendingGame = null; // START esperando a volta da tela de permissão
     private final Handler ui = new Handler(Looper.getMainLooper());
     private boolean resumed;
@@ -146,7 +143,6 @@ public class MainActivity extends Activity {
     private int updatePct = 0;
     private AtomicBoolean updateCancel = null;
     private long updateCheckedAt = 0;
-    private boolean askingOverlay;     // foi aos ajustes dar a permissão da bolha
     // Texturas: lista publicada, download em andamento (um por vez, numa fila) e o último erro.
     private Map<String, Textures.Offer> texOffer = null;
     private String texOfferStatus = "";  // loading, ok, error
@@ -190,13 +186,12 @@ public class MainActivity extends Activity {
 
     /**
      * Uma vez por mudança de padrão (pedido do Bruno, 08/11): "Preparar o jogo ao carregar" ligada para todos, inclusive
-     * quem tinha desmarcado; a bolha deixa de ser pedida no START: fica ligada só para quem já tinha dado a permissão.
+     * quem tinha desmarcado; sem bolha desde 11/11.
      * As texturas que vinham no APK (até a 1.6.4 de teste) saem: agora são baixadas pelo app.
      */
     private void migrate() {
         if (prefs.getInt("prefsVersion", 0) >= 2) return;
         SharedPreferences.Editor e = prefs.edit().putBoolean("prepareGame", true);
-        if (!prefs.contains("bubble")) e.putBoolean("bubble", Settings.canDrawOverlays(this));
         e.remove("overlayAsked").putInt("prefsVersion", 2).commit(); // commit: o motor lê este arquivo em outro processo
     }
 
@@ -207,7 +202,7 @@ public class MainActivity extends Activity {
         handleIntent(intent);
     }
 
-    /** O jogo pediu para voltar: com erro (o motor manda o código) ou "Reiniciar o jogo" (bolha). */
+    /** O jogo pediu para voltar: com erro (o motor manda o código) ou "Reiniciar o jogo". */
     private void handleIntent(Intent i) {
         if (i == null) return;
         if (AppUpdate.ACTION_INSTALLED.equals(i.getAction())) { installResult(i); i.setAction(null); return; }
@@ -305,19 +300,11 @@ public class MainActivity extends Activity {
         super.onResume();
         resumed = true;
         immersive();
-        stopService(new Intent(this, BubbleService.class)); // voltou ao app: a bolha só existe durante o jogo
         // A tela inicial está na frente: nenhum jogo pode ficar rodando por trás (menos o que acabou de ser aberto,
         // enquanto a tela dele ainda está entrando).
         if (SystemClock.uptimeMillis() - launchedAt > 5000) closeGame(this, getTaskId());
         home.onResume();
         home.evaluateJavascript("window.audioOn && audioOn(true); window.showHome && showHome()", null);
-        if (askingOverlay) {
-            askingOverlay = false;
-            boolean ok = Settings.canDrawOverlays(this);
-            prefs.edit().putBoolean("bubble", ok).commit();
-            toast(ok ? tr("Bolha ligada: ela aparece por cima do jogo.", "Bubble on: it shows over the game.")
-                     : tr("Sem a permissão, a bolha fica desligada.", "Without the permission, the bubble stays off."));
-        }
         if (pendingGame != null) { String g = pendingGame; pendingGame = null; launchGame(g); }
         refreshHome();
         // Quedas que o Android anotou enquanto o jogo rodava (CrashLog): lidas fora da tela, sem atrasar a volta.
@@ -779,7 +766,6 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (guide != null) { closeGuide(); return; }
         home.evaluateJavascript("window.goBack ? goBack() : 'exit'", v -> { if ("\"exit\"".equals(v)) finish(); });
     }
 
@@ -836,7 +822,6 @@ public class MainActivity extends Activity {
         try {
             o.put("lang", lang());
             o.put("game", prefs.getString("game", DEFAULT_GAME));
-            o.put("bubble", bubbleOn());
             o.put("sounds", true); // sempre ligados, como no PC, mesmo para quem tinha desligado
             o.put("prepareGame", prefs.getBoolean("prepareGame", true));
             o.put("hdTextures", prefs.getBoolean("hdTextures", true));
@@ -852,7 +837,7 @@ public class MainActivity extends Activity {
             for (Game g : GAMES) {
                 JSONObject j = new JSONObject();
                 j.put("id", g.id); j.put("short", g.shortName); j.put("name", g.name);
-                j.put("disc", g.disc); j.put("tips", g.tips); j.put("textures", g.textures);
+                j.put("disc", g.disc); j.put("textures", g.textures);
                 arr.put(j);
                 JSONObject c = new JSONObject();
                 c.put("bg", customFile(g.id, "bg").exists());
@@ -886,12 +871,10 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> home.evaluateJavascript("window.refresh && refresh()", null));
         }
         @JavascriptInterface public void setOption(String key, boolean on) {
-            if ("bubble".equals(key) && on && !Settings.canDrawOverlays(MainActivity.this)) { runOnUiThread(MainActivity.this::askOverlay); return; }
-            if (!"bubble".equals(key) && !"prepareGame".equals(key) && !"hdTextures".equals(key)) return;
+            if (!"prepareGame".equals(key) && !"hdTextures".equals(key)) return;
             prefs.edit().putBoolean(key, on).commit(); // commit: o processo do jogo lê este arquivo ao abrir
             runOnUiThread(MainActivity.this::refreshHome);
         }
-        @JavascriptInterface public void setFont(double f) { prefs.edit().putFloat("font", (float) f).apply(); }
         @JavascriptInterface public void checkUpdate() { runOnUiThread(MainActivity.this::checkUpdate); }
         @JavascriptInterface public void openUpdates() { runOnUiThread(MainActivity.this::openUpdates); }
         @JavascriptInterface public void downloadUpdate() { runOnUiThread(MainActivity.this::downloadUpdate); }
@@ -941,10 +924,6 @@ public class MainActivity extends Activity {
                 return "data:image/" + ("bg".equals(kind) ? "jpeg" : "png") + ";base64," + Base64.encodeToString(b, Base64.NO_WRAP);
             } catch (IOException e) { return ""; }
         }
-        @JavascriptInterface public void openGuide(String id) {
-            if (id == null || !id.matches("^[gt]\\d{1,2}$")) return;
-            runOnUiThread(() -> openGuideInApp(id));
-        }
         @JavascriptInterface public void quit() {
             runOnUiThread(() -> { closeGame(MainActivity.this, getTaskId()); finishAndRemoveTask(); });
         }
@@ -975,31 +954,8 @@ public class MainActivity extends Activity {
                 .show();
     }
 
-    /** A bolha só pede a permissão quando o jogador a liga (pedido do Bruno, 08/11). */
-    private void askOverlay() {
-        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(tr("Bolha de dicas", "Tips bubble"))
-                .setMessage(tr("Para mostrar a bolha (guia, reiniciar e voltar ao início) por cima do jogo, o Android pede a permissão "
-                                + "\"Sobrepor a outros apps\". Ligue para o NFS Launcher e volte. Em celulares Xiaomi, ligue "
-                                + "também \"Exibir janelas pop-up enquanto executa em segundo plano\".",
-                        "To show the bubble (guide, restart and back to home) over the game, Android asks for the \"Display over "
-                                + "other apps\" permission. Turn it on for NFS Launcher and come back."))
-                .setPositiveButton(tr("Permitir", "Allow"), (d, w) -> {
-                    try {
-                        askingOverlay = true;
-                        startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
-                    } catch (ActivityNotFoundException e) { askingOverlay = false; toast(tr("Não deu para abrir os ajustes.", "Could not open the settings.")); }
-                })
-                .setNegativeButton(tr("Agora não", "Not now"), (d, w) -> refreshHome())
-                .setOnCancelListener(d -> refreshHome())
-                .show();
-    }
-
-    private boolean bubbleOn() { return prefs.getBoolean("bubble", false) && Settings.canDrawOverlays(this); }
-
     private void launchGame(String id) {
         Game g = gameOf(id);
-        closeGuide();
         // A tela de carregar do motor lê estes valores em outro processo: precisam estar no arquivo antes de abrir.
         prefs.edit().putString("game", g.id).putString("gameName", g.name).commit();
         home.evaluateJavascript("window.showLoading && showLoading('" + g.id + "')", null);
@@ -1007,9 +963,6 @@ public class MainActivity extends Activity {
         boolean wasOpen = closeGame(this, getTaskId());
         pauseDownloads(); // durante o jogo, nada baixa (continua depois de onde parou)
         root.postDelayed(() -> {
-            if (bubbleOn()) {
-                startService(new Intent(this, BubbleService.class).putExtra(BubbleService.EXTRA_TIPS, g.tips));
-            }
             // Texturas HD (os dois NFSU2): com o jogo fechado, monta o pacote com a escolha atual (só se mudou) e liga (ou
             // desfaz) o mapa detalhado no settings.ini de cada um, por onde elas entram. O motor abre o pacote ao começar
             // (patch 0005). Antes de abrir qualquer jogo, as pastas novas do navegador ficam com o jogo anterior
@@ -1069,38 +1022,10 @@ public class MainActivity extends Activity {
     }
 
     private void motorFailed() {
-        stopService(new Intent(this, BubbleService.class));
         home.evaluateJavascript("window.showHome && showHome()", null);
         toast(tr("Não consegui abrir o jogo. Feche o app e tente de novo.", "Could not open the game. Close the app and try again."));
     }
 
-    // ───────────────────────── Guia dentro do app ─────────────────────────
-    private void openGuideInApp(String id) {
-        closeGuide();
-        guide = new GuideView(this, new GuideView.Host() {
-            @Override public void dragBy(float dx, float dy) {
-                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) guide.getLayoutParams();
-                lp.leftMargin = GuideView.inside(lp.leftMargin + (int) dx, lp.width, root.getWidth());
-                lp.topMargin = GuideView.inside(lp.topMargin + (int) dy, lp.height, root.getHeight());
-                guide.setLayoutParams(lp);
-            }
-            @Override public void closeGuide() { MainActivity.this.closeGuide(); }
-            @Override public void resize(int w, int h) { // A+/A−: a caixa acompanha a escala e continua na tela
-                if (guide == null) return;
-                FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) guide.getLayoutParams();
-                lp.width = w; lp.height = h;
-                lp.leftMargin = GuideView.inside(lp.leftMargin, w, root.getWidth());
-                lp.topMargin = GuideView.inside(lp.topMargin, h, root.getHeight());
-                guide.setLayoutParams(lp);
-            }
-        }, id);
-        int[] size = GuideView.size(this); // ~1/6 da tela na escala padrão; o texto rola dentro
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size[0], size[1], Gravity.TOP | Gravity.START);
-        lp.leftMargin = (root.getWidth() - size[0]) / 2;
-        lp.topMargin = (int) dp(60);
-        root.addView(guide, lp);
-    }
-    private void closeGuide() { if (guide != null) { root.removeView(guide); guide = null; } }
 
     @Override
     protected void onDestroy() {

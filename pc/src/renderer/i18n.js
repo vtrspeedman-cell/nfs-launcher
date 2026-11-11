@@ -4,7 +4,6 @@
 // data-t (conteúdo), data-tt (dica do mouse, "title") e data-ta (rótulo de acessibilidade).
 // Os textos são constantes deste arquivo (nada vindo de fora), então podem ter <b>, <i> e <small>.
 const EN = {
-  cTipsT: 'Tips (Ctrl+Alt+I)', cTipsA: 'Tips',
   cFsA: 'Toggle fullscreen',
   cHomeT: 'Back to home (closes the game)', cHomeA: 'Back to home',
   cReloadA: 'Reload the game',
@@ -49,7 +48,6 @@ const EN = {
   escBack: 'Esc also goes back',
   loading: 'Loading the game…',
   errTitle: 'Could not load the game', errRetry: 'Trying to reconnect automatically every 5 seconds.',
-  fontDown: 'Smaller text', fontUp: 'Larger text',
   retry: 'Try now', dnsTry: 'Try with secure DNS', exitProt: 'Leave protected mode', quitApp: 'Close the app',
   hCustom: 'Customization',
   customNote: 'Replace the home screen <b>background</b> and the <b>cover</b> (the disc) of each game with a PNG or JPG image from your PC. The cover is round: the app uses the middle square of the image. “Default” goes back to the original image.',

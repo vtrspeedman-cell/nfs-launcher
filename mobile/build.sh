@@ -51,7 +51,7 @@ for p in "$HERE"/patches/*.patch; do
 done
 # Ícones do NFS Motor (gerados no Windows por make-icons.ps1) por cima dos do Chromium.
 cp -r "$HERE"/res/. chrome/android/java/res_chromium_base/
-# App único: tela inicial, bolha e guia do NFS Launcher dentro do motor (chrome/android/nfs).
+# App único: tela inicial do NFS Launcher dentro do motor (chrome/android/nfs).
 python3 "$HERE/app/setup.py"
 
 log "4/6 configuração"
