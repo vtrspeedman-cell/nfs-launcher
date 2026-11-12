@@ -23,6 +23,8 @@ const DEFAULTS = Object.freeze({
   hdTextures: true,         // texturas melhores do NFSU2 (pacote do instalador e pasta de mods). Vale ao iniciar ou recarregar o jogo
   texUiPrev: null,          // linha "ui_textures" que o app trocou no settings.ini do jogo (gameSettings.js); null = não trocou
   texUiPrevMod: null,       // o mesmo, no settings.ini do NFSU2 Modded (pasta de dados própria)
+  texRoadPrev: null,        // linha "road_textures" que o app trocou (Estradas mais nítidas sai com as Texturas HD)
+  texRoadPrevMod: null,
   texParts: {},             // ordem dos mods de cada parte das texturas (texPack.js), ex.: { asfalto: ['nextgen', 'redux'], ceu: [] }; vazio = padrão
   dx11GameMin: false,       // gráficos do jogo no mínimo ainda por fazer (entrou no modo DirectX 11; gameSettings.minGraphics)
   dx11GameMinMod: false,    // o mesmo, no NFSU2 Modded (feito à parte: ele pode ser aberto pela 1ª vez bem depois)
@@ -72,7 +74,7 @@ function sanitize(raw) {
   if (Object.hasOwn(SECURE_DNS, r.secureDns)) out.secureDns = r.secureDns;
   if (Number.isInteger(r.crewInvites) && r.crewInvites >= 0) out.crewInvites = Math.min(r.crewInvites, 99);
   out.texParts = require('./texPack').sanitizeChoice(r.texParts);
-  for (const k of ['texUiPrev', 'texUiPrevMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && !/[\r\n]/.test(r[k])) out[k] = r[k];
+  for (const k of ['texUiPrev', 'texUiPrevMod', 'texRoadPrev', 'texRoadPrevMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && !/[\r\n]/.test(r[k])) out[k] = r[k];
   // Caminho do registry.txt: só pastas e nomes simples, dentro da pasta de dados do jogo.
   for (const k of ['gameReg', 'gameRegMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && /^[\w-]+([\\/][\w.-]+)*$/.test(r[k]) && !r[k].includes('..')) out[k] = r[k];
   // NFSU2 Modded (09/11): quem já estava no modo DirectX 11 recebe os gráficos mínimos nele também, uma vez.

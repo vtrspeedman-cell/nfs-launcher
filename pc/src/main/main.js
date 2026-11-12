@@ -283,6 +283,7 @@ const gameFsRoot = (partition = PARTITION) => path.join(app.getPath('userData'),
 const savesDirOf = (id) => (GAMES[id].savesDir ? path.join(saveCopyDir(), GAMES[id].savesDir) : saveCopyDir());
 // O que o app guarda por jogo nas preferências: a linha que trocou no settings.ini e o "gráficos no mínimo" a fazer.
 const TEX_PREV_KEY = { nfsu2: 'texUiPrev', nfsu2mod: 'texUiPrevMod' };
+const ROAD_PREV_KEY = { nfsu2: 'texRoadPrev', nfsu2mod: 'texRoadPrevMod' }; // "Estradas mais nítidas" desligada pelo app
 const DX11_MIN_KEY = { nfsu2: 'dx11GameMin', nfsu2mod: 'dx11GameMinMod' };
 
 // Texturas HD (gameSettings.js): com a opção ligada, deixa "ui_textures = map" no settings.ini do jogo, para o pacote
@@ -297,15 +298,17 @@ async function texturesSettingAtStart() {
   const notes = [];
   for (const id of TEX_GAMES) {
     const key = TEX_PREV_KEY[id];
+    const roadKey = ROAD_PREV_KEY[id];
     texUiOnBy[id] = true;
-    if (SAFE_MODE || !key || (!hasPack && cfg[key] === null)) continue;
+    if (SAFE_MODE || !key || (!hasPack && cfg[key] === null && cfg[roadKey] === null)) continue;
     const on = cfg.hdTextures && hasPack;
     try {
-      const r = await gameSettings.run({ root: gameFsRoot(GAMES[id].partition), backupDir: savesDirOf(id), on, prev: cfg[key] });
+      const r = await gameSettings.run({ root: gameFsRoot(GAMES[id].partition), backupDir: savesDirOf(id), on, prev: cfg[key], prevRoad: cfg[roadKey] });
       // Só pede para reabrir quando reabrir resolve: com o mapa escolhido pelo jogador ou sem achar o arquivo certo, não.
       texUiOnBy[id] = !!r.uiOn || (!!r.why && r.why !== 'sem settings.ini');
       notes.push(`settings.ini do ${GAMES[id].short}: ${r.changed ? (on ? `"${gameSettings.UI_LINE}" gravada` : 'linha do app desfeita') : 'sem mudança'}${r.why ? ` (${r.why})` : ''}`);
-      if (r.prev !== cfg[key]) { cfg = { ...cfg, [key]: r.prev }; saveCfg(); }
+      if (r.roadChanged) notes.push(`settings.ini do ${GAMES[id].short}: ${on ? `"${gameSettings.ROAD_LINE}" gravada` : 'estradas do jogo devolvidas'}`);
+      if (r.prev !== cfg[key] || r.prevRoad !== cfg[roadKey]) { cfg = { ...cfg, [key]: r.prev, [roadKey]: r.prevRoad }; saveCfg(); }
     } catch (e) {
       notes.push(`settings.ini do ${GAMES[id].short}: não deu para conferir (${e && e.message})`);
     }

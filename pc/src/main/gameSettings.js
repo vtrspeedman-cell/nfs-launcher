@@ -44,25 +44,53 @@ function plan(text, { on, prev = null }) {
   return { text: lines.join(nl), prev: null, changed: true, uiOn: false }; // o app só troca o que estava em original
 }
 
-// Acha o settings.ini do NFSU2 (pelo começo do arquivo, como a cópia do save) e aplica o plano.
+// "Estradas mais nítidas" (aba Mods do jogo, 12/11): troca as texturas das estradas e briga com as Texturas HD. Com elas
+// ligadas, o app grava "road_textures = off" (no PC o jogo liga sozinho; linha ausente = ligada); desligadas, devolve a
+// linha que trocou, só se ela continua "off". Mesmas regras da linha do mapa.
+const ROAD_LINE = 'road_textures = off';
+const ROAD_KEY = /^\s*road_textures\s*=\s*([^\s#;]*)/i;
+const OFF = /^(off|0|false|no)$/;
+function planRoad(text, { on, prev = null }) {
+  const nl = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.split(/\r?\n/);
+  const i = lines.findIndex((l) => active(l) && ROAD_KEY.test(l));
+  const off = i >= 0 && OFF.test(ROAD_KEY.exec(lines[i])[1].toLowerCase());
+  if (on) {
+    if (off) return { text, prev, changed: false };
+    const before = i >= 0 ? lines[i] : '';
+    if (i >= 0) lines[i] = ROAD_LINE;
+    else {
+      while (lines.length && lines[lines.length - 1] === '') lines.pop();
+      lines.push(ROAD_LINE, '');
+    }
+    return { text: lines.join(nl), prev: before, changed: true };
+  }
+  if (prev === null || prev === undefined || !off) return { text, prev: null, changed: false };
+  if (prev) lines[i] = prev; else lines.splice(i, 1);
+  return { text: lines.join(nl), prev: null, changed: true };
+}
+
+// Acha o settings.ini do NFSU2 (pelo começo do arquivo, como a cópia do save) e aplica os dois planos.
 // Desiste sem escrever se achar mais de um, se não achar, ou se a procura passar de budgetMs.
-async function run({ root, backupDir, on, prev = null, budgetMs = 3000 }) {
+async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs = 3000 }) {
   const t0 = Date.now();
   const late = () => Date.now() - t0 > budgetMs;
   const found = [];
   for (const f of await saveCopy.listFiles(root)) {
     if (f.size < 20 || f.size > 200000) continue;
-    if (late()) return { prev, uiOn: false, why: 'demorou' };
+    if (late()) return { prev, prevRoad, uiOn: false, why: 'demorou' };
     let head;
     try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
     if (saveCopy.kindOf(head) === 'settings.ini') found.push(f.path);
   }
-  if (found.length !== 1) return { prev, uiOn: false, why: found.length ? 'mais de um settings.ini' : 'sem settings.ini' };
+  if (found.length !== 1) return { prev, prevRoad, uiOn: false, why: found.length ? 'mais de um settings.ini' : 'sem settings.ini' };
   const file = found[0];
   const text = await fsp.readFile(file, 'latin1'); // byte a byte: o resto do arquivo volta igual
-  const p = plan(text, { on, prev });
+  const ui = plan(text, { on, prev });
+  const road = planRoad(ui.text, { on, prev: prevRoad });
+  const p = { ...ui, text: road.text, prevRoad: road.prev, roadChanged: road.changed, changed: ui.changed || road.changed };
   if (!p.changed) return { ...p, text: undefined };
-  if (late()) return { prev, uiOn: false, why: 'demorou' };
+  if (late()) return { prev, prevRoad, uiOn: false, why: 'demorou' };
   await fsp.mkdir(backupDir, { recursive: true });
   await fsp.writeFile(path.join(backupDir, BACKUP), text, 'latin1');
   // Grava ao lado da cópia e troca de uma vez: um arquivo pela metade nunca fica no lugar do settings.ini.
@@ -162,4 +190,4 @@ function gameAaSync(root, rel) {
   } catch { return null; }
 }
 
-module.exports = { plan, run, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };
+module.exports = { plan, planRoad, ROAD_LINE, run, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };

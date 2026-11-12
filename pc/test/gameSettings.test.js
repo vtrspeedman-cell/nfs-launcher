@@ -61,12 +61,12 @@ test('Texturas HD: grava no lugar, com cópia antes; sem arquivo ou com dois, n�
     put('000/t/00/00000013', 'outro arquivo do jogo');
     const r = await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: true });
     assert.ok(r.changed && r.uiOn);
-    assert.strictEqual(fs.readFileSync(file, 'latin1'), text.replace('original', 'map'));
+    assert.strictEqual(fs.readFileSync(file, 'latin1'), `${text.replace('original', 'map')}road_textures = off\r\n`);
     assert.strictEqual(fs.readFileSync(path.join(bak, gs.BACKUP), 'latin1'), text);
     assert.deepStrictEqual(fs.readdirSync(bak), [gs.BACKUP]); // nada pela metade
     // De novo ligado: nada muda. Desligado com a linha do app: volta ao original.
-    assert.ok(!(await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: true, prev: r.prev })).changed);
-    const off = await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: false, prev: r.prev });
+    assert.ok(!(await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: true, prev: r.prev, prevRoad: r.prevRoad })).changed);
+    const off = await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: false, prev: r.prev, prevRoad: r.prevRoad });
     assert.ok(off.changed);
     assert.strictEqual(fs.readFileSync(file, 'latin1'), text);
     put('001/t/00/00000001', Buffer.from(text, 'latin1'));
@@ -133,4 +133,20 @@ test('anti-serrilhado do jogo: acha o registry.txt, lê direto na abertura segui
   fs.writeFileSync(path.join(dir, '00000009'), 'd g_WorldLodLevel=0\r\nd g_FSAALevel=0\r\n', 'latin1');
   assert.strictEqual(await gs.gameAa({ root }), null, 'dois registry.txt: não escolhe');
   fs.rmSync(root, { recursive: true, force: true });
+});
+
+test('Estradas mais nítidas: Texturas HD desligam; desligar as texturas devolve', () => {
+  for (const t of [`${HEAD}fps = 60\r\n`, `${HEAD}road_textures = on\r\nfps = 60\r\n`]) {
+    const a = gs.planRoad(t, { on: true });
+    assert.ok(a.changed);
+    assert.ok(a.text.includes('road_textures = off'));
+    assert.ok(!gs.planRoad(a.text, { on: true, prev: a.prev }).changed);
+    assert.strictEqual(gs.planRoad(a.text, { on: false, prev: a.prev }).text, t);
+  }
+  // Já desligada pelo jogador: nada muda, e desligar as texturas não liga.
+  const off = `${HEAD}road_textures = off\r\n`;
+  assert.ok(!gs.planRoad(off, { on: true }).changed);
+  assert.ok(!gs.planRoad(off, { on: false, prev: null }).changed);
+  // O jogador religou depois: fica o dele.
+  assert.ok(!gs.planRoad(`${HEAD}road_textures = on\r\n`, { on: false, prev: '' }).changed);
 });
