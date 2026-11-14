@@ -77,7 +77,7 @@ final class SaveCopy {
         return name.matches("[A-Za-z0-9]+") ? name : "Perfil" + (i + 1); // nome estranho: o "Restaurar" do jogo conserta
     }
 
-    private static String kindOf(File f) {
+    static String kindOf(File f) {
         byte[] head = new byte[32];
         int n;
         try (FileInputStream in = new FileInputStream(f)) { n = in.read(head); } catch (IOException e) { return null; }

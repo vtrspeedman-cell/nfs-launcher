@@ -825,6 +825,7 @@ public class MainActivity extends Activity {
             o.put("sounds", true); // sempre ligados, como no PC, mesmo para quem tinha desligado
             o.put("prepareGame", prefs.getBoolean("prepareGame", true));
             o.put("hdTextures", prefs.getBoolean("hdTextures", true));
+            o.put("lightMode", prefs.getBoolean("lightMode", false));
             o.put("tex", texState());
             o.put("crashes", new JSONArray(CrashLog.lines(this, "en".equals(lang()))));
             if (error != null) {
@@ -871,7 +872,7 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> home.evaluateJavascript("window.refresh && refresh()", null));
         }
         @JavascriptInterface public void setOption(String key, boolean on) {
-            if (!"prepareGame".equals(key) && !"hdTextures".equals(key)) return;
+            if (!"prepareGame".equals(key) && !"hdTextures".equals(key) && !"lightMode".equals(key)) return;
             prefs.edit().putBoolean(key, on).commit(); // commit: o processo do jogo lê este arquivo ao abrir
             runOnUiThread(MainActivity.this::refreshHome);
         }
@@ -968,11 +969,16 @@ public class MainActivity extends Activity {
             // (patch 0005). Antes de abrir qualquer jogo, as pastas novas do navegador ficam com o jogo anterior
             // (SaveCopy.launched): é assim que o app sabe qual pasta é de qual NFSU2.
             Context app = getApplicationContext();
-            boolean want = prefs.getBoolean("hdTextures", true);
+            // Modo leve (igual ao PC 3.0.18): desliga as Texturas HD e põe o jogo no mínimo uma vez. As duas mexem em
+            // road_textures: ligado, vem depois (fica desligada); desligado, vem antes.
+            boolean light = prefs.getBoolean("lightMode", false);
+            boolean want = prefs.getBoolean("hdTextures", true) && !light;
             new Thread(() -> {
                 if (g.textures) {
+                    if (!light) GameSettings.light(app, false);
                     if (want) Textures.build(app);
                     GameSettings.run(app, want && Textures.ready(app));
+                    if (light) GameSettings.light(app, true);
                 }
                 SaveCopy.launched(app, g.id);
                 ui.post(() -> launchInMotor(g));

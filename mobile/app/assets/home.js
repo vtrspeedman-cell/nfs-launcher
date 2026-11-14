@@ -245,6 +245,9 @@
     $('s-prepareGame').checked = !!st.prepareGame;
     $('s-prepareGame-l').textContent = t('Preparar o jogo ao carregar: otimiza o jogo todo no início, não durante a corrida. Pesa mais nos primeiros segundos e pode reduzir engasgos depois',
       'Prepare the game while loading: optimizes the whole game at the start, not during the race. Heavier in the first seconds and may reduce stutters later');
+    $('s-lightMode').checked = !!st.lightMode;
+    $('s-lightMode-l').textContent = t('Modo leve: para celular fraco ou FPS baixo. Põe tudo no mínimo, uma vez: no jogo, todas as opções de Options > Display no mínimo, resolução em 50%, até 16 carros de outros jogadores, faróis só no seu carro e sem filtro anisotrópico; desliga dano de batida, rebaixamento, peças nos outros carros, vinis HQ, estradas mais nítidas, dia, skate e skatista, gráficos no máximo em jogo salvo novo e proporções 3D corrigidas. No app, desliga as Texturas HD. Depois, vá subindo os gráficos e as melhorias no próprio jogo, olhando o FPS: o que você religar fica. Desligando, volta como estava o que você não mudou',
+      'Light mode: for weak phones or low FPS. Sets everything to the minimum, once: in the game, every Options > Display setting at the minimum, 50% resolution, up to 16 other players’ cars, headlights only on your car and no anisotropic filtering; turns off crash damage, stance, parts on other cars, HQ vinyls, sharper roads, daytime, skateboard and skater, max graphics on new saves and fixed 3D proportions. In the app, turns off HD Textures. Then raise the graphics and enhancements in the game itself, watching the FPS: whatever you turn back on stays. Turning it off brings back what you did not change');
     renderTextures();
     $('set-maint-h').textContent = t('Manutenção', 'Maintenance');
     $('maint-note').textContent = t('Limpar o cache fica nos ajustes do Android, em Armazenamento, e não toca nos seus saves. Atenção: nunca use “Limpar dados” ali: ele apaga o login, as configurações e os saves do jogo neste app.',
@@ -350,7 +353,7 @@
   $('e-retry').onclick = () => api.retry();
   $('e-dns').onclick = () => api.trySecureDns();
   $('e-home').onclick = () => api.clearError();
-  for (const key of ['prepareGame', 'hdTextures']) {
+  for (const key of ['prepareGame', 'hdTextures', 'lightMode']) {
     $(`s-${key}`).onchange = (e) => {
       api.setOption(key, e.target.checked);
       toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.'));
