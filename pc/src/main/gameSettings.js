@@ -107,6 +107,7 @@ async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs
 const LIGHT = Object.freeze({
   crash_damage: 'off', stance: 'off', others_mod_parts: 'original', hq_vinyls: 'off',
   road_textures: 'off', daytime: 'off', skateboard: 'off', show_offcar: 'off',
+  seed_registry: 'off', fov_scale: 'original',
 });
 const LIGHT_BACKUP = 'settings.ini-antes-do-modo-leve.txt';
 const LIGHT_REG_BACKUP = 'registry.txt-antes-do-modo-leve.txt';
