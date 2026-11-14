@@ -372,8 +372,7 @@ async function lightAuto(avg) {
     type: 'warning', buttons: [tr('Desfazer', 'Undo'), tr('OK', 'OK'), tr('Reabrir o app', 'Reopen the app')], defaultId: 2, cancelId: 1, noLink: true,
     title: tr('Modo leve', 'Light mode'),
     message: tr(`FPS baixo (média de ${avg}). O modo leve foi ligado.`, `Low FPS (average ${avg}). Light mode was turned on.`),
-    detail: tr('Ele desliga os mods mais pesados do jogo e o anti-serrilhado, e liga as opções de desempenho. Para valer por completo, reabra o app: antes, vá para a garagem e salve o jogo, ou o progresso que não foi salvo será perdido. Dá para desligar em Configurações > Desempenho.',
-      'It turns off the game\'s heaviest mods and anti-aliasing, and turns on the performance options. To fully apply it, reopen the app: first go to the garage and save the game, or unsaved progress will be lost. You can turn it off in Settings > Performance.'),
+    detail: `${lightWhat()}\n\n${tr('Para valer, reabra o app: antes, vá para a garagem e salve o jogo, ou o progresso que não foi salvo será perdido.', 'To apply it, reopen the app: first go to the garage and save the game, or unsaved progress will be lost.')}`,
   });
   if (response === 0) {
     cfg = { ...cfg };
@@ -1055,10 +1054,15 @@ async function askLightRestart() {
     title: tr('Modo leve', 'Light mode'),
     message: on ? tr('Modo leve ligado. Reabra o app para desligar os mods pesados do jogo.', 'Light mode on. Reopen the app to turn off the game\'s heavy mods.')
       : tr('Modo leve desligado. Reabra o app para devolver os mods do jogo.', 'Light mode off. Reopen the app to bring back the game\'s mods.'),
-    detail: tr('Vá para a garagem e salve o jogo antes: o progresso que não foi salvo será perdido.',
-      'Go to the garage and save the game first: progress that was not saved will be lost.'),
+    detail: `${on ? `${lightWhat()}\n\n` : ''}${tr('Vá para a garagem e salve o jogo antes: o progresso que não foi salvo será perdido.',
+      'Go to the garage and save the game first: progress that was not saved will be lost.')}`,
   });
   if (response === 1) relaunchApp();
+}
+// O que o modo leve muda, para o jogador saber e poder desfazer (mesma lista do LIGHT do gameSettings.js).
+function lightWhat() {
+  return tr('No jogo: resolução em 50%, até 16 carros de outros jogadores, faróis só no seu carro, sem filtro anisotrópico e sem anti-serrilhado 4x; desliga dano de batida, rebaixamento, peças nos outros carros, vinis HQ, estradas mais nítidas, dia, skate e skatista, gráficos no máximo em jogo salvo novo e proporções 3D corrigidas. No app: desliga Texturas HD, FXAA e pacote de imagem, e liga as opções que aliviam o processador.\n\nPara desfazer, desmarque Modo leve em Configurações > Desempenho e reabra o app: tudo volta como estava.',
+    'In the game: 50% resolution, up to 16 other players\' cars, headlights only on your car, no anisotropic filtering and no 4x anti-aliasing; turns off crash damage, stance, parts on other cars, HQ vinyls, sharper roads, daytime, skateboard and skater, highest graphics for a new save and corrected 3D proportions. In the app: turns off HD Textures, FXAA and the image pack, and turns on the options that ease the processor.\n\nTo undo it, uncheck Light mode in Settings > Performance and reopen the app: everything goes back as it was.');
 }
 async function askTexturesRestart(partChanged = false) {
   if (!modsOn) return;

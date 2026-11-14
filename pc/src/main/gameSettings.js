@@ -108,6 +108,9 @@ const LIGHT = Object.freeze({
   crash_damage: 'off', stance: 'off', others_mod_parts: 'original', hq_vinyls: 'off',
   road_textures: 'off', daytime: 'off', skateboard: 'off', show_offcar: 'off',
   seed_registry: 'off', fov_scale: 'original',
+  // Desempenho (como o próprio jogo faz no celular): metade da resolução, 16 carros de jogadores, faróis só no seu
+  // carro e sem filtro anisotrópico.
+  render: 'scale:0.5', roam_max_cars: '16', other_headlights: 'off', anisotropic: 'off',
 });
 const LIGHT_BACKUP = 'settings.ini-antes-do-modo-leve.txt';
 const LIGHT_REG_BACKUP = 'registry.txt-antes-do-modo-leve.txt';
