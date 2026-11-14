@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.17",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.17/NFS-Launcher-Setup-3.0.17.exe",
-  "tamanho": 105626883,
-  "sha256": "d7da0d7facbe5dfe6718eba99dc2d2b88a30a4a1e2b3f7d12059d4b38224efda",
+  "versao": "3.0.18",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.18/NFS-Launcher-Setup-3.0.18.exe",
+  "tamanho": 105628198,
+  "sha256": "0439baf1263c1b1341253133a11ae77881b525a6e4eb791511835f6bf6fb58f2",
   "novidades": {
-    "pt": "Modo leve mais leve: além dos mods pesados, põe a resolução em 50%, até 16 carros de outros jogadores, faróis só no seu carro, sem filtro anisotrópico, e desliga Gráficos no máximo e Proporções 3D. O aviso mostra tudo o que muda e como desfazer.",
-    "en": "Lighter light mode: besides the heavy mods, it sets 50% resolution, up to 16 other players’ cars, headlights only on your car, no anisotropic filtering, and turns off highest graphics and 3D proportions. The warning lists everything that changes and how to undo it."
+    "pt": "Modo leve agora põe tudo no mínimo uma vez, inclusive os gráficos do jogo (Options > Display). Depois, vá subindo os gráficos e as melhorias no próprio jogo, olhando o FPS no F8: o que você religar fica. Desligar o modo leve devolve o que você não mudou.",
+    "en": "Light mode now sets everything to minimum once, including the game’s graphics (Options > Display). Then raise graphics and enhancements in the game itself while watching FPS on F8: what you turn back on stays. Turning light mode off restores what you didn’t change."
   }
 }
