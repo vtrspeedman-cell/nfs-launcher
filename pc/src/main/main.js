@@ -235,7 +235,7 @@ function buildState() {
       startFullscreen: cfg.startFullscreen, showHome: cfg.showHome, protectFullscreen: cfg.protectFullscreen,
       blockAltSpace: cfg.blockAltSpace, highPriority: cfg.highPriority, showCorner: cfg.showCorner,
       toggleCombo: cfg.toggleCombo, exitCombo: cfg.exitCombo, lang: cfg.lang, game: cfg.game,
-      prepareGame: cfg.prepareGame, lighterGpu: cfg.lighterGpu, unblockGpu: cfg.unblockGpu, newDrawing: cfg.newDrawing, antiAlias: cfg.antiAlias, imageFilter: cfg.imageFilter, imageMode: cfg.imageMode, hdTextures: cfg.hdTextures, sounds: cfg.sounds, discord: cfg.discord,
+      prepareGame: cfg.prepareGame, lighterGpu: cfg.lighterGpu, unblockGpu: cfg.unblockGpu, newDrawing: cfg.newDrawing, antiAlias: cfg.antiAlias, imageFilter: cfg.imageFilter, imageMode: cfg.imageMode, hdTextures: cfg.hdTextures, lightMode: cfg.lightMode, sounds: cfg.sounds, discord: cfg.discord,
     },
     customRev, custom: customFlags(),   // quais jogos têm fundo/capa próprios (as imagens vêm por custom:get)
     update: updateInfo,
@@ -1046,6 +1046,20 @@ async function askReloadGame() {
 }
 // Texturas melhores ligadas ou desligadas (botão da barra ou Configurações): só valem quando o jogo carrega de novo.
 // Com o NFSU2 aberto, pergunta se reinicia agora, lembrando de salvar na garagem.
+// Modo leve marcado à mão: os mods do jogo só mudam ao abrir o app (com o jogo fechado), então pergunta se reabre.
+async function askLightRestart() {
+  if (SAFE_MODE) return;
+  const on = cfg.lightMode;
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'info', buttons: [tr('Depois', 'Later'), tr('Reabrir o app', 'Reopen the app')], defaultId: 1, cancelId: 0, noLink: true,
+    title: tr('Modo leve', 'Light mode'),
+    message: on ? tr('Modo leve ligado. Reabra o app para desligar os mods pesados do jogo.', 'Light mode on. Reopen the app to turn off the game\'s heavy mods.')
+      : tr('Modo leve desligado. Reabra o app para devolver os mods do jogo.', 'Light mode off. Reopen the app to bring back the game\'s mods.'),
+    detail: tr('Vá para a garagem e salve o jogo antes: o progresso que não foi salvo será perdido.',
+      'Go to the garage and save the game first: progress that was not saved will be lost.'),
+  });
+  if (response === 1) relaunchApp();
+}
 async function askTexturesRestart(partChanged = false) {
   if (!modsOn) return;
   const on = cfg.hdTextures;
@@ -1483,6 +1497,7 @@ function registerIpc() {
     if (key === 'imageFilter' || key === 'imageMode' || key === 'antiAlias' || key === 'unblockGpu' || key === 'lightMode') applyImageFilter(); // DX11 e modo leve desligam o filtro
     refresh();
     if (key === 'hdTextures') askTexturesRestart();
+    if (key === 'lightMode') askLightRestart();
     return { ok: true };
   });
   // Janela de texturas (botão "Texturas HD" da barra e Configurações > Texturas): volta para onde estava.

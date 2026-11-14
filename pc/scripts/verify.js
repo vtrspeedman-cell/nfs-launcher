@@ -74,6 +74,11 @@ check('Nomes em MAIÚSCULAS declarados antes de usar (erro da 2.0.4)', () => {
   }
   assert(!faltando.length, `usados mas não declarados: ${[...new Set(faltando)].join(', ')}`);
 });
+check('Caixas das Configurações recebem o valor (buildState)', () => {
+  const ui = read('src/renderer/ui.js').match(/const BOOLS = \[([^\]]+)\]/)[1].match(/'(\w+)'/g).map((s) => s.slice(1, -1));
+  const st = read('src/main/main.js').match(/function buildState\(\)[\s\S]*?settings: \{([\s\S]*?)\n    \},/)[1];
+  for (const k of ui) assert(new RegExp(`\\b${k}: cfg\\.${k}\\b`).test(st), `buildState sem ${k} (a caixa volta desmarcada)`);
+});
 check('Arquivos referenciados pela interface existem', () => {
   const html = read('src/renderer/ui.html');
   for (const m of html.matchAll(/(?:src|href)="([^"#]+)"/g)) assert(fs.existsSync(path.join(p('src/renderer'), m[1])), `não encontrado: ${m[1]}`);
