@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.14",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.14/NFS-Launcher-Setup-3.0.14.exe",
-  "tamanho": 105624021,
-  "sha256": "41a607177beba590a625556e73af8468bbb434fa334bca89e62f15e3d238d978",
+  "versao": "3.0.15",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.15/NFS-Launcher-Setup-3.0.15.exe",
+  "tamanho": 105627589,
+  "sha256": "70b81cb4c099487c529627238c3ee6a68e4b6c44d4dc642771bd25c2c954b384",
   "novidades": {
-    "pt": "Com as Texturas HD ligadas, o app desliga a opção \"Estradas mais nítidas\" do jogo (aba Mods), que trocava as estradas das texturas. Desligando as Texturas HD, ela volta como estava.",
-    "en": "With HD Textures on, the app turns off the game's \"Sharper roads\" option (Mods tab), which replaced the textures' roads. Turning HD Textures off puts it back as it was."
+    "pt": "Modo leve em Configurações > Desempenho: desliga os mods mais pesados do jogo, o anti-serrilhado e as opções de imagem, e desfaz ao desligar. Se o FPS ficar abaixo de 30 por 1 minuto, o app liga sozinho e avisa, com a opção de desfazer.",
+    "en": "Light mode in Settings > Performance: turns off the game's heaviest mods, anti-aliasing and image options, and undoes it when turned off. If FPS stays below 30 for 1 minute, the app turns it on by itself and tells you, with an undo option."
   }
 }

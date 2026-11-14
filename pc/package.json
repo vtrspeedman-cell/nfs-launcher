@@ -1,7 +1,7 @@
 {
   "name": "nfsu2-launcher",
   "productName": "NFS Launcher",
-  "version": "3.0.14",
+  "version": "3.0.15",
   "description": "Cliente dedicado (não oficial) para NFSU2 (nfsu2.xyz), NFSMW (web.nfsmwo.com) e NFSC (nfscrb.xyz) com WebGPU, tela cheia protegida e atualização automática pelo GitHub, para Windows 10 e 11",
   "main": "src/main/main.js",
   "author": "NFS Launcher",
