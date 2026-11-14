@@ -42,6 +42,7 @@ const DEFAULTS = Object.freeze({
   game: 'nfsu2',            // último jogo iniciado (vem selecionado na tela inicial; 1ª vez: NFSU2)
   crewInvites: 0,           // quantas vezes o START abriu com o convite da equipe (config.CREW_MAX)
   lightMode: false,         // modo leve: mods pesados e anti-serrilhado do jogo desligados (gameSettings.lightMode)
+  lightAuto: false,         // o FPS baixo já ligou (ou ofereceu) o modo leve uma vez (fpsWatch.js)
 });
 const { GAME_IDS, SECURE_DNS } = require('./config');
 const { MODE_IDS } = require('./imageFilter');
@@ -49,7 +50,7 @@ const LANGS = ['pt', 'en'];
 const USER_BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures', 'lightMode'];
 // Sempre ligadas e fora das configurações (pedido do Bruno): vale também para quem tinha desligado antes.
 const ALWAYS_ON = ['showHome', 'protectFullscreen', 'blockAltSpace', 'showCorner', 'sounds', 'discord'];
-const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod'];
+const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod', 'lightAuto'];
 const OPACITY = (v, d) => (Number.isFinite(v) && v >= 0.3 && v <= 1 ? Math.round(v * 100) / 100 : d);
 
 function sanitizeLightPrev(v) {

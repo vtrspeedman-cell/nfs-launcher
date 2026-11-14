@@ -31,6 +31,7 @@ const modFiles = require('./modFiles');
 const cacheClean = require('./cacheClean');
 const texPack = require('./texPack');
 const gameSettings = require('./gameSettings');
+const fpsWatch = require('./fpsWatch');
 
 // ───────────────────────── Argumentos de linha de comando ─────────────────────────
 const argv = process.argv.slice(1);
@@ -333,6 +334,53 @@ async function lightModeAtStart() {
     }
   }
   lightNote = notes.join('; ');
+}
+// FPS baixo (fpsWatch.js): só no NFSU2/Modded, com o modo leve desligado e uma vez só (cfg.lightAuto), seja qual
+// for a resposta. Liga o modo leve, avisa que vale ao reabrir o app e oferece "Desfazer".
+let fpsTimer = null;
+function fpsWatchStart(wc) {
+  clearInterval(fpsTimer); fpsTimer = null;
+  const id = currentGame;
+  if (SAFE_MODE || cfg.lightMode || cfg.lightAuto || !LIGHT_PREV_KEY[id]) return;
+  const w = fpsWatch.watcher();
+  const t0 = Date.now();
+  let last = 0;
+  const timer = fpsTimer = setInterval(async () => {
+    const stop = () => { clearInterval(timer); if (fpsTimer === timer) fpsTimer = null; };
+    if (wc.isDestroyed() || currentGame !== id || cfg.lightMode || cfg.lightAuto) return stop();
+    if (Date.now() - t0 < fpsWatch.WARMUP_MS) return;
+    let r = null;
+    try { r = await wc.executeJavaScriptInIsolatedWorld(fpsWatch.WORLD, [{ code: last ? fpsWatch.readCode : fpsWatch.startCode }]); }
+    catch { return; }
+    const now = Date.now(), ms = last ? now - last : 0;
+    last = now;
+    if (!r || fpsTimer !== timer) return;
+    const onScreen = screen === 'none' && win && win.isVisible() && !win.isMinimized();
+    const avg = w.add(r.n, ms, r.vis && onScreen);
+    if (avg !== null) { stop(); lightAuto(avg); }
+  }, fpsWatch.SAMPLE_MS);
+}
+async function lightAuto(avg) {
+  const before = cfg;
+  const r = settings.applyChange(cfg, 'lightMode', true);
+  if (!r.ok) return;
+  const changed = Object.keys(r.cfg).filter((k) => r.cfg[k] !== before[k]);
+  cfg = { ...r.cfg, lightAuto: true };
+  saveCfg(); applyPriority(); applyImageFilter(); refresh();
+  modLog(`FPS baixo (média ${avg} em 1 minuto): modo leve ligado sozinho`);
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning', buttons: [tr('Desfazer', 'Undo'), tr('OK', 'OK'), tr('Reabrir o app', 'Reopen the app')], defaultId: 2, cancelId: 1, noLink: true,
+    title: tr('Modo leve', 'Light mode'),
+    message: tr(`FPS baixo (média de ${avg}). O modo leve foi ligado.`, `Low FPS (average ${avg}). Light mode was turned on.`),
+    detail: tr('Ele desliga os mods mais pesados do jogo e o anti-serrilhado, e liga as opções de desempenho. Para valer por completo, reabra o app: antes, vá para a garagem e salve o jogo, ou o progresso que não foi salvo será perdido. Dá para desligar em Configurações > Desempenho.',
+      'It turns off the game\'s heaviest mods and anti-aliasing, and turns on the performance options. To fully apply it, reopen the app: first go to the garage and save the game, or unsaved progress will be lost. You can turn it off in Settings > Performance.'),
+  });
+  if (response === 0) {
+    cfg = { ...cfg };
+    for (const k of changed) cfg[k] = before[k];
+    saveCfg(); applyPriority(); applyImageFilter(); refresh();
+    modLog('modo leve desfeito pelo jogador');
+  } else if (response === 2) relaunchApp();
 }
 // Modo DirectX 11 (pedido do Bruno, 08/11): uma vez, com o jogo fechado, os gráficos do próprio jogo vão ao mínimo
 // (registry.txt, gameSettings.minGraphics). Sem o arquivo ainda (jogo nunca aberto), tenta na próxima abertura.
@@ -1309,7 +1357,7 @@ function wireGameContents(wc) {
     endLoading();         // volta direto para a partida
   });
   wc.on('dom-ready', () => { if (mine()) endLoading(); });
-  wc.on('dom-ready', () => { if (mine()) { imageCssKey = null; applyImageFilter(); } });
+  wc.on('dom-ready', () => { if (mine()) { imageCssKey = null; applyImageFilter(); fpsWatchStart(wc); } });
 
   wc.on('did-fail-load', (_e, code, _desc, _url, isMainFrame) => {
     if (!isMainFrame || !mine()) return;
