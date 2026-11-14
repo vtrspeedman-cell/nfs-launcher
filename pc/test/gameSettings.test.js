@@ -173,15 +173,23 @@ test('modo leve: desliga os mods pesados e devolve só o que o app trocou', () =
   assert.equal(gs.planLight(a.text, { on: false, prev: a.prev }).text, ini);
 });
 
-test('modo leve: anti-serrilhado do jogo vai a 0 e volta', () => {
-  const reg = 'd g_FSAALevel=4\r\nd g_FogEnable=1\r\n';
+test('modo leve: gráficos do jogo no mínimo uma vez e voltam', () => {
+  const reg = 'd g_FSAALevel=4\r\nd g_FogEnable=1\r\nd g_Outra=7\r\n';
   const a = gs.planLightReg(reg, { on: true });
-  assert.equal(a.prev, '4');
+  assert.equal(a.prev.reg.g_FSAALevel, '4');
+  assert.equal(a.prev.reg.g_RainEnable, '');
   assert.match(a.text, /^d g_FSAALevel=0\r$/m);
+  assert.match(a.text, /^d g_FogEnable=0\r$/m);
+  assert.match(a.text, /^d g_RainEnable=0\r$/m);
   assert.equal(gs.planLightReg(a.text, { on: false, prev: a.prev }).text, reg);
-  assert.equal(gs.planLightReg(reg, { on: true, prev: a.prev }).changed, false);
-  assert.equal(gs.planLightReg(reg, { on: true, prev: '-' }).changed, false);
-  assert.equal(gs.planLightReg('d g_FSAALevel=4294967295\n', { on: true }).changed, false);
+  // o jogador religou a neblina no jogo: fica ligada com o modo leve e ao desligar
+  const up = a.text.replace('g_FogEnable=0', 'g_FogEnable=1');
+  assert.equal(gs.planLightReg(up, { on: true, prev: a.prev }).changed, false);
+  assert.match(gs.planLightReg(up.replace('g_FSAALevel=0', 'g_FSAALevel=2'), { on: false, prev: a.prev }).text, /g_FSAALevel=2\r\nd g_FogEnable=1\r\nd g_Outra=7/);
+  // quem vinha da 3.0.15–17 (só o anti-serrilhado zerado): recebe o mínimo e o 4x volta ao desligar
+  const b = gs.planLightReg('d g_FSAALevel=0\n', { on: true, prev: '4' });
+  assert.equal(b.prev.reg.g_FSAALevel, '4');
+  assert.equal(gs.planLightReg('d g_FSAALevel=0\n', { on: true, prev: '-' }).changed, true);
   assert.equal(gs.planLightReg('d g_FSAALevel=2\n', { on: false, prev: '4' }).changed, false);
 });
 

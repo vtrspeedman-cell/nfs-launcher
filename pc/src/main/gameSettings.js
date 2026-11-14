@@ -145,14 +145,31 @@ function planLight(text, { on, prev = null }) {
 }
 // Anti-serrilhado 4x do jogo (registry.txt): ligado vira 0; ao desligar o modo leve, volta o número de antes se ainda é 0.
 const FSAA_LINE = /^d g_FSAALevel=(\d+)(\r?)$/im;
+// Desde a 3.0.18: as 22 opções de Options > Display também vão ao mínimo (MIN_GRAPHICS), uma vez. prev = objeto
+// {reg: {nome: 'valor de antes' | '' (não havia)}}; texto ('-' ou número) = só o anti-serrilhado, das 3.0.15 a 3.0.17.
 function planLightReg(text, { on, prev = null }) {
-  const m = FSAA_LINE.exec(text);
+  const reg = prev && typeof prev === 'object' ? prev.reg : null;
   if (on) {
-    // Uma vez só ("-" = já visto, estava desligado): se o jogador religar no jogo, fica o dele.
-    if (prev !== null && prev !== undefined) return { text, prev, changed: false };
-    if (!m || !gameAaOn(text)) return { text, prev: '-', changed: false };
-    return { text: text.replace(FSAA_LINE, `d g_FSAALevel=0${m[2]}`), prev: prev ?? m[1], changed: true };
+    if (reg) return { text, prev, changed: false };
+    const old = {};
+    const seen = new Map();
+    text.replace(DWORD, (_l, name, v) => { seen.set(name.toLowerCase(), v); return _l; });
+    for (const k of Object.keys(MIN_GRAPHICS)) old[k] = seen.get(k.toLowerCase()) ?? '';
+    if (typeof prev === 'string' && /^\d+$/.test(prev)) old.g_FSAALevel = prev; // a 3.0.15–17 já tinha zerado
+    const p = minGraphicsText(text);
+    return { text: p.text, prev: { reg: old }, changed: p.changed };
   }
+  if (reg) {
+    const nl = text.includes('\r\n') ? '\r\n' : '\n';
+    let out = text.replace(DWORD, (line, name, v, cr) => {
+      const k = Object.keys(MIN_GRAPHICS).find((x) => x.toLowerCase() === name.toLowerCase());
+      if (!k || !(k in reg) || String(MIN_GRAPHICS[k]) !== v) return line; // o jogador mudou: fica o dele
+      return reg[k] === '' ? `\u0000${cr}` : `d ${name}=${reg[k]}${cr}`;
+    });
+    out = out.split(nl).filter((l) => !l.startsWith('\u0000')).join(nl);
+    return { text: out, prev: null, changed: out !== text };
+  }
+  const m = FSAA_LINE.exec(text);
   if (prev === null || prev === undefined) return { text, prev: null, changed: false };
   if (!m || m[1] !== '0' || !/^\d+$/.test(prev)) return { text, prev: null, changed: false };
   return { text: text.replace(FSAA_LINE, `d g_FSAALevel=${prev}${m[2]}`), prev: null, changed: true };

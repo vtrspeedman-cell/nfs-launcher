@@ -59,7 +59,13 @@ function sanitizeLightPrev(v) {
   const line = (x) => typeof x === 'string' && x.length <= 200 && !/[\r\n]/.test(x);
   let ini = null;
   if (v.ini && typeof v.ini === 'object') for (const k of Object.keys(LIGHT)) if (line(v.ini[k])) (ini ||= {})[k] = v.ini[k];
-  const aa = typeof v.aa === 'string' && /^(\d{1,10}|-)$/.test(v.aa) ? v.aa : null;
+  let aa = typeof v.aa === 'string' && /^(\d{1,10}|-)$/.test(v.aa) ? v.aa : null;
+  if (v.aa && typeof v.aa === 'object' && v.aa.reg && typeof v.aa.reg === 'object') {
+    const { MIN_GRAPHICS } = require('./gameSettings');
+    const reg = {};
+    for (const k of Object.keys(MIN_GRAPHICS)) { const x = v.aa.reg[k]; if (typeof x === 'string' && /^\d{0,10}$/.test(x)) reg[k] = x; }
+    aa = { reg };
+  }
   return ini || aa !== null ? { ini, aa } : null;
 }
 function sanitizeBounds(b, minW = 640, minH = 360) {
