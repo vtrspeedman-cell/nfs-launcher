@@ -1,12 +1,12 @@
 --- PT ---
 # 🏁 NFS LAUNCHER
-**NFSU2, NFSU2 Modded, Most Wanted e Carbon com cara de jogo instalado, no PC e no celular.** Os mesmos jogos dos sites de fãs, sem navegador em volta. Grátis, em português e inglês.
+**Need for Speed Underground 2 com cara de jogo instalado, no PC e no celular**, incluindo a versão Modded, com mais carros. O mesmo jogo do site de fãs, sem navegador em volta. Grátis, em português e inglês.
 
 ## Por que usar
 🚀 **Mais leve que o navegador:** motor próprio no PC, treinado jogando o próprio jogo. Sem abas nem extensões disputando o PC.
 ⌨️ **Teclas só do jogo:** Ctrl+W não fecha, F5 não recarrega, Alt+Espaço não abre o menu do Windows.
-💾 **Save seguro:** limpar o navegador não apaga nada, e o app guarda cópia automática do NFSU2.
-🎨 **Texturas HD no NFSU2:** TexWizard, Redux, Definitive e NextGen; dá para misturar partes de cada uma.
+💾 **Save seguro:** limpar o navegador não apaga nada, e o app guarda cópia automática do save.
+🎨 **Texturas HD:** TexWizard, Redux, Definitive e NextGen; dá para misturar partes de cada uma.
 ✨ **Pacotes de imagem e FXAA** (PC): Vívido, Neon, Cinema, Nítido e outros, trocando na hora.
 🐢 **PC fraco:** modo leve que liga sozinho com FPS baixo, e DirectX 11 automático em placa antiga.
 🔄 **Atualiza sozinho**, sem perder login nem save, e limpa as cópias velhas que o jogo deixa no disco.
@@ -24,13 +24,13 @@ Android 1.6.9: `A21AF2022E58EFB337DEC63D7AE25E83DA7A57222306FDC31756083831380163
 @everyone Testa, manda para os amigos e dá uma moral, é nois! 🤝
 --- EN ---
 # 🏁 NFS LAUNCHER
-**NFSU2, NFSU2 Modded, Most Wanted and Carbon as an installed game, on PC and Android.** The same fan-site games, no browser around them. Free, in English and Portuguese.
+**Need for Speed Underground 2 as an installed game, on PC and Android**, including the Modded version with extra cars. The same fan-site game, no browser around it. Free, in English and Portuguese.
 
 ## Why use it
 🚀 **Lighter than a browser:** our own PC engine, trained by playing the game itself. No tabs or extensions eating your PC.
 ⌨️ **Keys belong to the game:** Ctrl+W doesn't close, F5 doesn't reload, Alt+Space doesn't open the Windows menu.
-💾 **Safe saves:** clearing your browser deletes nothing, and the app keeps an automatic NFSU2 copy.
-🎨 **HD textures in NFSU2:** TexWizard, Redux, Definitive and NextGen; mix parts from each.
+💾 **Safe saves:** clearing your browser deletes nothing, and the app keeps an automatic save copy.
+🎨 **HD textures:** TexWizard, Redux, Definitive and NextGen; mix parts from each.
 ✨ **Image packs and FXAA** (PC): Vivid, Neon, Cinema, Sharp and more, switched instantly.
 🐢 **Low-end PC:** light mode that turns on by itself on low FPS, and automatic DirectX 11 on older GPUs.
 🔄 **Updates itself**, keeping your login and saves, and clears the old copies the game leaves on disk.
