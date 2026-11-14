@@ -59,7 +59,7 @@ function sanitizeLightPrev(v) {
   const line = (x) => typeof x === 'string' && x.length <= 200 && !/[\r\n]/.test(x);
   let ini = null;
   if (v.ini && typeof v.ini === 'object') for (const k of Object.keys(LIGHT)) if (line(v.ini[k])) (ini ||= {})[k] = v.ini[k];
-  const aa = typeof v.aa === 'string' && /^\d{1,10}$/.test(v.aa) ? v.aa : null;
+  const aa = typeof v.aa === 'string' && /^(\d{1,10}|-)$/.test(v.aa) ? v.aa : null;
   return ini || aa !== null ? { ini, aa } : null;
 }
 function sanitizeBounds(b, minW = 640, minH = 360) {

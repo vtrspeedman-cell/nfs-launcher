@@ -126,8 +126,10 @@ function planLight(text, { on, prev = null }) {
     const i = lines.findIndex((l) => active(l) && re.test(l));
     const has = i >= 0 && isVal(re.exec(lines[i])[1], want);
     if (on) {
+      // Aplica uma vez só: chave já anotada = o app já passou por ela; se o jogador religou no jogo, fica o dele.
+      if (k in out) continue;
+      out[k] = i >= 0 ? lines[i] : '';
       if (has) continue;
-      if (!(k in out)) out[k] = i >= 0 ? lines[i] : '';
       if (i >= 0) lines[i] = `${k} = ${want}`;
       else {
         while (lines.length && lines[lines.length - 1] === '') lines.pop();
@@ -146,7 +148,9 @@ const FSAA_LINE = /^d g_FSAALevel=(\d+)(\r?)$/im;
 function planLightReg(text, { on, prev = null }) {
   const m = FSAA_LINE.exec(text);
   if (on) {
-    if (!m || !gameAaOn(text)) return { text, prev, changed: false };
+    // Uma vez só ("-" = já visto, estava desligado): se o jogador religar no jogo, fica o dele.
+    if (prev !== null && prev !== undefined) return { text, prev, changed: false };
+    if (!m || !gameAaOn(text)) return { text, prev: '-', changed: false };
     return { text: text.replace(FSAA_LINE, `d g_FSAALevel=0${m[2]}`), prev: prev ?? m[1], changed: true };
   }
   if (prev === null || prev === undefined) return { text, prev: null, changed: false };

@@ -159,8 +159,11 @@ test('modo leve: desliga os mods pesados e devolve só o que o app trocou', () =
   assert.match(a.text, /^open_tunnel = on\r$/m);
   assert.match(a.text, /^others_mod_parts = original\r$/m);
   assert.equal(a.prev.crash_damage, 'crash_damage = on');
-  assert.ok(!('skateboard' in a.prev));
+  assert.equal(a.prev.skateboard, 'skateboard = off');
   assert.equal(gs.planLight(a.text, { on: true, prev: a.prev }).changed, false);
+  // Modo leve ainda ligado e o jogador religou opções no jogo: ao reabrir o app, ficam as dele.
+  const religou = a.text.replace('crash_damage = off', 'crash_damage = on').replace('skateboard = off', 'skateboard = on');
+  assert.equal(gs.planLight(religou, { on: true, prev: a.prev }).changed, false);
   // O jogador religou o dano no jogo: fica o dele.
   const mexido = a.text.replace('crash_damage = off', 'crash_damage = on');
   const b = gs.planLight(mexido, { on: false, prev: a.prev });
@@ -176,6 +179,8 @@ test('modo leve: anti-serrilhado do jogo vai a 0 e volta', () => {
   assert.equal(a.prev, '4');
   assert.match(a.text, /^d g_FSAALevel=0\r$/m);
   assert.equal(gs.planLightReg(a.text, { on: false, prev: a.prev }).text, reg);
+  assert.equal(gs.planLightReg(reg, { on: true, prev: a.prev }).changed, false);
+  assert.equal(gs.planLightReg(reg, { on: true, prev: '-' }).changed, false);
   assert.equal(gs.planLightReg('d g_FSAALevel=4294967295\n', { on: true }).changed, false);
   assert.equal(gs.planLightReg('d g_FSAALevel=2\n', { on: false, prev: '4' }).changed, false);
 });
