@@ -100,6 +100,93 @@ async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs
   return { ...p, text: undefined, file };
 }
 
+// ───────────── Modo leve (pedido do Bruno, 14/11) ─────────────
+// Desliga os mods do jogo que pesam (aba Mods) e o anti-serrilhado 4x dele. Túnel, garagem e HUD ficam como estão (não
+// mudam o FPS). Uma linha por opção no settings.ini (vale por cima do preset). Guarda a linha de antes de cada uma que
+// trocou; ao desligar, devolve só as que continuam com o valor do app.
+const LIGHT = Object.freeze({
+  crash_damage: 'off', stance: 'off', others_mod_parts: 'original', hq_vinyls: 'off',
+  road_textures: 'off', daytime: 'off', skateboard: 'off', show_offcar: 'off',
+});
+const LIGHT_BACKUP = 'settings.ini-antes-do-modo-leve.txt';
+const LIGHT_REG_BACKUP = 'registry.txt-antes-do-modo-leve.txt';
+const keyRe = (k) => new RegExp(`^\\s*${k}\\s*=\\s*([^\\s#;]*)`, 'i');
+const isVal = (got, want) => (want === 'off' ? OFF.test(got.toLowerCase()) : got.toLowerCase() === want);
+function planLight(text, { on, prev = null }) {
+  const nl = text.includes('\r\n') ? '\r\n' : '\n';
+  const lines = text.split(/\r?\n/);
+  const out = { ...(prev || {}) };
+  let changed = false;
+  for (const [k, want] of Object.entries(LIGHT)) {
+    const re = keyRe(k);
+    const i = lines.findIndex((l) => active(l) && re.test(l));
+    const has = i >= 0 && isVal(re.exec(lines[i])[1], want);
+    if (on) {
+      if (has) continue;
+      if (!(k in out)) out[k] = i >= 0 ? lines[i] : '';
+      if (i >= 0) lines[i] = `${k} = ${want}`;
+      else {
+        while (lines.length && lines[lines.length - 1] === '') lines.pop();
+        lines.push(`${k} = ${want}`, '');
+      }
+      changed = true;
+    } else if (k in out) {
+      if (has) { if (out[k]) lines[i] = out[k]; else lines.splice(i, 1); changed = true; }
+      delete out[k];
+    }
+  }
+  return { text: lines.join(nl), prev: Object.keys(out).length ? out : null, changed };
+}
+// Anti-serrilhado 4x do jogo (registry.txt): ligado vira 0; ao desligar o modo leve, volta o número de antes se ainda é 0.
+const FSAA_LINE = /^d g_FSAALevel=(\d+)(\r?)$/im;
+function planLightReg(text, { on, prev = null }) {
+  const m = FSAA_LINE.exec(text);
+  if (on) {
+    if (!m || !gameAaOn(text)) return { text, prev, changed: false };
+    return { text: text.replace(FSAA_LINE, `d g_FSAALevel=0${m[2]}`), prev: prev ?? m[1], changed: true };
+  }
+  if (prev === null || prev === undefined) return { text, prev: null, changed: false };
+  if (!m || m[1] !== '0' || !/^\d+$/.test(prev)) return { text, prev: null, changed: false };
+  return { text: text.replace(FSAA_LINE, `d g_FSAALevel=${prev}${m[2]}`), prev: null, changed: true };
+}
+async function writeWithBackup(file, before, after, backupDir, name) {
+  await fsp.mkdir(backupDir, { recursive: true });
+  await fsp.writeFile(path.join(backupDir, name), before, 'latin1');
+  const tmp = path.join(backupDir, `${name}.novo`);
+  await fsp.writeFile(tmp, after, 'latin1');
+  await fsp.rename(tmp, file);
+}
+// prev = { ini: {chave: linha}, aa: 'número' } ou null. Arquivo que falta (jogo nunca aberto) fica para a próxima abertura.
+async function lightMode({ root, backupDir, on, prev = null, budgetMs = 3000 }) {
+  const t0 = Date.now();
+  const found = { 'settings.ini': [], 'registry.txt': [] };
+  for (const f of await saveCopy.listFiles(root)) {
+    if (f.size < 20 || f.size > 200000) continue;
+    if (Date.now() - t0 > budgetMs) return { prev, changed: false, why: 'demorou' };
+    let head;
+    try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
+    const kind = saveCopy.kindOf(head);
+    if (found[kind]) found[kind].push(f.path);
+  }
+  const next = { ini: prev?.ini || null, aa: prev?.aa ?? null };
+  let changed = false;
+  if (found['settings.ini'].length === 1) {
+    const file = found['settings.ini'][0];
+    const text = await fsp.readFile(file, 'latin1');
+    const p = planLight(text, { on, prev: next.ini });
+    if (p.changed) { await writeWithBackup(file, text, p.text, backupDir, LIGHT_BACKUP); changed = true; }
+    next.ini = p.prev;
+  }
+  if (found['registry.txt'].length === 1) {
+    const file = found['registry.txt'][0];
+    const text = await fsp.readFile(file, 'latin1');
+    const p = planLightReg(text, { on, prev: next.aa });
+    if (p.changed) { await writeWithBackup(file, text, p.text, backupDir, LIGHT_REG_BACKUP); changed = true; }
+    next.aa = p.prev;
+  }
+  return { prev: next.ini || next.aa !== null ? next : null, changed };
+}
+
 // ───────────── Modo DirectX 11: gráficos do jogo no mínimo (pedido do Bruno, 08/11) ─────────────
 // As opções de Options > Display ficam no registry.txt do jogo, uma por linha ("d g_Nome=valor", como no próprio
 // código do jogo: phonegraphics.ts). Ao entrar no modo DirectX 11 (placa fraca ou antiga), o app as põe no mínimo uma
@@ -190,4 +277,4 @@ function gameAaSync(root, rel) {
   } catch { return null; }
 }
 
-module.exports = { plan, planRoad, ROAD_LINE, run, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };
+module.exports = { plan, planRoad, ROAD_LINE, run, LIGHT, planLight, planLightReg, lightMode, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };

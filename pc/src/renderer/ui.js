@@ -2,7 +2,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const api = window.launcher;
-  const BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures'];
+  const BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures', 'lightMode'];
   let state = null;
   let capturingFor = null;
   let gpuResult = null;

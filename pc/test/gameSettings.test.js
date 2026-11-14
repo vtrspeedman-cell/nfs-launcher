@@ -150,3 +150,42 @@ test('Estradas mais nítidas: Texturas HD desligam; desligar as texturas devolve
   // O jogador religou depois: fica o dele.
   assert.ok(!gs.planRoad(`${HEAD}road_textures = on\r\n`, { on: false, prev: '' }).changed);
 });
+
+test('modo leve: desliga os mods pesados e devolve só o que o app trocou', () => {
+  const ini = 'render = scale:1\r\ncrash_damage = on\r\nopen_tunnel = on\r\nskateboard = off\r\n';
+  const a = gs.planLight(ini, { on: true });
+  assert.ok(a.changed);
+  assert.match(a.text, /^crash_damage = off\r$/m);
+  assert.match(a.text, /^open_tunnel = on\r$/m);
+  assert.match(a.text, /^others_mod_parts = original\r$/m);
+  assert.equal(a.prev.crash_damage, 'crash_damage = on');
+  assert.ok(!('skateboard' in a.prev));
+  assert.equal(gs.planLight(a.text, { on: true, prev: a.prev }).changed, false);
+  // O jogador religou o dano no jogo: fica o dele.
+  const mexido = a.text.replace('crash_damage = off', 'crash_damage = on');
+  const b = gs.planLight(mexido, { on: false, prev: a.prev });
+  assert.equal(b.prev, null);
+  assert.match(b.text, /^crash_damage = on\r$/m);
+  assert.doesNotMatch(b.text, /daytime|others_mod_parts|hq_vinyls/);
+  assert.equal(gs.planLight(a.text, { on: false, prev: a.prev }).text, ini);
+});
+
+test('modo leve: anti-serrilhado do jogo vai a 0 e volta', () => {
+  const reg = 'd g_FSAALevel=4\r\nd g_FogEnable=1\r\n';
+  const a = gs.planLightReg(reg, { on: true });
+  assert.equal(a.prev, '4');
+  assert.match(a.text, /^d g_FSAALevel=0\r$/m);
+  assert.equal(gs.planLightReg(a.text, { on: false, prev: a.prev }).text, reg);
+  assert.equal(gs.planLightReg('d g_FSAALevel=4294967295\n', { on: true }).changed, false);
+  assert.equal(gs.planLightReg('d g_FSAALevel=2\n', { on: false, prev: '4' }).changed, false);
+});
+
+test('modo leve: sem arquivos do jogo, não grava nada', async () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'leve-'));
+  try {
+    const r = await gs.lightMode({ root, backupDir: path.join(root, 'bk'), on: true });
+    assert.equal(r.changed, false);
+    assert.equal(r.prev, null);
+    assert.ok(!fs.existsSync(path.join(root, 'bk')));
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

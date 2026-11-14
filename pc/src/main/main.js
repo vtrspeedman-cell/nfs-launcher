@@ -315,6 +315,25 @@ async function texturesSettingAtStart() {
   }
   texUiNote = notes.join('; ');
 }
+// Modo leve (pedido do Bruno, 14/11): mods pesados do jogo e o anti-serrilhado dele desligados (gameSettings.lightMode);
+// desligado, devolve só o que o app trocou e continua como o app deixou.
+const LIGHT_PREV_KEY = { nfsu2: 'lightPrev', nfsu2mod: 'lightPrevMod' };
+let lightNote = '';
+async function lightModeAtStart() {
+  const notes = [];
+  for (const id of TEX_GAMES) {
+    const key = LIGHT_PREV_KEY[id];
+    if (SAFE_MODE || !key || (!cfg.lightMode && !cfg[key])) continue;
+    try {
+      const r = await gameSettings.lightMode({ root: gameFsRoot(GAMES[id].partition), backupDir: savesDirOf(id), on: cfg.lightMode, prev: cfg[key] });
+      notes.push(`modo leve no ${GAMES[id].short}: ${r.changed ? (cfg.lightMode ? 'mods pesados desligados' : 'opções do jogo devolvidas') : 'sem mudança'}${r.why ? ` (${r.why})` : ''}`);
+      if (JSON.stringify(r.prev) !== JSON.stringify(cfg[key])) { cfg = { ...cfg, [key]: r.prev }; saveCfg(); }
+    } catch (e) {
+      notes.push(`modo leve no ${GAMES[id].short}: não deu para conferir (${e && e.message})`);
+    }
+  }
+  lightNote = notes.join('; ');
+}
 // Modo DirectX 11 (pedido do Bruno, 08/11): uma vez, com o jogo fechado, os gráficos do próprio jogo vão ao mínimo
 // (registry.txt, gameSettings.minGraphics). Sem o arquivo ainda (jogo nunca aberto), tenta na próxima abertura.
 // Um pedido por jogo: o NFSU2 Modded pode ser aberto pela 1ª vez bem depois do NFSU2.
@@ -435,6 +454,7 @@ function setupMods() {
   }
   if (SAFE_MODE) { modLog('modo seguro: mods desligados'); return; }
   if (texUiNote) modLog(texUiNote);
+  if (lightNote) modLog(lightNote);
   loadTexSources();
   const mods = allMods();
   modLog(`baixadas em ${texSourcesDir()}, do jogador ${dir}: ${mods.length} arquivo(s)`);
@@ -1411,8 +1431,8 @@ function registerIpc() {
     if (!r.ok) return r;
     cfg = r.cfg;
     saveCfg();
-    if (key === 'highPriority') applyPriority();
-    if (key === 'imageFilter' || key === 'imageMode' || key === 'antiAlias' || key === 'unblockGpu') applyImageFilter(); // DX11 desliga o filtro
+    if (key === 'highPriority' || key === 'lightMode') applyPriority();
+    if (key === 'imageFilter' || key === 'imageMode' || key === 'antiAlias' || key === 'unblockGpu' || key === 'lightMode') applyImageFilter(); // DX11 e modo leve desligam o filtro
     refresh();
     if (key === 'hdTextures') askTexturesRestart();
     return { ok: true };
@@ -1573,7 +1593,11 @@ if (gotLock) {
       app.exit(0);
       return;
     }
-    await texturesSettingAtStart(); // inteiras antes da sessão: as únicas escritas nos dados do jogo
+    // Inteiras antes da sessão: as únicas escritas nos dados do jogo. As duas mexem em road_textures: o modo leve ligado
+    // vem depois (fica desligada); desligado, vem antes (as Texturas HD ligadas a deixam desligada).
+    if (!cfg.lightMode) await lightModeAtStart();
+    await texturesSettingAtStart();
+    if (cfg.lightMode) await lightModeAtStart();
     await dx11MinAtStart();
     await copySaveAtStart();
     gameAaAtStart().catch(() => {}); // só leitura, depois do modo DirectX 11 (que zera o anti-serrilhado do jogo)

@@ -41,16 +41,26 @@ const DEFAULTS = Object.freeze({
   lang: 'pt',               // idioma do app e das dicas ('pt' ou 'en'), escolhido na tela inicial ou nas configurações
   game: 'nfsu2',            // último jogo iniciado (vem selecionado na tela inicial; 1ª vez: NFSU2)
   crewInvites: 0,           // quantas vezes o START abriu com o convite da equipe (config.CREW_MAX)
+  lightMode: false,         // modo leve: mods pesados e anti-serrilhado do jogo desligados (gameSettings.lightMode)
 });
 const { GAME_IDS, SECURE_DNS } = require('./config');
 const { MODE_IDS } = require('./imageFilter');
 const LANGS = ['pt', 'en'];
-const USER_BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures'];
+const USER_BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures', 'lightMode'];
 // Sempre ligadas e fora das configurações (pedido do Bruno): vale também para quem tinha desligado antes.
 const ALWAYS_ON = ['showHome', 'protectFullscreen', 'blockAltSpace', 'showCorner', 'sounds', 'discord'];
 const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod'];
 const OPACITY = (v, d) => (Number.isFinite(v) && v >= 0.3 && v <= 1 ? Math.round(v * 100) / 100 : d);
 
+function sanitizeLightPrev(v) {
+  if (!v || typeof v !== 'object') return null;
+  const { LIGHT } = require('./gameSettings');
+  const line = (x) => typeof x === 'string' && x.length <= 200 && !/[\r\n]/.test(x);
+  let ini = null;
+  if (v.ini && typeof v.ini === 'object') for (const k of Object.keys(LIGHT)) if (line(v.ini[k])) (ini ||= {})[k] = v.ini[k];
+  const aa = typeof v.aa === 'string' && /^\d{1,10}$/.test(v.aa) ? v.aa : null;
+  return ini || aa !== null ? { ini, aa } : null;
+}
 function sanitizeBounds(b, minW = 640, minH = 360) {
   if (!b || typeof b !== 'object') return null;
   const n = (v) => (Number.isFinite(v) ? Math.round(v) : null);
@@ -75,6 +85,8 @@ function sanitize(raw) {
   if (Number.isInteger(r.crewInvites) && r.crewInvites >= 0) out.crewInvites = Math.min(r.crewInvites, 99);
   out.texParts = require('./texPack').sanitizeChoice(r.texParts);
   for (const k of ['texUiPrev', 'texUiPrevMod', 'texRoadPrev', 'texRoadPrevMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && !/[\r\n]/.test(r[k])) out[k] = r[k];
+  // Linhas de antes do modo leve: { ini: {chave: linha}, aa: 'número' }.
+  for (const k of ['lightPrev', 'lightPrevMod']) out[k] = sanitizeLightPrev(r[k]);
   // Caminho do registry.txt: só pastas e nomes simples, dentro da pasta de dados do jogo.
   for (const k of ['gameReg', 'gameRegMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && /^[\w-]+([\\/][\w.-]+)*$/.test(r[k]) && !r[k].includes('..')) out[k] = r[k];
   // NFSU2 Modded (09/11): quem já estava no modo DirectX 11 recebe os gráficos mínimos nele também, uma vez.
@@ -115,6 +127,15 @@ function sanitize(raw) {
 const PERF_ON = ['highPriority', 'prepareGame', 'lighterGpu', 'newDrawing', 'antiAlias'];
 const DX11_KEEP = ['highPriority', 'prepareGame', 'lighterGpu'];
 const DX11_OFF = ['hdTextures', 'newDrawing', 'antiAlias', 'imageFilter'];
+// Modo leve (pedido do Bruno, 14/11): desliga o que pesa no app (texturas HD, FXAA, pacote de imagem) e liga o que alivia.
+// O desenho novo fica como está (é mais rápido). Sair do modo não religa nada.
+const LIGHT_OFF = ['hdTextures', 'antiAlias', 'imageFilter'];
+function lightBasic(cfg) {
+  const out = { ...cfg, lightMode: true };
+  for (const k of LIGHT_OFF) out[k] = false;
+  for (const k of DX11_KEEP) out[k] = true;
+  return out;
+}
 function dx11Basic(cfg) {
   const out = { ...cfg, unblockGpu: true, dx11GameMin: true, dx11GameMinMod: true };
   for (const k of DX11_OFF) out[k] = false;
@@ -137,6 +158,7 @@ function applyChange(cfg, key, value) {
   if (USER_BOOLS.includes(key)) {
     if (typeof value !== 'boolean') return { ok: false, error: 'Valor inválido.' };
     if (key === 'unblockGpu' && value && !cfg.unblockGpu) return { ok: true, cfg: dx11Basic(cfg) };
+    if (key === 'lightMode' && value) return { ok: true, cfg: lightBasic(cfg) };
     return { ok: true, cfg: { ...cfg, [key]: value } };
   }
   if (key === 'toggleCombo' || key === 'exitCombo') {
@@ -156,4 +178,4 @@ function applyChange(cfg, key, value) {
   }
   return { ok: false, error: 'Configuração desconhecida.' };
 }
-module.exports = { DEFAULTS, LANGS, sanitize, load, save, applyChange, OPACITY, dx11Basic, DX11_OFF, DX11_KEEP, PERF_ON };
+module.exports = { DEFAULTS, LANGS, sanitize, load, save, applyChange, OPACITY, dx11Basic, DX11_OFF, DX11_KEEP, PERF_ON, LIGHT_OFF, lightBasic };
