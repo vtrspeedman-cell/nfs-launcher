@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.15",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.15/NFS-Launcher-Setup-3.0.15.exe",
-  "tamanho": 105627589,
-  "sha256": "70b81cb4c099487c529627238c3ee6a68e4b6c44d4dc642771bd25c2c954b384",
+  "versao": "3.0.16",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.16/NFS-Launcher-Setup-3.0.16.exe",
+  "tamanho": 105626739,
+  "sha256": "5641e78ff6b265a7d05aff6ca27a089a15df92278b678b55d9296bd7236280f2",
   "novidades": {
-    "pt": "Modo leve em Configurações > Desempenho: desliga os mods mais pesados do jogo, o anti-serrilhado e as opções de imagem, e desfaz ao desligar. Se o FPS ficar abaixo de 30 por 1 minuto, o app liga sozinho e avisa, com a opção de desfazer.",
-    "en": "Light mode in Settings > Performance: turns off the game's heaviest mods, anti-aliasing and image options, and undoes it when turned off. If FPS stays below 30 for 1 minute, the app turns it on by itself and tells you, with an undo option."
+    "pt": "Modo leve corrigido: a caixa continua marcada e o app pergunta se quer reabrir, que é quando os mods pesados do jogo saem (ou voltam).",
+    "en": "Light mode fixed: the box stays checked and the app asks to reopen, which is when the game's heavy mods are turned off (or back on)."
   }
 }
