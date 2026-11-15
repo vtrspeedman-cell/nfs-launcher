@@ -26,6 +26,9 @@ const SITE = 'site'; // mapa detalhado do site: sempre entra (é o que o jogo j�
 
 // Partes, pelo nome da textura no jogo. A primeira que casa vale; "menus" fica com o resto.
 const PARTS = Object.freeze([
+  { id: 'estacionamento', pt: 'Faixas do estacionamento', en: 'Parking lot lines', re: /^RDP_PARKING/,
+    notePt: 'No NextGen as faixas somem. A melhor é a do Definitive; a do TexWizard é a mais parecida com a original.',
+    noteEn: 'With NextGen the lines disappear. Definitive has the best ones; TexWizard is closest to the original.' },
   { id: 'asfalto', pt: 'Asfalto e pistas', en: 'Asphalt and tracks', re: /^(RDP_(?!ROADSTRIP_COBBLE)|SHRM_ROAD$|ARC_CONCFREEWAY$)/ },
   { id: 'calcadas', pt: 'Calçadas e paralelepípedo', en: 'Sidewalks and cobblestone', re: /^(ARC_SIDEWALK|RDP_ROADSTRIP_COBBLE|RDT_|ARC_BOARDWALK|ARC_COURTGD|ARC_PRESSED_CONCRETE|ARC_UC_BOARKWALK)/ },
   { id: 'cenario', pt: 'Prédios, muros e objetos', en: 'Buildings, walls and objects', re: /^(ARC_|ARK_|OBJ_|SGN_|SHRM_(?!SKY$)|SHR_|GRG_|GFE_|CRLOT_|PNT_|PRTSHP_|MARBLEFLOOR|SHADOWRAMP)/ },

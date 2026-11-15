@@ -176,3 +176,15 @@ test('texturas por partes: TexWizard é o padrão onde tem; a escolha do jogador
   assert.equal(unpack(tp.virtualMod(src, saved.texParts)).RDP_ROADSTRIP_MA.data, 'R-ASFALTO');
   assert.deepEqual(s.sanitize({ version: 7, texParts: { asfalto: 'redux' } }).texParts, {}, 'escolha de antes do TexWizard: volta ao padrão uma vez');
 });
+
+test('texturas por partes: faixas do estacionamento são uma parte à parte do asfalto', () => {
+  assert.equal(tp.partOf('RDP_PARKING_WL_AA_KT'), 'estacionamento');
+  assert.equal(tp.partOf('RDP_ROADSTRIP_MA'), 'asfalto');
+  const ent = (name, w) => ({ name, key: name, crc: 1, adler: 1, w, h: w });
+  const src = {
+    nextgen: { entries: [ent('RDP_PARKING_WL_AA_KT', 2048), ent('RDP_ROADSTRIP_MA', 2048)] },
+    definitive: { entries: [ent('RDP_PARKING_WL_AA_KT', 1024), ent('RDP_ROADSTRIP_MA', 1024)] },
+  };
+  const got = Object.fromEntries(tp.choose(src, { asfalto: ['nextgen'], estacionamento: ['definitive'] }).list.map((x) => [x.e.name, x.src]));
+  assert.deepEqual(got, { RDP_PARKING_WL_AA_KT: 'definitive', RDP_ROADSTRIP_MA: 'nextgen' });
+});

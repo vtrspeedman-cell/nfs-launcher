@@ -27,7 +27,8 @@ test('celular: mesmas partes de textura do PC', () => {
   const { PARTS } = require('../src/main/texPack');
   const src = java('Textures');
   const got = [...src.matchAll(/new Part\("(\w+)", "[^"]*", "[^"]*", "((?:[^"\\]|\\.)*)"\)/g)].map((m) => [m[1], m[2].replace(/\\\\/g, '\\')]);
-  assert.deepEqual(got, PARTS.map((p) => [p.id, p.re.source]));
+  // Estacionamento (15/11): só no PC até o Bruno dizer que está pronto.
+  assert.deepEqual(got, PARTS.filter((p) => p.id !== 'estacionamento').map((p) => [p.id, p.re.source]));
 });
 
 test('celular: texturas fora do APK, baixadas pelo app em 1x e 2x, só TexWizard e NextGen', () => {

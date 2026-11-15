@@ -247,7 +247,7 @@ function buildState() {
     texDl: texDlState(),     // o que dá para baixar e o que já está no PC (janela Texturas HD)
     // Partes das texturas (texPack.js): o que cada parte oferece e o que vale agora. null = nenhum mod baixado.
     texParts: texSources ? {
-      parts: texPack.PARTS.map((p) => ({ id: p.id, pt: p.pt, en: p.en, mods: texAvail[p.id] })),
+      parts: texPack.PARTS.map((p) => ({ id: p.id, pt: p.pt, en: p.en, notePt: p.notePt, noteEn: p.noteEn, mods: texAvail[p.id] })),
       mods: texPack.MODS.filter((m) => texSources[m.id]).map((m) => ({ id: m.id, name: m.name })),
       choice: texPack.effectiveChoice(cfg.texParts, texAvail),
     } : null,

@@ -278,6 +278,7 @@
       o.onclick = () => { texDraft.parts[p.id] = []; renderTexScreen(state); };
       group.append(o);
       row.append(group);
+      if (p.notePt) row.append(el('small', 'muted', t(p.notePt, p.noteEn)));
       return row;
     }));
   }

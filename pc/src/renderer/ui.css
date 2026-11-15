@@ -163,6 +163,7 @@ body.windowed .screen, body.windowed .intro { top: 32px; }
 .tex-parts { display: grid; gap: 8px; margin-top: 8px; }
 .tex-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .tex-row > b { min-width: 230px; font-weight: 500; }
+.tex-row > small { flex-basis: 100%; margin-top: -6px; }
 #x-box.dim { opacity: .45; } /* texturas desligadas: as partes ficam apagadas (dá para escolher mesmo assim) */
 /* Personalização: uma linha por jogo, com miniatura do fundo e da capa. */
 .custom-list { display: grid; gap: 10px; margin-top: 8px; }
