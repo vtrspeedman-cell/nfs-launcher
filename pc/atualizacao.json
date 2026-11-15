@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.18",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.18/NFS-Launcher-Setup-3.0.18.exe",
-  "tamanho": 105628198,
-  "sha256": "0439baf1263c1b1341253133a11ae77881b525a6e4eb791511835f6bf6fb58f2",
+  "versao": "3.0.19",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.19/NFS-Launcher-Setup-3.0.19.exe",
+  "tamanho": 105630416,
+  "sha256": "1765cda3c13124734bf62ebde75424c7bf2af801ead4c428d9dc3358c7d8a14e",
   "novidades": {
-    "pt": "Modo leve agora põe tudo no mínimo uma vez, inclusive os gráficos do jogo (Options > Display). Depois, vá subindo os gráficos e as melhorias no próprio jogo, olhando o FPS no F8: o que você religar fica. Desligar o modo leve devolve o que você não mudou.",
-    "en": "Light mode now sets everything to minimum once, including the game’s graphics (Options > Display). Then raise graphics and enhancements in the game itself while watching FPS on F8: what you turn back on stays. Turning light mode off restores what you didn’t change."
+    "pt": "Texturas HD agora usam as estradas mais nítidas do próprio jogo por baixo dos mods, e a opção \"Estradas mais nítidas\" volta a ficar ligada. Parte nova \"Faixas do estacionamento\" (o NextGen apagava as listras), com dica da melhor. Janela de texturas mais organizada, e o app espera mais pelas configurações do jogo em PC mais lento.",
+    "en": "HD Textures now use the game’s own sharper roads underneath the mods, and the \"Sharper roads\" option stays on again. New \"Parking lines\" part (NextGen erased the stripes), with a tip on the best one. Tidier textures window, and the app waits longer for the game’s settings on slower PCs."
   }
 }
