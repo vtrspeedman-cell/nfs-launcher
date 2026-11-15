@@ -44,28 +44,28 @@ function plan(text, { on, prev = null }) {
   return { text: lines.join(nl), prev: null, changed: true, uiOn: false }; // o app só troca o que estava em original
 }
 
-// "Estradas mais nítidas" (aba Mods do jogo, 12/11): troca as texturas das estradas e briga com as Texturas HD. Com elas
-// ligadas, o app grava "road_textures = off" (no PC o jogo liga sozinho; linha ausente = ligada); desligadas, devolve a
-// linha que trocou, só se ela continua "off". Mesmas regras da linha do mapa.
-const ROAD_LINE = 'road_textures = off';
+// "Estradas mais nítidas" (aba Mods do jogo): desde a 3.0.19 entra por baixo das Texturas HD (o modpack vence onde
+// tem textura). Com as texturas ligadas, o app liga a opção se estiver desligada (linha ausente = ligada no PC);
+// desligadas, devolve a linha de antes, só se o estado continua o que o app deixou. prev: linha antes do app
+// (null: o app não trocou; '': não havia linha). Também desfaz o "off" que as versões 3.0.14–3.0.18 gravavam.
+const ROAD_LINE = 'road_textures = on';
 const ROAD_KEY = /^\s*road_textures\s*=\s*([^\s#;]*)/i;
 const OFF = /^(off|0|false|no)$/;
+const roadOff = (line) => !!line && OFF.test(ROAD_KEY.exec(line)[1].toLowerCase());
 function planRoad(text, { on, prev = null }) {
   const nl = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
   const i = lines.findIndex((l) => active(l) && ROAD_KEY.test(l));
-  const off = i >= 0 && OFF.test(ROAD_KEY.exec(lines[i])[1].toLowerCase());
+  const off = i >= 0 && roadOff(lines[i]);
+  const had = prev !== null && prev !== undefined;
   if (on) {
-    if (off) return { text, prev, changed: false };
-    const before = i >= 0 ? lines[i] : '';
-    if (i >= 0) lines[i] = ROAD_LINE;
-    else {
-      while (lines.length && lines[lines.length - 1] === '') lines.pop();
-      lines.push(ROAD_LINE, '');
-    }
+    if (!off) return { text, prev: had ? prev : null, changed: false };
+    const before = had ? prev : lines[i]; // "off" de versão antiga: guarda a linha de antes dela
+    lines[i] = ROAD_LINE;
     return { text: lines.join(nl), prev: before, changed: true };
   }
-  if (prev === null || prev === undefined || !off) return { text, prev: null, changed: false };
+  if (!had || off === roadOff(prev)) return { text, prev: null, changed: false }; // nada do app, ou já está como antes
+  if (i < 0) return { text, prev: null, changed: false };
   if (prev) lines[i] = prev; else lines.splice(i, 1);
   return { text: lines.join(nl), prev: null, changed: true };
 }
@@ -87,9 +87,7 @@ async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs
   const file = found[0];
   const text = await fsp.readFile(file, 'latin1'); // byte a byte: o resto do arquivo volta igual
   const ui = plan(text, { on, prev });
-  // Desde a 3.0.19 as Texturas HD não desligam mais as estradas do jogo (entram por baixo do modpack): só devolve
-  // a linha que uma versão antiga trocou.
-  const road = planRoad(ui.text, { on: false, prev: prevRoad });
+  const road = planRoad(ui.text, { on, prev: prevRoad });
   const p = { ...ui, text: road.text, prevRoad: road.prev, roadChanged: road.changed, changed: ui.changed || road.changed };
   if (!p.changed) return { ...p, text: undefined };
   if (late()) return { prev, prevRoad, uiOn: false, why: 'demorou' };

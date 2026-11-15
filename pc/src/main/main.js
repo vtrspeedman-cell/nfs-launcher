@@ -309,7 +309,7 @@ async function texturesSettingAtStart() {
       // Só pede para reabrir quando reabrir resolve: com o mapa escolhido pelo jogador ou sem achar o arquivo certo, não.
       texUiOnBy[id] = !!r.uiOn || (!!r.why && r.why !== 'sem settings.ini');
       notes.push(`settings.ini do ${GAMES[id].short}: ${r.changed ? (on ? `"${gameSettings.UI_LINE}" gravada` : 'linha do app desfeita') : 'sem mudança'}${r.why ? ` (${r.why})` : ''}`);
-      if (r.roadChanged) notes.push(`settings.ini do ${GAMES[id].short}: estradas do jogo devolvidas`);
+      if (r.roadChanged) notes.push(`settings.ini do ${GAMES[id].short}: "Estradas mais nítidas" do jogo ajustada`);
       if (r.prev !== cfg[key] || r.prevRoad !== cfg[roadKey]) { cfg = { ...cfg, [key]: r.prev, [roadKey]: r.prevRoad }; saveCfg(); }
     } catch (e) {
       notes.push(`settings.ini do ${GAMES[id].short}: não deu para conferir (${e && e.message})`);

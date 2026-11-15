@@ -135,20 +135,27 @@ test('anti-serrilhado do jogo: acha o registry.txt, lê direto na abertura segui
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-test('Estradas mais nítidas: Texturas HD desligam; desligar as texturas devolve', () => {
-  for (const t of [`${HEAD}fps = 60\r\n`, `${HEAD}road_textures = on\r\nfps = 60\r\n`]) {
-    const a = gs.planRoad(t, { on: true });
-    assert.ok(a.changed);
-    assert.ok(a.text.includes('road_textures = off'));
-    assert.ok(!gs.planRoad(a.text, { on: true, prev: a.prev }).changed);
-    assert.strictEqual(gs.planRoad(a.text, { on: false, prev: a.prev }).text, t);
+test('Estradas mais nítidas: Texturas HD ligam; desligar as texturas devolve', () => {
+  const off = `${HEAD}road_textures = off\r\nfps = 60\r\n`;
+  const a = gs.planRoad(off, { on: true });
+  assert.ok(a.changed && a.prev === 'road_textures = off');
+  assert.ok(a.text.includes('road_textures = on'));
+  assert.ok(!gs.planRoad(a.text, { on: true, prev: a.prev }).changed);
+  assert.strictEqual(gs.planRoad(a.text, { on: false, prev: a.prev }).text, off);
+  // Já ligada (ou sem linha): nada muda.
+  for (const t of [`${HEAD}fps = 60\r\n`, `${HEAD}road_textures = on\r\n`]) {
+    const r = gs.planRoad(t, { on: true });
+    assert.ok(!r.changed && r.prev === null);
+    assert.ok(!gs.planRoad(t, { on: false, prev: null }).changed);
   }
-  // Já desligada pelo jogador: nada muda, e desligar as texturas não liga.
-  const off = `${HEAD}road_textures = off\r\n`;
-  assert.ok(!gs.planRoad(off, { on: true }).changed);
-  assert.ok(!gs.planRoad(off, { on: false, prev: null }).changed);
-  // O jogador religou depois: fica o dele.
-  assert.ok(!gs.planRoad(`${HEAD}road_textures = on\r\n`, { on: false, prev: '' }).changed);
+  // O jogador desligou depois: fica o dele.
+  assert.ok(!gs.planRoad(off, { on: false, prev: 'road_textures = off' }).changed);
+  // "off" gravado por versão antiga (prev = linha de antes): ligar mantém o prev; desligar não volta ao off.
+  const old = gs.planRoad(off, { on: true, prev: '' });
+  assert.ok(old.changed && old.prev === '');
+  assert.ok(!gs.planRoad(old.text, { on: false, prev: '' }).changed);
+  const back = gs.planRoad(off, { on: false, prev: 'road_textures = on' });
+  assert.ok(back.changed && back.text.includes('road_textures = on'));
 });
 
 test('modo leve: desliga os mods pesados e devolve só o que o app trocou', () => {
