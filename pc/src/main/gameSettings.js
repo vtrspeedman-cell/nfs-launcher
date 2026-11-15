@@ -70,19 +70,30 @@ function planRoad(text, { on, prev = null }) {
   return { text: lines.join(nl), prev: null, changed: true };
 }
 
-// Acha o settings.ini do NFSU2 (pelo começo do arquivo, como a cópia do save) e aplica os dois planos.
-// Desiste sem escrever se achar mais de um, se não achar, ou se a procura passar de budgetMs.
-async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs = 3000 }) {
+// Acha o settings.ini e o registry.txt do jogo pelo começo de cada arquivo pequeno. Com o cache grande do jogo a
+// busca passa de 3 s (15/11: "demorou" no PC do Bruno e a opção não era gravada); por isso 20 s.
+const FIND_MS = 20000;
+async function findGameFiles(root, budgetMs = FIND_MS) {
   const t0 = Date.now();
-  const late = () => Date.now() - t0 > budgetMs;
-  const found = [];
+  const found = { 'settings.ini': [], 'registry.txt': [] };
   for (const f of await saveCopy.listFiles(root)) {
     if (f.size < 20 || f.size > 200000) continue;
-    if (late()) return { prev, prevRoad, uiOn: false, why: 'demorou' };
+    if (Date.now() - t0 > budgetMs) return null;
     let head;
     try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
-    if (saveCopy.kindOf(head) === 'settings.ini') found.push(f.path);
+    const kind = saveCopy.kindOf(head);
+    if (found[kind]) found[kind].push(f.path);
   }
+  return found;
+}
+// Acha o settings.ini do NFSU2 (pelo começo do arquivo, como a cópia do save) e aplica os dois planos.
+// Desiste sem escrever se achar mais de um, se não achar, ou se a procura passar de budgetMs.
+async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs = FIND_MS }) {
+  const t0 = Date.now();
+  const late = () => Date.now() - t0 > budgetMs;
+  const all = await findGameFiles(root, budgetMs);
+  if (!all) return { prev, prevRoad, uiOn: false, why: 'demorou' };
+  const found = all['settings.ini'];
   if (found.length !== 1) return { prev, prevRoad, uiOn: false, why: found.length ? 'mais de um settings.ini' : 'sem settings.ini' };
   const file = found[0];
   const text = await fsp.readFile(file, 'latin1'); // byte a byte: o resto do arquivo volta igual
@@ -182,17 +193,9 @@ async function writeWithBackup(file, before, after, backupDir, name) {
   await fsp.rename(tmp, file);
 }
 // prev = { ini: {chave: linha}, aa: 'número' } ou null. Arquivo que falta (jogo nunca aberto) fica para a próxima abertura.
-async function lightMode({ root, backupDir, on, prev = null, budgetMs = 3000 }) {
-  const t0 = Date.now();
-  const found = { 'settings.ini': [], 'registry.txt': [] };
-  for (const f of await saveCopy.listFiles(root)) {
-    if (f.size < 20 || f.size > 200000) continue;
-    if (Date.now() - t0 > budgetMs) return { prev, changed: false, why: 'demorou' };
-    let head;
-    try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
-    const kind = saveCopy.kindOf(head);
-    if (found[kind]) found[kind].push(f.path);
-  }
+async function lightMode({ root, backupDir, on, prev = null, budgetMs = FIND_MS }) {
+  const found = await findGameFiles(root, budgetMs);
+  if (!found) return { prev, changed: false, why: 'demorou' };
   const next = { ini: prev?.ini || null, aa: prev?.aa ?? null };
   let changed = false;
   if (found['settings.ini'].length === 1) {
@@ -241,16 +244,10 @@ function minGraphicsText(text) {
 }
 // Acha o registry.txt do NFSU2 (um só) e grava. done = feito (ou nada a mudar); sem o arquivo (jogo nunca aberto), tenta
 // na próxima abertura.
-async function minGraphics({ root, backupDir, budgetMs = 3000 }) {
-  const t0 = Date.now();
-  const found = [];
-  for (const f of await saveCopy.listFiles(root)) {
-    if (f.size < 20 || f.size > 200000) continue;
-    if (Date.now() - t0 > budgetMs) return { done: false, why: 'demorou' };
-    let head;
-    try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
-    if (saveCopy.kindOf(head) === 'registry.txt') found.push(f.path);
-  }
+async function minGraphics({ root, backupDir, budgetMs = FIND_MS }) {
+  const all = await findGameFiles(root, budgetMs);
+  if (!all) return { done: false, why: 'demorou' };
+  const found = all['registry.txt'];
   if (found.length !== 1) return { done: false, why: found.length ? 'mais de um registry.txt' : 'sem registry.txt' };
   const file = found[0];
   const text = await fsp.readFile(file, 'latin1');
@@ -275,16 +272,10 @@ function gameAaOn(text) {
   return v >= 1 && v <= 16;
 }
 // Acha o registry.txt (um só). Devolve o caminho dentro da pasta de dados e se o anti-serrilhado do jogo está ligado.
-async function gameAa({ root, budgetMs = 3000 }) {
-  const t0 = Date.now();
-  const found = [];
-  for (const f of await saveCopy.listFiles(root)) {
-    if (f.size < 20 || f.size > 200000) continue;
-    if (Date.now() - t0 > budgetMs) return null;
-    let head;
-    try { head = await saveCopy.readHead(f.path, 32); } catch { continue; }
-    if (saveCopy.kindOf(head) === 'registry.txt') found.push(f.path);
-  }
+async function gameAa({ root, budgetMs = FIND_MS }) {
+  const all = await findGameFiles(root, budgetMs);
+  if (!all) return null;
+  const found = all['registry.txt'];
   if (found.length !== 1) return null;
   return { rel: path.relative(root, found[0]), on: gameAaOn(await fsp.readFile(found[0], 'latin1')) };
 }
@@ -302,4 +293,4 @@ function gameAaSync(root, rel) {
   } catch { return null; }
 }
 
-module.exports = { plan, planRoad, ROAD_LINE, run, LIGHT, planLight, planLightReg, lightMode, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };
+module.exports = { findGameFiles, plan, planRoad, ROAD_LINE, run, LIGHT, planLight, planLightReg, lightMode, UI_LINE, BACKUP, MIN_GRAPHICS, minGraphicsText, minGraphics, REG_BACKUP, gameAaOn, gameAa, gameAaSync };
