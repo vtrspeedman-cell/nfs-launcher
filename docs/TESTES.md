@@ -60,6 +60,7 @@ Automatizados, na pasta `pc`: `npm test` (141 testes) e `npm run verify` (27 ver
 | 46g | Texturas HD ligada, com mods baixados: START no NFSU2 Modded, jogar até o settings.ini existir, fechar e abrir o app de novo; andar na cidade | Asfalto, cenário e céu com as texturas escolhidas, como no NFSU2; carros novos do site ficam como o site fez. Os saves do Modded não aparecem no NFSU2 nem o contrário. A cópia do save do Modded fica em `NFS Launcher Saves\NFSU2 Modded`. Trocar do NFSU2 para o Modded com a partida aberta pede confirmação antes. |
 | 46h | NFSU2: Options > Audio (músicas), clicar no botão do Spotify | A playlist oficial abre no navegador do Windows; o jogo continua aberto no app. Outros links continuam sem abrir. |
 | 46i | NFSU2: Options > Audio, Last.fm > Conectar; depois clicar em .fmbot > Adicionar | Abre uma janela do app com o login do Last.fm; depois de entrar e autorizar, ela fecha sozinha e o jogo mostra a conta ligada. O .fmbot abre no navegador do Windows. |
+| 46j | Texturas HD ligadas (3.0.19): ver a aba Mods do jogo e andar por estradas e pelo estacionamento; na janela Texturas HD, escolher a parte "Faixas do estacionamento" | "Estradas mais nítidas" fica ligada e as estradas do jogo aparecem por baixo dos mods; com a melhor opção da dica, as listras do estacionamento aparecem (com o NextGen sozinho, somem). Títulos das partes sempre em cima dos botões. |
 
 ## Celular (Android)
 
