@@ -61,7 +61,7 @@ test('Texturas HD: grava no lugar, com c√≥pia antes; sem arquivo ou com dois, n√
     put('000/t/00/00000013', 'outro arquivo do jogo');
     const r = await gs.run({ root: path.join(root, 'fs'), backupDir: bak, on: true });
     assert.ok(r.changed && r.uiOn);
-    assert.strictEqual(fs.readFileSync(file, 'latin1'), `${text.replace('original', 'map')}road_textures = off\r\n`);
+    assert.strictEqual(fs.readFileSync(file, 'latin1'), text.replace('original', 'map'));
     assert.strictEqual(fs.readFileSync(path.join(bak, gs.BACKUP), 'latin1'), text);
     assert.deepStrictEqual(fs.readdirSync(bak), [gs.BACKUP]); // nada pela metade
     // De novo ligado: nada muda. Desligado com a linha do app: volta ao original.

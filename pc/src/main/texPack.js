@@ -181,7 +181,9 @@ function compose(sources, choice) {
     head.writeUInt32LE(boff, bo); head.writeUInt32LE(bsize, bo + 4);
     nameOff += Buffer.byteLength(e.name, 'latin1') + 1;
   });
-  return { size: pos, segs, count: n, counts, eff };
+  // Texturas que vêm de um mod: os pacotes do jogo entram sem elas (maskPack.js).
+  const modKeys = new Set(list.filter((x) => x.src !== SITE).map(({ e }) => `${e.crc >>> 0}:${e.adler >>> 0}`));
+  return { size: pos, segs, count: n, counts, eff, modKeys };
 }
 
 // Lê [start, end) do pacote virtual, juntando cabeçalho e trechos dos arquivos de origem.

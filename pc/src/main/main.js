@@ -30,6 +30,7 @@ const saveCopy = require('./saveCopy');
 const modFiles = require('./modFiles');
 const cacheClean = require('./cacheClean');
 const texPack = require('./texPack');
+const maskPack = require('./maskPack');
 const gameSettings = require('./gameSettings');
 const fpsWatch = require('./fpsWatch');
 
@@ -308,7 +309,7 @@ async function texturesSettingAtStart() {
       // Só pede para reabrir quando reabrir resolve: com o mapa escolhido pelo jogador ou sem achar o arquivo certo, não.
       texUiOnBy[id] = !!r.uiOn || (!!r.why && r.why !== 'sem settings.ini');
       notes.push(`settings.ini do ${GAMES[id].short}: ${r.changed ? (on ? `"${gameSettings.UI_LINE}" gravada` : 'linha do app desfeita') : 'sem mudança'}${r.why ? ` (${r.why})` : ''}`);
-      if (r.roadChanged) notes.push(`settings.ini do ${GAMES[id].short}: ${on ? `"${gameSettings.ROAD_LINE}" gravada` : 'estradas do jogo devolvidas'}`);
+      if (r.roadChanged) notes.push(`settings.ini do ${GAMES[id].short}: estradas do jogo devolvidas`);
       if (r.prev !== cfg[key] || r.prevRoad !== cfg[roadKey]) { cfg = { ...cfg, [key]: r.prev, [roadKey]: r.prevRoad }; saveCfg(); }
     } catch (e) {
       notes.push(`settings.ini do ${GAMES[id].short}: não deu para conferir (${e && e.message})`);
@@ -450,7 +451,9 @@ function texVirtualMods() {
   try {
     const v = texPack.virtualMod(texSources, cfg.texParts);
     modLog(`texturas por partes: ${JSON.stringify(v.virtual.eff)}, ${v.virtual.count} texturas ${JSON.stringify(v.virtual.counts)}`);
-    return [v];
+    // As "Estradas mais nítidas" do jogo (e céus, carros, cidade) ficam por baixo: entram só onde o modpack não tem.
+    const masks = v.virtual.modKeys.size ? maskPack.PACKS.map((p) => maskPack.maskedMod(p, v.virtual.modKeys)) : [];
+    return [v, ...masks];
   } catch (e) { modLog(`não deu para montar as texturas: ${e && e.message}`); return []; }
 }
 // Mods do jogador (pasta própria) valem por cima dos do app, pelo caminho.
@@ -1660,7 +1663,7 @@ if (gotLock) {
       app.exit(0);
       return;
     }
-    // Inteiras antes da sessão: as únicas escritas nos dados do jogo. As duas mexem em road_textures: o modo leve ligado
+    // Inteiras antes da sessão: as únicas escritas nos dados do jogo. As duas mexem em road_textures (as Texturas HD só devolvem a linha de versões antigas): o modo leve ligado
     // vem depois (fica desligada); desligado, vem antes (as Texturas HD ligadas a deixam desligada).
     if (!cfg.lightMode) await lightModeAtStart();
     await texturesSettingAtStart();

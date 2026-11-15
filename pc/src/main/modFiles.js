@@ -54,6 +54,15 @@ function patchManifest(manifest, mods) {
   const served = new Map();
   for (const mod of mods) {
     const key = mod.p.toLowerCase();
+    if (mod.bind) {
+      // Cópia filtrada de um pacote do site (maskPack.js): só existe se o site tem o pacote.
+      const f = byLower.has(key) && files[byLower.get(key)];
+      if (!f || f.d || !Number.isInteger(f.s) || f.s <= 0) continue;
+      const b = mod.bind(f);
+      f.m = b.m;
+      served.set(f.p, b);
+      continue;
+    }
     if (byLower.has(key)) {
       const f = files[byLower.get(key)];
       if (f.d) continue; // pasta do site com o mesmo nome de um arquivo do mod
@@ -150,14 +159,17 @@ function passInit(req, allowed) {
 // pelo app; o resto segue para o site sem mudança (`fetch` da própria sessão, sem passar por aqui de novo).
 // `allowed(url)`: o endereço é do site do NFSU2. `log(texto)`: registro curto para o jogador (e para nós) ver o que houve.
 // `mods`: arquivos do disco ({ p, file, s, m }) ou virtuais ({ p, s, m, read(a, b), check() }, texPack.js).
+const sizeOf = (m) => (m.bind ? 'do site, sem as texturas do modpack' : `${m.s} bytes`);
+const direct = (mods) => new Map(mods.filter((m) => !m.bind).map((m) => [m.p, m]));
+
 function install(ses, { mods, allowed, log = () => {} }) {
   if (!mods.length) return null;
-  log(`mods encontrados: ${mods.map((m) => `"${m.p}" (${m.s} bytes)`).join(', ')}`);
+  log(`mods encontrados: ${mods.map((m) => `"${m.p}" (${sizeOf(m)})`).join(', ')}`);
   const HEAD = { 'cache-control': 'no-store', 'cross-origin-resource-policy': 'same-origin' };
   const fail = (status, why) => { log(`recusado (${status}): ${why}`); return new Response(null, { status, headers: HEAD }); };
   const sent = new Set();
   const pass = (req) => ses.fetch(req, passInit(req, allowed));
-  let served = new Map(mods.map((m) => [m.p, m]));
+  let served = direct(mods);
   let on = false;
   const handler = async (req) => {
     const r = allowed(req.url) && route(req.url, served);
@@ -191,7 +203,8 @@ function install(ses, { mods, allowed, log = () => {} }) {
         if (span === false) return fail(416, `"${r.p}": trecho inválido`);
         if (span) { status = 206; headers['content-range'] = `bytes ${span.start}-${span.end - 1}/${mod.s}`; } else span = { start: 0, end: mod.s };
       }
-      const body = mod.read ? mod.read(span.start, span.end) : readSpan(mod.file, span.start, span.end);
+      const ctx = { origin: new URL(req.url).origin, fetch: (u, i) => ses.fetch(u, { ...i, bypassCustomProtocolHandlers: true }) };
+      const body = mod.read ? await mod.read(span.start, span.end, ctx) : readSpan(mod.file, span.start, span.end);
       if (body && !sent.has(r.p)) { sent.add(r.p); log(`o jogo começou a ler "${r.p}"`); }
       return body ? new Response(body, { status, headers }) : fail(409, `"${r.p}": não deu para ler o arquivo`);
     } catch (e) { return fail(500, String((e && e.message) || e)); }
@@ -201,8 +214,8 @@ function install(ses, { mods, allowed, log = () => {} }) {
     // Troca a lista de mods (escolha de partes das texturas): vale na próxima vez que o jogo pedir a lista.
     setMods(next) {
       mods = next;
-      served = new Map(mods.map((m) => [m.p, m]));
-      log(`mods trocados: ${mods.map((m) => `"${m.p}" (${m.s} bytes)`).join(', ')}`);
+      served = direct(mods);
+      log(`mods trocados: ${mods.map((m) => `"${m.p}" (${sizeOf(m)})`).join(', ')}`);
     },
     // Liga só com o NFSU2 aberto: nos outros jogos (mesma sessão) nada passa pelo app.
     active(want) {

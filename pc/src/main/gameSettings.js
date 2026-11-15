@@ -87,7 +87,9 @@ async function run({ root, backupDir, on, prev = null, prevRoad = null, budgetMs
   const file = found[0];
   const text = await fsp.readFile(file, 'latin1'); // byte a byte: o resto do arquivo volta igual
   const ui = plan(text, { on, prev });
-  const road = planRoad(ui.text, { on, prev: prevRoad });
+  // Desde a 3.0.19 as Texturas HD não desligam mais as estradas do jogo (entram por baixo do modpack): só devolve
+  // a linha que uma versão antiga trocou.
+  const road = planRoad(ui.text, { on: false, prev: prevRoad });
   const p = { ...ui, text: road.text, prevRoad: road.prev, roadChanged: road.changed, changed: ui.changed || road.changed };
   if (!p.changed) return { ...p, text: undefined };
   if (late()) return { prev, prevRoad, uiOn: false, why: 'demorou' };
