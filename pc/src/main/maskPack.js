@@ -37,8 +37,39 @@ function applyMask(buf, a, offs) {
   return buf;
 }
 
+const BLOCK = 1 << 20; // igual ao modFiles.BLOCK (blocos de 1 MB do site)
+const WAIT_MS = 15000;
+const TRIES = 3;
+
+// Pedido ao site com tempo limite e nova tentativa (3.0.19: um pedido parado segurava o jogo por 80 s).
+async function fetchRetry(ctx, url, init) {
+  let last;
+  for (let t = 0; t < TRIES; t++) {
+    try {
+      const res = await ctx.fetch(url, { ...init, signal: AbortSignal.timeout(WAIT_MS) });
+      if (res.status >= 500) throw new Error(`site respondeu ${res.status}`);
+      return res;
+    } catch (e) { last = e; }
+  }
+  throw last;
+}
+
+// Trecho [a, b) do pacote do site. Pedido de blocos do jogo (`ctx.url` em /data-blocks/): pede os mesmos blocos do
+// site, com a versão do site (endereço que o servidor guarda em cache); senão, /data com Range.
 async function fetchSpan(ctx, url, a, b) {
-  const res = await ctx.fetch(url, { headers: { range: `bytes=${a}-${b - 1}` } });
+  const blocks = ctx.url && /^\/data-blocks\//.test(new URL(ctx.url).pathname);
+  if (blocks) {
+    const first = Math.floor(a / BLOCK), n = Math.ceil(b / BLOCK) - first;
+    const u = new URL(ctx.url);
+    u.searchParams.set('b', String(first)); u.searchParams.set('n', String(n));
+    u.searchParams.set('m', String(ctx.m)); u.searchParams.set('s', String(ctx.size));
+    const res = await fetchRetry(ctx, u.toString(), {});
+    if (res.status !== 200) throw new Error(`site respondeu ${res.status}`);
+    const all = Buffer.from(await res.arrayBuffer());
+    if (all.length !== Math.min(ctx.size, (first + n) * BLOCK) - first * BLOCK) throw new Error('blocos incompletos do site');
+    return all.subarray(a - first * BLOCK, b - first * BLOCK);
+  }
+  const res = await fetchRetry(ctx, url, { headers: { range: `bytes=${a}-${b - 1}` } });
   if (res.status !== 206 && res.status !== 200) throw new Error(`site respondeu ${res.status}`);
   let buf = Buffer.from(await res.arrayBuffer());
   if (res.status === 200) buf = buf.subarray(a, b); // site sem Range: veio inteiro
@@ -64,7 +95,7 @@ function maskedMod(p, mask) {
         p, s: f.s, m: (Number(f.m) || 0) + 1 + h, masked: true,
         check: () => true,
         async read(a, b, ctx) {
-          const c = { ...ctx, size: f.s };
+          const c = { ...ctx, size: f.s, m: f.m };
           const url = `${ctx.origin}/data/${p.split('/').map(encodeURIComponent).join('/')}`;
           if (!index) {
             index = (async () => {

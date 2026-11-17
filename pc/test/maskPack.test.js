@@ -66,3 +66,32 @@ test('lista do jogo: cópia filtrada só entra se o site tem o pacote, com data 
   assert.ok(!out.served.has('TEXPACKS/skies.pak'));
   assert.ok(!out.manifest.files.some((f) => f.p === 'TEXPACKS/skies.pak'));
 });
+
+test('pedido de blocos do jogo: pede ao site os mesmos blocos, com a versão do site', async () => {
+  const buf = pack([[1, 2], [3, 4]]);
+  const urls = [];
+  const fetch = async (u) => {
+    urls.push(u);
+    const q = new URL(u).searchParams, b = Number(q.get('b')), n = Number(q.get('n'));
+    const body = buf.subarray(b << 20, Math.min(buf.length, (b + n) << 20));
+    return { status: 200, headers: new Map(), arrayBuffer: async () => body };
+  };
+  const mod = mp.maskedMod('TEXPACKS/roads.pak', new Set([mp.keyOf(3, 4)])).bind({ p: 'TEXPACKS/roads.pak', s: buf.length, m: 1000 });
+  const url = `https://nfsu2.xyz/data-blocks/v9/TEXPACKS/roads.pak?b=0&n=1&m=${mod.m}&s=${buf.length}`;
+  const out = await mod.read(0, buf.length, { origin: 'https://nfsu2.xyz', url, fetch });
+  assert.strictEqual(out.readUInt16LE(16 + 40 + 8), 0);
+  assert.strictEqual(out.readUInt16LE(16 + 8), 256);
+  for (const u of urls) { assert.match(u, /\/data-blocks\/v9\//); assert.match(u, /m=1000/); }
+});
+
+test('pedido parado: desiste e tenta de novo', async () => {
+  const buf = pack([[1, 2]]);
+  let n = 0;
+  const fetch = async (u, i) => {
+    if (n++ === 0) throw new Error('tempo esgotado');
+    return site(buf).fetch(u, i);
+  };
+  const mod = mp.maskedMod('TEXPACKS/roads.pak', new Set()).bind({ p: 'TEXPACKS/roads.pak', s: buf.length, m: 1 });
+  const out = await mod.read(0, 20, { origin: 'https://x', fetch });
+  assert.strictEqual(out.length, 20);
+});

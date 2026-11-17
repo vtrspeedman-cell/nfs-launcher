@@ -203,7 +203,7 @@ function install(ses, { mods, allowed, log = () => {} }) {
         if (span === false) return fail(416, `"${r.p}": trecho inválido`);
         if (span) { status = 206; headers['content-range'] = `bytes ${span.start}-${span.end - 1}/${mod.s}`; } else span = { start: 0, end: mod.s };
       }
-      const ctx = { origin: new URL(req.url).origin, fetch: (u, i) => ses.fetch(u, { ...i, bypassCustomProtocolHandlers: true }) };
+      const ctx = { origin: new URL(req.url).origin, url: r.kind === 'blocks' ? req.url : null, fetch: (u, i) => ses.fetch(u, { ...i, bypassCustomProtocolHandlers: true }) };
       const body = mod.read ? await mod.read(span.start, span.end, ctx) : readSpan(mod.file, span.start, span.end);
       if (body && !sent.has(r.p)) { sent.add(r.p); log(`o jogo começou a ler "${r.p}"`); }
       return body ? new Response(body, { status, headers }) : fail(409, `"${r.p}": não deu para ler o arquivo`);
