@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.19",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.19/NFS-Launcher-Setup-3.0.19.exe",
-  "tamanho": 105630416,
-  "sha256": "1765cda3c13124734bf62ebde75424c7bf2af801ead4c428d9dc3358c7d8a14e",
+  "versao": "3.0.20",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.20/NFS-Launcher-Setup-3.0.20.exe",
+  "tamanho": 105630002,
+  "sha256": "2adc920dfdea7a28e29c53d6f15ff3ca55398174bf93d8670c0fc5f3f493f1a9",
   "novidades": {
-    "pt": "Texturas HD agora usam as estradas mais nítidas do próprio jogo por baixo dos mods, e a opção \"Estradas mais nítidas\" volta a ficar ligada. Parte nova \"Faixas do estacionamento\" (o NextGen apagava as listras), com dica da melhor. Janela de texturas mais organizada, e o app espera mais pelas configurações do jogo em PC mais lento.",
-    "en": "HD Textures now use the game’s own sharper roads underneath the mods, and the \"Sharper roads\" option stays on again. New \"Parking lines\" part (NextGen erased the stripes), with a tip on the best one. Tidier textures window, and the app waits longer for the game’s settings on slower PCs."
+    "pt": "Corrigido o travamento com as Texturas HD ligadas: as estradas às vezes ficavam esperando o servidor do jogo por mais de um minuto. Agora o app pede as estradas do mesmo jeito que o jogo, mais rápido, e tenta de novo se o servidor demorar.",
+    "en": "Fixed stuttering with HD Textures on: roads sometimes waited over a minute for the game server. The app now requests roads the same way the game does, faster, and retries if the server is slow."
   }
 }
