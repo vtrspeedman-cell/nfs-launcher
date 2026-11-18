@@ -346,11 +346,6 @@ def patch_game_activity(t):
                             if (!nfsFresh) {
                                 nfsFresh = true;
                                 t.reloadIgnoringCache();
-                                try {
-                                    nfsClean(t);
-                                } catch (Throwable e) {
-                                    // A limpeza nunca segura o jogo.
-                                }
                             }
                         }
                     }
@@ -384,55 +379,6 @@ def patch_game_activity(t):
     private static boolean nfsGameHost(String h) {
         return "nfsu2.xyz".equals(h) || "www.nfsu2.xyz".equals(h)
                 || "nfsu2mod.xyz".equals(h) || "www.nfsu2mod.xyz".equals(h);
-    }
-
-    // Igual ao cacheClean.js do PC: apaga na pasta "cache" do jogo as cópias que a lista do site não usa mais.
-    private static final String NFS_CLEAN_JS =
-            "(async()=>{let n=0;try{"
-            + "const k=f=>String(f.p).replace(/[^A-Za-z0-9._-]/g,'_')+'.'+(f.s??0)+'.'+(f.m??0);"
-            + "const dir=await(await navigator.storage.getDirectory()).getDirectoryHandle('cache');"
-            + "const m=await(await fetch('/data-manifest',{cache:'no-store'})).json();"
-            + "const fs=m&&Array.isArray(m.files)?m.files.filter(f=>f&&!f.d&&f.p):[];"
-            + "if(fs.length>=20){const keep=new Set(fs.map(k));const names=[];"
-            + "for await(const [x,h] of dir.entries())if(h.kind==='file')names.push(x);"
-            + "for(const x of names){const b=x.endsWith('.have')?x.slice(0,-5):x;"
-            + "if(/^.+[.][0-9]+[.][0-9]+$/.test(b)&&!keep.has(b)){try{await dir.removeEntry(x);n++;}catch(e){}}}}"
-            + "}catch(e){}document.title='nfslimpeza:'+n;})();";
-
-    private boolean nfsCleanDone;
-
-    /**
-     * NFS Launcher: antes do jogo abrir de vez, uma página invisível do mesmo site apaga as cópias velhas que o
-     * jogo deixa no armazenamento (nunca saves: só a pasta "cache"); no máximo 10 s. Depois, a recarga sem cache.
-     */
-    private void nfsClean(Tab t) {
-        if (!nfsGameHost(t.getUrl().getHost())) return;
-        String list = "https://" + t.getUrl().getHost() + "/data-manifest";
-        org.chromium.content_public.browser.WebContents w =
-                org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
-                        t.getProfile(), true, true);
-        Runnable done = () -> {
-            if (nfsCleanDone) return;
-            nfsCleanDone = true;
-            getWindow().getDecorView().post(w::destroy);
-        };
-        new org.chromium.content_public.browser.WebContentsObserver(w) {
-            private boolean ran;
-
-            @Override
-            public void didStopLoading(org.chromium.url.GURL url, boolean isKnownValid) {
-                if (ran || nfsCleanDone) return;
-                ran = true;
-                w.evaluateJavaScriptForTests(NFS_CLEAN_JS, null);
-            }
-
-            @Override
-            public void titleWasSet(String title) {
-                if (title != null && title.startsWith("nfslimpeza:")) done.run();
-            }
-        };
-        getWindow().getDecorView().postDelayed(done, 10000);
-        w.getNavigationController().loadUrl(new org.chromium.content_public.browser.LoadUrlParams(list));
     }
 
     /** NFS Launcher: fecha o jogo e volta à tela inicial, que mostra o erro em frase simples. */
