@@ -1,10 +1,10 @@
 {
-  "versao": "1.6.9",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.6.9/NFS-Launcher-Android-1.6.9.apk",
-  "tamanho": 255401635,
-  "sha256": "a21af2022e58efb337dec63d7ae25e83da7a57222306fdc31756083831380163",
+  "versao": "1.7.0",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.0/NFS-Launcher-Android-1.7.0.apk",
+  "tamanho": 255395201,
+  "sha256": "06429f881aac476de653ff29b011297ddb5ddeb7241221f915d097795b8f7dd3",
   "novidades": {
-    "pt": "Saíram as dicas, os guias e a bolha: o jogo foi corrigido e eles não fazem mais falta. O app ficou mais leve.",
-    "en": "Tips, guides and the bubble were removed: the game was fixed and they are no longer needed. The app is lighter."
+    "pt": "Modo leve em Configurações: deixa o jogo no mínimo uma vez, e o que você religar no jogo fica. Texturas HD: as estradas nítidas do jogo entram por baixo do pacote, nova parte \"Faixas do estacionamento\" e só entra o mod que você escolher. Spotify abre no navegador e o login do Last.fm funciona.",
+    "en": "Light mode in Settings: sets the game to minimum once, and whatever you turn back on in the game stays. HD Textures: the game's sharp roads now sit under the pack, new \"Parking lot lines\" part, and only the mod you choose is used. Spotify opens in the browser and the Last.fm login works."
   }
 }
