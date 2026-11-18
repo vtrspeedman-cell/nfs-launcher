@@ -31,7 +31,10 @@ final class GameSettings {
     private static final String BACKUP = "settings.ini-antes-das-texturas-HD.txt";
     private static final String PREV = "texUiPrev"; // linha que o app trocou ("" = não havia); ausente = nada trocado
 
-    private static final Pattern OFF = Pattern.compile("^(off|0|false|no)$");
+    private static final String ROAD_LINE = "road_textures = on";
+    private static final Pattern ROAD = Pattern.compile("^\\s*road_textures\\s*=\\s*([^\\s#;]*)", Pattern.CASE_INSENSITIVE);
+    private static final String ROAD_PREV = "texRoadPrev";
+    private static final Pattern OFF =Pattern.compile("^(off|0|false|no)$");
 
     // Modo leve (PC 3.0.15 a 3.0.18, gameSettings.js LIGHT e MIN_GRAPHICS): aplica uma vez só ao ligar; o que o jogador
     // religar no jogo fica. Desligando, devolve só o que ainda está como o app deixou.
@@ -89,7 +92,7 @@ final class GameSettings {
     private static void runDir(Context c, SharedPreferences prefs, File origin, boolean on) throws IOException {
         String key = PREV + ":" + origin.getName();
         String prev = prefs.contains(key) ? prefs.getString(key, "") : null;
-        if (!on && prev == null) return; // desligada e nada trocado: nem procura
+        if (!on && prev == null && !prefs.contains(ROAD_PREV + ":" + origin.getName())) return; // desligada e nada trocado: nem procura
         File file = findOne(origin, "settings.ini");
         if (file == null) return;
         String text = read(file);
@@ -108,8 +111,20 @@ final class GameSettings {
                 ed.remove(key); // o jogador mudou depois: fica o dele
             }
         }
-        // "Estradas mais nítidas" (road_textures) fica como o jogador deixou: o motor esconde nos pacotes do jogo só as
-        // texturas que o modpack já tem (patch 0007, igual ao PC 3.0.19).
+        // "Estradas mais nítidas" (road_textures, igual ao PC planRoad): com as Texturas HD, liga a opção do site, que fica
+        // por baixo do pacote (o motor esconde nela só o que o pacote tem, patch 0007). Desligadas, devolve a linha de
+        // antes, só se continua como o app deixou. Linha ausente = ligada.
+        String rkey = ROAD_PREV + ":" + origin.getName();
+        String rprev = prefs.contains(rkey) ? prefs.getString(rkey, "") : null;
+        int r = find(lines, ROAD);
+        boolean roadOff = r >= 0 && OFF.matcher(value(ROAD, lines.get(r)).toLowerCase()).matches();
+        if (on) {
+            if (roadOff) { if (rprev == null) ed.putString(rkey, lines.get(r)); lines.set(r, ROAD_LINE); }
+        } else if (rprev != null) {
+            boolean prevOff = !rprev.isEmpty() && OFF.matcher(value(ROAD, rprev).toLowerCase()).matches();
+            if (r >= 0 && !roadOff && prevOff) lines.set(r, rprev);
+            ed.remove(rkey);
+        }
         String out = String.join(nl(text), lines);
         if (!out.equals(text)) {
             // A cópia do NFSU2 continua com o nome de antes; a do Modded ganha o número da pasta.
