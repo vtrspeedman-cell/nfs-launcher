@@ -12,7 +12,7 @@ index 6ed792010ee90..0b63178d04536 100644
            renaming_sources += [ "$target_gen_dir/${_variant}_paks/locales/${_locale}${_gender_suffix}.pak" ]
            renaming_destinations += [ "locales/${_locale}${_gender_suffix}.pak" ]
 diff --git a/chrome/android/chrome_public_apk_tmpl.gni b/chrome/android/chrome_public_apk_tmpl.gni
-index 6b9413f634e59..182ed6c30115f 100644
+index 6b9413f634e59..fe982f261bbb7 100644
 --- a/chrome/android/chrome_public_apk_tmpl.gni
 +++ b/chrome/android/chrome_public_apk_tmpl.gni
 @@ -295,7 +295,7 @@ template("chrome_common_apk_or_module_tmpl") {

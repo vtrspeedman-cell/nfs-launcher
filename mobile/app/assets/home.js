@@ -180,11 +180,13 @@
         : x.ready ? t('Pronto: as texturas entram na próxima vez que o jogo abrir.', 'Ready: the textures apply the next time the game opens.') : '');
     const parts = x.parts || [];
     $('tex-parts-box').hidden = !parts.length;
-    $('tex-parts-note').textContent = t('De qual mod vem cada parte. “Original” deixa a parte como no jogo. Os outros mods completam o que o escolhido não tem.',
-      'Which mod each part comes from. “Original” keeps the part as in the game. The other mods fill in what the chosen one lacks.');
+    $('tex-parts-note').textContent = t('De qual mod vem cada parte. “Original” deixa a parte como no jogo. O que o mod escolhido não tem fica como no jogo.',
+      'Which mod each part comes from. “Original” keeps the part as in the game. What the chosen mod lacks stays as in the game.');
     $('tex-parts').replaceChildren(...parts.map((p) => {
       const row = el('div', 'custom-row');
-      row.append(el('span', 'tex-info', p.name));
+      const name = el('span', 'tex-info', p.name);
+      if (p.note) { name.append(document.createElement('br')); name.append(el('small', '', p.note)); }
+      row.append(name);
       const g = el('div', 'lang');
       for (const id of [...p.options, 'original']) {
         const btn = el('button', '', id === 'original' ? 'Original' : MOD_LABEL[id] || id);

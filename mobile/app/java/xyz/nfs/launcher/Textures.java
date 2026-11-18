@@ -49,11 +49,18 @@ final class Textures {
 
     static final class Part {
         final String id, pt, en;
+        final String notePt, noteEn;
         final Pattern re;
-        Part(String id, String pt, String en, String re) { this.id = id; this.pt = pt; this.en = en; this.re = Pattern.compile(re); }
+        Part(String id, String pt, String en, String re) { this(id, pt, en, re, null, null); }
+        Part(String id, String pt, String en, String re, String notePt, String noteEn) {
+            this.id = id; this.pt = pt; this.en = en; this.re = Pattern.compile(re); this.notePt = notePt; this.noteEn = noteEn;
+        }
     }
     // As mesmas partes do PC (texPack.js PARTS). A primeira que casa vale; "menus" fica com o resto.
     static final Part[] PARTS = {
+        new Part("estacionamento", "Faixas do estacionamento", "Parking lot lines", "^RDP_PARKING",
+                "No NextGen as faixas somem. A do TexWizard é a mais parecida com a original.",
+                "With NextGen the lines disappear. TexWizard is closest to the original."),
         new Part("asfalto", "Asfalto e pistas", "Asphalt and tracks", "^(RDP_(?!ROADSTRIP_COBBLE)|SHRM_ROAD$|ARC_CONCFREEWAY$)"),
         new Part("calcadas", "Calçadas e paralelepípedo", "Sidewalks and cobblestone", "^(ARC_SIDEWALK|RDP_ROADSTRIP_COBBLE|RDT_|ARC_BOARDWALK|ARC_COURTGD|ARC_PRESSED_CONCRETE|ARC_UC_BOARKWALK)"),
         new Part("cenario", "Prédios, muros e objetos", "Buildings, walls and objects", "^(ARC_|ARK_|OBJ_|SGN_|SHRM_(?!SKY$)|SHR_|GRG_|GFE_|CRLOT_|PNT_|PRTSHP_|MARBLEFLOOR|SHADOWRAMP)"),
@@ -213,7 +220,10 @@ final class Textures {
 
     static final class Pick { final Entry e; final String src; Pick(Entry e, String src) { this.e = e; this.src = src; } }
 
-    /** Mapa do site sempre; em cada parte o mod escolhido e os outros completando; mesma textura: a maior (empate: o site). */
+    /**
+     * Mapa do site sempre; em cada parte só o mod escolhido (o que ele não tem fica original: nada de mod não escolhido entra
+     * sozinho, igual ao PC desde 08/11); mesma textura: a maior (empate: o site).
+     */
     static List<Pick> choose(Map<String, Index> src, Map<String, String> eff) {
         Map<String, Pick> picked = new LinkedHashMap<>();
         Index site = src.get(SITE);
@@ -222,10 +232,7 @@ final class Textures {
         for (Part p : PARTS) {
             String chosen = eff.get(p.id);
             if (ORIGINAL.equals(chosen)) continue;
-            List<String> order = new ArrayList<>();
-            order.add(chosen);
-            for (String m : MODS) if (!m.equals(chosen)) order.add(m);
-            for (String m : order) {
+            for (String m : new String[] {chosen}) {
                 Index idx = src.get(m);
                 if (idx == null) continue;
                 for (Entry e : idx.entries) {

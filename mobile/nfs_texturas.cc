@@ -10,6 +10,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <map>
+#include <set>
+#include <vector>
+
 #include "base/files/file_path.h"
 #include "base/json/json_reader.h"
 #include "base/json/json_writer.h"
@@ -18,6 +23,7 @@
 #include "base/strings/escape.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_util.h"
+#include "base/time/time.h"
 #include "base/task/thread_pool.h"
 #include "mojo/public/cpp/bindings/receiver.h"
 #include "mojo/public/cpp/bindings/receiver_set.h"
@@ -30,7 +36,9 @@
 #include "net/http/http_request_headers.h"
 #include "net/http/http_response_headers.h"
 #include "net/http/http_util.h"
+#include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/resource_request.h"
+#include "services/network/public/cpp/simple_url_loader.h"
 #include "services/network/public/cpp/url_loader_completion_status.h"
 #include "services/network/public/mojom/early_hints.mojom.h"
 #include "services/network/public/mojom/url_loader.mojom.h"
@@ -48,7 +56,63 @@ struct Pack {
   int64_t offset = 0;
   int64_t size = 0;
   int64_t m = 0;  // "data" do arquivo para o jogo (ele guarda cópia por caminho.tamanho.data): fixa por pacote
+  std::set<std::pair<uint32_t, uint32_t>> keys;  // texturas do pacote (CRC-32, Adler-32)
+  int64_t mask_h = 0;                            // igual ao maskPack.hashOf do PC
 };
+
+// "Estradas mais nítidas" do site por baixo do pacote (igual ao maskPack.js do PC, 3.0.19/3.0.20): os pacotes do
+// jogo continuam vindo do site, mas as texturas que o pacote do app já tem ficam com largura original 0 no índice
+// (o jogo não as acha e usa a do pacote). O resto vem do site byte a byte.
+constexpr const char* kMaskPacks[] = {"texpacks/roads.pak", "texpacks/skies.pak", "texpacks/cars.pak",
+                                      "texpacks/city.pak"};
+constexpr int64_t kMaxEntries = 65536;
+
+uint32_t U32(const uint8_t* b) {
+  return static_cast<uint32_t>(b[0]) | (static_cast<uint32_t>(b[1]) << 8) | (static_cast<uint32_t>(b[2]) << 16) |
+         (static_cast<uint32_t>(b[3]) << 24);
+}
+
+int64_t MaskHash(const std::set<std::pair<uint32_t, uint32_t>>& keys) {
+  std::vector<std::string> list;
+  for (const auto& k : keys) {
+    list.push_back(base::NumberToString(k.first) + ":" + base::NumberToString(k.second));
+  }
+  std::sort(list.begin(), list.end());
+  std::string text = base::JoinString(list, ",");
+  uint32_t h = 2166136261u;
+  for (unsigned char c : text) {
+    h = (h ^ c) * 16777619u;
+  }
+  return h % 1000000;
+}
+
+bool IsMaskPack(const std::string& low) {
+  for (const char* p : kMaskPacks) {
+    if (low == p) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Pacote do site com máscara: caminho minúsculo -> tamanho e data do site.
+struct Masked {
+  int64_t s = 0;
+  int64_t m = 0;
+};
+std::map<std::string, Masked>& MaskedPacks() {
+  static base::NoDestructor<std::map<std::string, Masked>> v;
+  return *v;
+}
+// Índice já lido: "caminho|tamanho|data" -> fim do índice e posições dos bytes de largura a zerar.
+struct MaskIndex {
+  int64_t need = 0;
+  std::vector<int64_t> offs;
+};
+std::map<std::string, MaskIndex>& MaskIndexes() {
+  static base::NoDestructor<std::map<std::string, MaskIndex>> v;
+  return *v;
+}
 
 Pack OpenPack() {
   Pack p;
@@ -83,6 +147,19 @@ Pack OpenPack() {
   p.offset = region.offset;
   p.size = region.size;
   p.m = 1600000000 + (h % 100000000);
+  // Texturas do pacote (índice de 40 bytes por entrada; CRC e Adler no começo), para a máscara dos pacotes do site.
+  uint32_t ver = U32(head + 4);
+  int64_t count = U32(head + 8);
+  if ((ver == 1 || ver == 2) && count > 0 && count <= kMaxEntries && 16 + 40 * count <= region.size) {
+    std::string idx(static_cast<size_t>(40 * count), '\0');
+    if (pread(fd, idx.data(), idx.size(), 16) == static_cast<ssize_t>(idx.size())) {
+      const uint8_t* b = reinterpret_cast<const uint8_t*>(idx.data());
+      for (int64_t i = 0; i < count; i++) {
+        p.keys.emplace(U32(b + 40 * i), U32(b + 40 * i + 4));
+      }
+      p.mask_h = MaskHash(p.keys);
+    }
+  }
   return p;
 }
 
@@ -129,11 +206,12 @@ std::optional<std::string> ReadSpan(int64_t start, int64_t end) {
 struct Patched {
   std::string body;
   std::string served;
+  std::map<std::string, Masked> masked;
   bool ok = false;
 };
 
 // Lista do site com o pacote: troca tamanho e data de TEXPACKS/detailed.pak (ou o acrescenta, com a pasta).
-Patched PatchManifest(std::string body, int64_t size, int64_t m) {
+Patched PatchManifest(std::string body, int64_t size, int64_t m, int64_t mask_h) {
   Patched out;
   std::optional<base::Value> v = base::JSONReader::Read(body, base::JSON_PARSE_RFC);
   base::ListValue* files = v && v->is_dict() ? v->GetDict().FindList("files") : nullptr;
@@ -155,6 +233,17 @@ Patched PatchManifest(std::string body, int64_t size, int64_t m) {
     std::string low = base::ToLowerASCII(*p);
     if (low == "texpacks") {
       dir = true;
+    }
+    if (mask_h > 0 && IsMaskPack(low) && !d.Find("d")) {
+      std::optional<double> fs = d.FindDouble("s");
+      std::optional<double> fm = d.FindDouble("m");
+      if (fs && fm && *fs >= 16 && *fm >= 0 && *fm + 1 + mask_h < 2147483647.0) {
+        Masked k;
+        k.s = static_cast<int64_t>(*fs);
+        k.m = static_cast<int64_t>(*fm);
+        out.masked[low] = k;
+        d.Set("m", static_cast<int>(k.m + 1 + mask_h));
+      }
     }
     if (!done && low == "texpacks/detailed.pak" && !d.Find("d")) {
       d.Set("s", static_cast<int>(size));
@@ -311,6 +400,7 @@ class ManifestLoader : public network::mojom::URLLoader,
              uint32_t options,
              const network::ResourceRequest& original,
              const net::MutableNetworkTrafficAnnotationTag& annotation) {
+    host_ = std::string(original.url.host());
     network::ResourceRequest request(original);
     request.headers.SetHeader(net::HttpRequestHeaders::kAcceptEncoding, "identity");
     target->CreateLoaderAndStart(target_.BindNewPipeAndPassReceiver(), request_id, options, request,
@@ -381,7 +471,7 @@ class ManifestLoader : public network::mojom::URLLoader,
     const Pack& p = GetPack();
     base::ThreadPool::PostTaskAndReplyWithResult(
         FROM_HERE, {base::TaskPriority::USER_BLOCKING},
-        base::BindOnce(&PatchManifest, std::move(body_), p.size, p.m),
+        base::BindOnce(&PatchManifest, std::move(body_), p.size, p.m, p.keys.empty() ? 0 : p.mask_h + 0),
         base::BindOnce(&ManifestLoader::Send, weak_.GetWeakPtr()));
   }
 
@@ -396,6 +486,10 @@ class ManifestLoader : public network::mojom::URLLoader,
   void Send(Patched out) {
     if (out.ok) {
       Served() = out.served;
+      MaskedPacks().clear();
+      for (auto& [low, k] : out.masked) {
+        MaskedPacks()[host_ + "|" + low] = k;
+      }
       g_patched = true;
     }
     for (const char* h : {"content-length", "content-encoding", "etag"}) {
@@ -414,6 +508,7 @@ class ManifestLoader : public network::mojom::URLLoader,
   mojo::Remote<network::mojom::URLLoader> target_;
   mojo::Receiver<network::mojom::URLLoaderClient> client_receiver_{this};
   network::mojom::URLResponseHeadPtr head_;
+  std::string host_;
   std::unique_ptr<mojo::DataPipeDrainer> drainer_;
   std::string body_;
   network::URLLoaderCompletionStatus status_;
@@ -421,6 +516,203 @@ class ManifestLoader : public network::mojom::URLLoader,
   bool completed_ = false;
   bool patching_ = false;
   base::WeakPtrFactory<ManifestLoader> weak_{this};
+};
+
+// Trecho de um pacote do site com máscara (só o que toca o índice): vem do site com a data original (mesmo endereço
+// que o servidor guarda em cache), 15 s por tentativa, 3 tentativas, e sai com as larguras escondidas zeradas.
+class MaskLoader : public network::mojom::URLLoader {
+ public:
+  struct Job {
+    network::ResourceRequest request;
+    net::MutableNetworkTrafficAnnotationTag annotation;
+    bool blocks = false;
+    std::string key;  // "host|caminho|tamanho|data" do site
+    Masked site;
+    int64_t start = 0;
+    int64_t end = 0;
+    int code = 200;
+    std::string range;
+  };
+
+  MaskLoader(mojo::PendingReceiver<network::mojom::URLLoader> loader,
+             mojo::PendingRemote<network::mojom::URLLoaderClient> client,
+             mojo::PendingRemote<network::mojom::URLLoaderFactory> factory)
+      : receiver_(this, std::move(loader)),
+        client_(std::move(client)),
+        sender_(&client_),
+        factory_(std::move(factory)) {
+    receiver_.set_disconnect_handler(base::BindOnce(&MaskLoader::Done, base::Unretained(this)));
+    client_.set_disconnect_handler(base::BindOnce(&MaskLoader::Done, base::Unretained(this)));
+  }
+
+  void Start(Job job) {
+    job_ = std::move(job);
+    auto it = MaskIndexes().find(job_.key);
+    if (it != MaskIndexes().end()) {
+      offs_ = it->second.offs;
+      Body();
+      return;
+    }
+    Fetch(0, std::min<int64_t>(job_.site.s, 16), base::BindOnce(&MaskLoader::GotHead, base::Unretained(this)));
+  }
+
+  void FollowRedirect(network::HttpRequestHeadersUpdateParams, const std::optional<GURL>&) override {}
+  void SetPriority(net::RequestPriority, int32_t) override {}
+
+ private:
+  using SpanCallback = base::OnceCallback<void(std::optional<std::string>)>;
+
+  void Fetch(int64_t a, int64_t b, SpanCallback cb) {
+    a_ = a;
+    b_ = b;
+    tries_ = 0;
+    cb_ = std::move(cb);
+    Attempt();
+  }
+
+  void Attempt() {
+    auto req = std::make_unique<network::ResourceRequest>(job_.request);
+    if (job_.blocks) {
+      first_ = a_ / kBlock;
+      int64_t n = (b_ + kBlock - 1) / kBlock - first_;
+      GURL u = net::AppendOrReplaceQueryParameter(req->url, "b", base::NumberToString(first_));
+      u = net::AppendOrReplaceQueryParameter(u, "n", base::NumberToString(n));
+      u = net::AppendOrReplaceQueryParameter(u, "m", base::NumberToString(job_.site.m));
+      u = net::AppendOrReplaceQueryParameter(u, "s", base::NumberToString(job_.site.s));
+      req->url = u;
+      req->headers.RemoveHeader(net::HttpRequestHeaders::kRange);
+    } else {
+      req->headers.SetHeader(net::HttpRequestHeaders::kRange,
+                             "bytes=" + base::NumberToString(a_) + "-" + base::NumberToString(b_ - 1));
+    }
+    req->headers.SetHeader(net::HttpRequestHeaders::kAcceptEncoding, "identity");
+    loader_ = network::SimpleURLLoader::Create(std::move(req),
+                                               static_cast<net::NetworkTrafficAnnotationTag>(job_.annotation));
+    loader_->SetTimeoutDuration(base::Seconds(15));
+    loader_->SetAllowHttpErrorResults(true);
+    loader_->DownloadToStringOfUnboundedSizeUntilCrashAndDie(
+        factory_.get(), base::BindOnce(&MaskLoader::Got, base::Unretained(this)));
+  }
+
+  void Got(std::optional<std::string> body) {
+    const network::mojom::URLResponseHead* info = loader_->ResponseInfo();
+    int code = info && info->headers ? info->headers->response_code() : 0;
+    std::string range;
+    if (info && info->headers) {
+      range = info->headers->GetNormalizedHeader("content-range").value_or(std::string());
+    }
+    bool ok = body && loader_->NetError() == net::OK && code > 0 && code < 500;
+    loader_.reset();
+    if (!ok) {
+      if (++tries_ < 3) {
+        Attempt();
+        return;
+      }
+      std::move(cb_).Run(std::nullopt);
+      return;
+    }
+    std::optional<std::string> out;
+    int64_t len = static_cast<int64_t>(body->size());
+    if (job_.blocks) {
+      int64_t n = (b_ + kBlock - 1) / kBlock - first_;
+      if (code == 200 && len == std::min(job_.site.s, (first_ + n) * kBlock) - first_ * kBlock) {
+        out = body->substr(static_cast<size_t>(a_ - first_ * kBlock), static_cast<size_t>(b_ - a_));
+      }
+    } else if (code == 200) {
+      if (len >= b_) {  // site sem Range: veio inteiro
+        out = body->substr(static_cast<size_t>(a_), static_cast<size_t>(b_ - a_));
+      }
+    } else if (code == 206) {
+      size_t slash = range.rfind('/');
+      int64_t total = 0;
+      if (slash != std::string::npos && base::StringToInt64(range.substr(slash + 1), &total) &&
+          total == job_.site.s && len == b_ - a_) {
+        out = std::move(*body);
+      }
+    }
+    std::move(cb_).Run(std::move(out));
+  }
+
+  void GotHead(std::optional<std::string> data) {
+    if (!data || data->size() < 16 || data->compare(0, 4, "NTXP") != 0) {
+      return Fail();
+    }
+    const uint8_t* b = reinterpret_cast<const uint8_t*>(data->data());
+    uint32_t ver = U32(b + 4);
+    int64_t n = U32(b + 8);
+    if ((ver != 1 && ver != 2) || n > kMaxEntries || 16 + 40 * n > job_.site.s) {
+      return Fail();
+    }
+    Fetch(0, 16 + 40 * n, base::BindOnce(&MaskLoader::GotIndex, base::Unretained(this)));
+  }
+
+  void GotIndex(std::optional<std::string> data) {
+    if (!data || data->size() < 16) {
+      return Fail();
+    }
+    const uint8_t* b = reinterpret_cast<const uint8_t*>(data->data());
+    int64_t n = U32(b + 8);
+    if (n > kMaxEntries || static_cast<int64_t>(data->size()) < 16 + 40 * n) {
+      return Fail();
+    }
+    const auto& keys = GetPack().keys;
+    MaskIndex idx;
+    idx.need = 16 + 40 * n;
+    for (int64_t i = 0; i < n; i++) {
+      const uint8_t* e = b + 16 + 40 * i;
+      if (keys.count({U32(e), U32(e + 4)})) {
+        idx.offs.push_back(16 + 40 * i + 8);
+      }
+    }
+    offs_ = idx.offs;
+    MaskIndexes()[job_.key] = std::move(idx);
+    Body();
+  }
+
+  void Body() {
+    if (job_.end <= job_.start) {
+      sender_.Send(MakeHead(job_.code, 0, job_.range), std::string(),
+                   base::BindOnce(&MaskLoader::Done, base::Unretained(this)));
+      return;
+    }
+    Fetch(job_.start, job_.end, base::BindOnce(&MaskLoader::GotBody, base::Unretained(this)));
+  }
+
+  void GotBody(std::optional<std::string> data) {
+    if (!data) {
+      return Fail();
+    }
+    for (int64_t o : offs_) {
+      for (int64_t k : {o, o + 1}) {
+        if (k >= job_.start && k < job_.end) {
+          (*data)[static_cast<size_t>(k - job_.start)] = '\0';
+        }
+      }
+    }
+    int64_t len = static_cast<int64_t>(data->size());
+    sender_.Send(MakeHead(job_.code, len, job_.range), std::move(*data),
+                 base::BindOnce(&MaskLoader::Done, base::Unretained(this)));
+  }
+
+  void Fail() {
+    client_->OnComplete(network::URLLoaderCompletionStatus(net::ERR_FAILED));
+    Done();
+  }
+
+  void Done() { delete this; }
+
+  mojo::Receiver<network::mojom::URLLoader> receiver_;
+  mojo::Remote<network::mojom::URLLoaderClient> client_;
+  BodySender sender_;
+  mojo::Remote<network::mojom::URLLoaderFactory> factory_;
+  Job job_;
+  std::vector<int64_t> offs_;
+  std::unique_ptr<network::SimpleURLLoader> loader_;
+  SpanCallback cb_;
+  int64_t a_ = 0;
+  int64_t b_ = 0;
+  int64_t first_ = 0;
+  int tries_ = 0;
 };
 
 // Fábrica intermediária, só para páginas e workers do site do NFSU2.
@@ -449,6 +741,9 @@ class Factory : public network::mojom::URLLoaderFactory {
         return;
       }
       if (MaybeServe(request, path, loader, client)) {
+        return;
+      }
+      if (MaybeMask(request_id, options, request, path, loader, client, annotation)) {
         return;
       }
     }
@@ -525,6 +820,95 @@ class Factory : public network::mojom::URLLoaderFactory {
       }
     }
     (new FileLoader(std::move(loader), std::move(client)))->Start(code, start, end, std::move(range));
+    return true;
+  }
+
+  // Pacote do site com máscara (estradas, céus, carros, cidade). false = segue para o site como veio.
+  bool MaybeMask(int32_t request_id,
+                 uint32_t options,
+                 const network::ResourceRequest& request,
+                 const std::string& path,
+                 mojo::PendingReceiver<network::mojom::URLLoader>& loader,
+                 mojo::PendingRemote<network::mojom::URLLoaderClient>& client,
+                 const net::MutableNetworkTrafficAnnotationTag& annotation) {
+    if (!g_patched || MaskedPacks().empty()) {
+      return false;
+    }
+    std::string rest;
+    bool blocks = false;
+    if (base::StartsWith(path, "/data-blocks/")) {
+      size_t slash = path.find('/', 13);
+      if (slash == std::string::npos) {
+        return false;
+      }
+      rest = path.substr(slash + 1);
+      blocks = true;
+    } else if (base::StartsWith(path, "/data/")) {
+      rest = path.substr(6);
+    } else {
+      return false;
+    }
+    std::string low = base::ToLowerASCII(base::UnescapeBinaryURLComponent(rest));
+    auto it = MaskedPacks().find(std::string(request.url.host()) + "|" + low);
+    if (it == MaskedPacks().end()) {
+      return false;
+    }
+    const Masked site = it->second;
+    MaskLoader::Job job;
+    job.blocks = blocks;
+    job.key = it->first + "|" + base::NumberToString(site.s) + "|" + base::NumberToString(site.m);
+    job.site = site;
+    auto idx = MaskIndexes().find(job.key);
+    int64_t need = idx == MaskIndexes().end() ? -1 : idx->second.need;
+    if (blocks) {
+      std::string b, n, m, s;
+      int64_t bi = 0, ni = 0, mi = 0, si = 0;
+      if (!net::GetValueForKeyInQuery(request.url, "b", &b) || !net::GetValueForKeyInQuery(request.url, "n", &n) ||
+          !net::GetValueForKeyInQuery(request.url, "m", &m) || !net::GetValueForKeyInQuery(request.url, "s", &s) ||
+          !base::StringToInt64(b, &bi) || !base::StringToInt64(n, &ni) || !base::StringToInt64(m, &mi) ||
+          !base::StringToInt64(s, &si)) {
+        return false;
+      }
+      if (mi != site.m + 1 + GetPack().mask_h || si != site.s) {
+        return false;  // lista antiga: é o arquivo do site
+      }
+      if (bi < 0 || ni < 1 || ni > 64 || bi * kBlock >= site.s) {
+        (new FileLoader(std::move(loader), std::move(client)))->Start(400, 0, 0, std::string());
+        return true;
+      }
+      job.start = bi * kBlock;
+      job.end = std::min(site.s, (bi + ni) * kBlock);
+      if (need >= 0 && job.start >= need) {
+        // Depois do índice: o mesmo pedido ao site, com a data original (cache do servidor).
+        network::ResourceRequest plain(request);
+        plain.url = net::AppendOrReplaceQueryParameter(request.url, "m", base::NumberToString(site.m));
+        target_->CreateLoaderAndStart(std::move(loader), request_id, options, plain, std::move(client), annotation);
+        return true;
+      }
+    } else {
+      std::optional<std::string> header = request.headers.GetHeader(net::HttpRequestHeaders::kRange);
+      if (!header) {
+        return false;
+      }
+      std::vector<net::HttpByteRange> ranges;
+      if (!net::HttpUtil::ParseRangeHeader(*header, &ranges) || ranges.size() != 1 ||
+          !ranges[0].ComputeBounds(site.s)) {
+        return false;
+      }
+      job.start = ranges[0].first_byte_position();
+      job.end = ranges[0].last_byte_position() + 1;
+      if (need >= 0 && job.start >= need) {
+        return false;
+      }
+      job.code = 206;
+      job.range = "bytes " + base::NumberToString(job.start) + "-" + base::NumberToString(job.end - 1) + "/" +
+                  base::NumberToString(site.s);
+    }
+    job.request = request;
+    job.annotation = annotation;
+    mojo::PendingRemote<network::mojom::URLLoaderFactory> factory;
+    target_->Clone(factory.InitWithNewPipeAndPassReceiver());
+    (new MaskLoader(std::move(loader), std::move(client), std::move(factory)))->Start(std::move(job));
     return true;
   }
 

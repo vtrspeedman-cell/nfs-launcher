@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..76cf45f23bc6d 100644
+index 4e773273b1667..64e39c7d22bec 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..76cf45f23bc6d 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,211 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,286 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -103,7 +103,7 @@ index 4e773273b1667..76cf45f23bc6d 100644
 +                            nfsSaveDns();
 +                            if (!nfsFresh) {
 +                                nfsFresh = true;
-+                                t.reloadIgnoringCache();
++                                nfsClean(t);
 +                            }
 +                        }
 +                    }
@@ -116,6 +116,15 @@ index 4e773273b1667..76cf45f23bc6d 100644
 +                    @Override
 +                    public void onPageLoadFinished(Tab t, org.chromium.url.GURL url) {
 +                        if (nfsFresh) nfsHideLoading();
++                        // Volta do login do Last.fm: a página do site grava a conta; depois, de volta ao jogo.
++                        if (nfsGameHost(url.getHost()) && "/lastfm.html".equals(url.getPath())) {
++                            String home = "https://" + url.getHost() + "/";
++                            getWindow().getDecorView().postDelayed(() -> {
++                                if (!t.isDestroyed()) {
++                                    t.loadUrl(new org.chromium.content_public.browser.LoadUrlParams(home));
++                                }
++                            }, 3000);
++                        }
 +                    }
 +
 +                    @Override
@@ -123,6 +132,72 @@ index 4e773273b1667..76cf45f23bc6d 100644
 +                        if (nfsVisible) nfsFail(-1);
 +                    }
 +                });
++    }
++
++    private static boolean nfsGameHost(String h) {
++        return "nfsu2.xyz".equals(h) || "www.nfsu2.xyz".equals(h)
++                || "nfsu2mod.xyz".equals(h) || "www.nfsu2mod.xyz".equals(h);
++    }
++
++    // Igual ao cacheClean.js do PC: apaga na pasta "cache" do jogo as cópias que a lista do site não usa mais.
++    private static final String NFS_CLEAN_JS =
++            "(async()=>{let n=0;try{"
++            + "const k=f=>String(f.p).replace(/[^A-Za-z0-9._-]/g,'_')+'.'+(f.s??0)+'.'+(f.m??0);"
++            + "const dir=await(await navigator.storage.getDirectory()).getDirectoryHandle('cache');"
++            + "const m=await(await fetch('/data-manifest',{cache:'no-store'})).json();"
++            + "const fs=m&&Array.isArray(m.files)?m.files.filter(f=>f&&!f.d&&f.p):[];"
++            + "if(fs.length>=20){const keep=new Set(fs.map(k));const names=[];"
++            + "for await(const [x,h] of dir.entries())if(h.kind==='file')names.push(x);"
++            + "for(const x of names){const b=x.endsWith('.have')?x.slice(0,-5):x;"
++            + "if(/^.+[.][0-9]+[.][0-9]+$/.test(b)&&!keep.has(b)){try{await dir.removeEntry(x);n++;}catch(e){}}}}"
++            + "}catch(e){}document.title='nfslimpeza:'+n;})();";
++
++    private boolean nfsCleanDone;
++
++    /**
++     * NFS Launcher: antes do jogo abrir de vez, uma página invisível do mesmo site apaga as cópias velhas que o
++     * jogo deixa no armazenamento (nunca saves: só a pasta "cache"); no máximo 10 s. Depois, a recarga sem cache.
++     */
++    private void nfsClean(Tab t) {
++        if (!nfsGameHost(t.getUrl().getHost())) {
++            t.reloadIgnoringCache();
++            return;
++        }
++        String list = "https://" + t.getUrl().getHost() + "/data-manifest";
++        org.chromium.content_public.browser.WebContents w;
++        try {
++            w = org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
++                    t.getProfile(), true, true);
++        } catch (RuntimeException e) {
++            t.reloadIgnoringCache();
++            return;
++        }
++        t.stopLoading();
++        Runnable done = () -> {
++            if (nfsCleanDone) return;
++            nfsCleanDone = true;
++            getWindow().getDecorView().post(() -> {
++                w.destroy();
++                if (!t.isDestroyed()) t.reloadIgnoringCache();
++            });
++        };
++        new org.chromium.content_public.browser.WebContentsObserver(w) {
++            private boolean ran;
++
++            @Override
++            public void didStopLoading(org.chromium.url.GURL url, boolean isKnownValid) {
++                if (ran || nfsCleanDone) return;
++                ran = true;
++                w.evaluateJavaScriptForTests(NFS_CLEAN_JS, null);
++            }
++
++            @Override
++            public void titleWasSet(String title) {
++                if (title != null && title.startsWith("nfslimpeza:")) done.run();
++            }
++        };
++        getWindow().getDecorView().postDelayed(done, 10000);
++        w.getNavigationController().loadUrl(new org.chromium.content_public.browser.LoadUrlParams(list));
 +    }
 +
 +    /** NFS Launcher: fecha o jogo e volta à tela inicial, que mostra o erro em frase simples. */
@@ -222,7 +297,7 @@ index 4e773273b1667..76cf45f23bc6d 100644
      }
  
      @Override
-@@ -338,12 +544,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +619,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
@@ -286,7 +361,7 @@ index 7dbdc9ab880ee..e1ec2bd943c44 100644
      }
  
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.java b/chrome/android/java/src/org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.java
-index 5598176a446f0..40e4dbf686c99 100644
+index 5598176a446f0..2e792d99bda6e 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.java
 @@ -171,7 +171,7 @@ final class TabWebContentsDelegateAndroidImpl extends TabWebContentsDelegateAndr
@@ -298,12 +373,37 @@ index 5598176a446f0..40e4dbf686c99 100644
      }
  
      @Override
-@@ -351,7 +351,7 @@ final class TabWebContentsDelegateAndroidImpl extends TabWebContentsDelegateAndr
+@@ -351,7 +351,32 @@ final class TabWebContentsDelegateAndroidImpl extends TabWebContentsDelegateAndr
  
      @Override
      public boolean shouldCreateWebContents(GURL targetUrl) {
 -        return mDelegate.shouldCreateWebContents(targetUrl);
++        nfsOpen(targetUrl);
 +        return false; // NFS Launcher: sem abas/janelas novas.
++    }
++
++    private void nfsOpen(GURL u) {
++        if (!"https".equals(u.getScheme()) || !u.getPort().isEmpty() || !u.getUsername().isEmpty()
++                || !u.getPassword().isEmpty()) return;
++        String h = u.getHost();
++        String spec = u.getSpec();
++        if ("open.spotify.com".equals(h) || "fm.bot".equals(h)) {
++            try {
++                ContextUtils.getApplicationContext()
++                        .startActivity(
++                                new android.content.Intent(
++                                                android.content.Intent.ACTION_VIEW, android.net.Uri.parse(spec))
++                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
++            } catch (RuntimeException e) {
++                // Sem navegador no aparelho: não abre nada.
++            }
++        } else if ("www.last.fm".equals(h) || "last.fm".equals(h)) {
++            ThreadUtils.postOnUiThread(() -> {
++                if (!mTab.isDestroyed()) {
++                    mTab.loadUrl(new org.chromium.content_public.browser.LoadUrlParams(spec));
++                }
++            });
++        }
      }
  
      @Override

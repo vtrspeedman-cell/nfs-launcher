@@ -31,10 +31,6 @@ final class GameSettings {
     private static final String BACKUP = "settings.ini-antes-das-texturas-HD.txt";
     private static final String PREV = "texUiPrev"; // linha que o app trocou ("" = não havia); ausente = nada trocado
 
-    // Texturas HD ligadas desligam "Estradas mais nítidas" (aba Mods do jogo), que troca as estradas (PC 3.0.14, planRoad).
-    private static final String ROAD_LINE = "road_textures = off";
-    private static final Pattern ROAD_KEY = Pattern.compile("^\\s*road_textures\\s*=\\s*([^\\s#;]*)", Pattern.CASE_INSENSITIVE);
-    private static final String ROAD_PREV = "texRoadPrev";
     private static final Pattern OFF = Pattern.compile("^(off|0|false|no)$");
 
     // Modo leve (PC 3.0.15 a 3.0.18, gameSettings.js LIGHT e MIN_GRAPHICS): aplica uma vez só ao ligar; o que o jogador
@@ -91,10 +87,9 @@ final class GameSettings {
     }
 
     private static void runDir(Context c, SharedPreferences prefs, File origin, boolean on) throws IOException {
-        String key = PREV + ":" + origin.getName(), roadKey = ROAD_PREV + ":" + origin.getName();
+        String key = PREV + ":" + origin.getName();
         String prev = prefs.contains(key) ? prefs.getString(key, "") : null;
-        String roadPrev = prefs.contains(roadKey) ? prefs.getString(roadKey, "") : null;
-        if (!on && prev == null && roadPrev == null) return; // desligada e nada trocado: nem procura
+        if (!on && prev == null) return; // desligada e nada trocado: nem procura
         File file = findOne(origin, "settings.ini");
         if (file == null) return;
         String text = read(file);
@@ -113,15 +108,8 @@ final class GameSettings {
                 ed.remove(key); // o jogador mudou depois: fica o dele
             }
         }
-        // road_textures = off
-        int r = find(lines, ROAD_KEY);
-        boolean off = r >= 0 && OFF.matcher(value(ROAD_KEY, lines.get(r))).matches();
-        if (on) {
-            if (!off) { ed.putString(roadKey, r >= 0 ? lines.get(r) : ""); put(lines, r, ROAD_LINE); }
-        } else if (roadPrev != null) {
-            if (off) { if (roadPrev.isEmpty()) lines.remove(r); else lines.set(r, roadPrev); }
-            ed.remove(roadKey);
-        }
+        // "Estradas mais nítidas" (road_textures) fica como o jogador deixou: o motor esconde nos pacotes do jogo só as
+        // texturas que o modpack já tem (patch 0007, igual ao PC 3.0.19).
         String out = String.join(nl(text), lines);
         if (!out.equals(text)) {
             // A cópia do NFSU2 continua com o nome de antes; a do Modded ganha o número da pasta.

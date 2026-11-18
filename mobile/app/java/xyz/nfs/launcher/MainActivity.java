@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
             GAMES = new Game[]{ new Game("nfsu2", "NFSU2", "Need for Speed: Underground 2", "https://nfsu2.xyz", "https://nfsu2.xyz/#crew=U2BR", "games/nfsu2.png", true) };
         }
     }
-    static final String VERSION = "1.6.9"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
+    static final String VERSION = "1.6.10"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
     static final long LOW_DISK_BYTES = 3L * 1024 * 1024 * 1024; // o maior jogo baixa cerca de 3 GB
     // Tela de entrada do motor (o mesmo pacote deste app). Pelo nome exato: o motor não recebe links de fora.
     static final String MOTOR_ENTRY = "com.google.android.apps.chrome.IntentDispatcher";
@@ -618,6 +618,7 @@ public class MainActivity extends Activity {
             JSONObject j = new JSONObject();
             j.put("id", p.id);
             j.put("name", "en".equals(lang()) ? p.en : p.pt);
+            if (p.notePt != null) j.put("note", "en".equals(lang()) ? p.noteEn : p.notePt);
             JSONArray opts = new JSONArray();
             for (String m : avail.get(p.id)) opts.put(m);
             j.put("options", opts);
@@ -969,8 +970,7 @@ public class MainActivity extends Activity {
             // (patch 0005). Antes de abrir qualquer jogo, as pastas novas do navegador ficam com o jogo anterior
             // (SaveCopy.launched): é assim que o app sabe qual pasta é de qual NFSU2.
             Context app = getApplicationContext();
-            // Modo leve (igual ao PC 3.0.18): desliga as Texturas HD e põe o jogo no mínimo uma vez. As duas mexem em
-            // road_textures: ligado, vem depois (fica desligada); desligado, vem antes.
+            // Modo leve (igual ao PC 3.0.18): desliga as Texturas HD e põe o jogo no mínimo uma vez (ligado, vem depois).
             boolean light = prefs.getBoolean("lightMode", false);
             boolean want = prefs.getBoolean("hdTextures", true) && !light;
             new Thread(() -> {

@@ -345,7 +345,7 @@ def patch_game_activity(t):
                             nfsSaveDns();
                             if (!nfsFresh) {
                                 nfsFresh = true;
-                                t.reloadIgnoringCache();
+                                nfsClean(t);
                             }
                         }
                     }
@@ -358,6 +358,15 @@ def patch_game_activity(t):
                     @Override
                     public void onPageLoadFinished(Tab t, org.chromium.url.GURL url) {
                         if (nfsFresh) nfsHideLoading();
+                        // Volta do login do Last.fm: a página do site grava a conta; depois, de volta ao jogo.
+                        if (nfsGameHost(url.getHost()) && "/lastfm.html".equals(url.getPath())) {
+                            String home = "https://" + url.getHost() + "/";
+                            getWindow().getDecorView().postDelayed(() -> {
+                                if (!t.isDestroyed()) {
+                                    t.loadUrl(new org.chromium.content_public.browser.LoadUrlParams(home));
+                                }
+                            }, 3000);
+                        }
                     }
 
                     @Override
@@ -365,6 +374,72 @@ def patch_game_activity(t):
                         if (nfsVisible) nfsFail(-1);
                     }
                 });
+    }
+
+    private static boolean nfsGameHost(String h) {
+        return "nfsu2.xyz".equals(h) || "www.nfsu2.xyz".equals(h)
+                || "nfsu2mod.xyz".equals(h) || "www.nfsu2mod.xyz".equals(h);
+    }
+
+    // Igual ao cacheClean.js do PC: apaga na pasta "cache" do jogo as cópias que a lista do site não usa mais.
+    private static final String NFS_CLEAN_JS =
+            "(async()=>{let n=0;try{"
+            + "const k=f=>String(f.p).replace(/[^A-Za-z0-9._-]/g,'_')+'.'+(f.s??0)+'.'+(f.m??0);"
+            + "const dir=await(await navigator.storage.getDirectory()).getDirectoryHandle('cache');"
+            + "const m=await(await fetch('/data-manifest',{cache:'no-store'})).json();"
+            + "const fs=m&&Array.isArray(m.files)?m.files.filter(f=>f&&!f.d&&f.p):[];"
+            + "if(fs.length>=20){const keep=new Set(fs.map(k));const names=[];"
+            + "for await(const [x,h] of dir.entries())if(h.kind==='file')names.push(x);"
+            + "for(const x of names){const b=x.endsWith('.have')?x.slice(0,-5):x;"
+            + "if(/^.+[.][0-9]+[.][0-9]+$/.test(b)&&!keep.has(b)){try{await dir.removeEntry(x);n++;}catch(e){}}}}"
+            + "}catch(e){}document.title='nfslimpeza:'+n;})();";
+
+    private boolean nfsCleanDone;
+
+    /**
+     * NFS Launcher: antes do jogo abrir de vez, uma página invisível do mesmo site apaga as cópias velhas que o
+     * jogo deixa no armazenamento (nunca saves: só a pasta "cache"); no máximo 10 s. Depois, a recarga sem cache.
+     */
+    private void nfsClean(Tab t) {
+        if (!nfsGameHost(t.getUrl().getHost())) {
+            t.reloadIgnoringCache();
+            return;
+        }
+        String list = "https://" + t.getUrl().getHost() + "/data-manifest";
+        org.chromium.content_public.browser.WebContents w;
+        try {
+            w = org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
+                    t.getProfile(), true, true);
+        } catch (RuntimeException e) {
+            t.reloadIgnoringCache();
+            return;
+        }
+        t.stopLoading();
+        Runnable done = () -> {
+            if (nfsCleanDone) return;
+            nfsCleanDone = true;
+            getWindow().getDecorView().post(() -> {
+                w.destroy();
+                if (!t.isDestroyed()) t.reloadIgnoringCache();
+            });
+        };
+        new org.chromium.content_public.browser.WebContentsObserver(w) {
+            private boolean ran;
+
+            @Override
+            public void didStopLoading(org.chromium.url.GURL url, boolean isKnownValid) {
+                if (ran || nfsCleanDone) return;
+                ran = true;
+                w.evaluateJavaScriptForTests(NFS_CLEAN_JS, null);
+            }
+
+            @Override
+            public void titleWasSet(String title) {
+                if (title != null && title.startsWith("nfslimpeza:")) done.run();
+            }
+        };
+        getWindow().getDecorView().postDelayed(done, 10000);
+        w.getNavigationController().loadUrl(new org.chromium.content_public.browser.LoadUrlParams(list));
     }
 
     /** NFS Launcher: fecha o jogo e volta à tela inicial, que mostra o erro em frase simples. */
@@ -545,8 +620,35 @@ def patch_media(t):
 
 def patch_no_tabs(t):
     # Sem abas/janelas novas: o app abre uma página só (a do jogo). Links "_blank" e window.open não abrem nada.
+    # Exceções iguais ao PC: Spotify e .fmbot abrem no navegador do aparelho; o login do Last.fm abre na própria
+    # tela do jogo (a volta cai no site do jogo, que guarda a conta, e o app volta ao jogo).
     t = sub1(t, '''        return mDelegate.shouldCreateWebContents(targetUrl);''',
-             '''        return false; // NFS Launcher: sem abas/janelas novas.''')
+             '''        nfsOpen(targetUrl);
+        return false; // NFS Launcher: sem abas/janelas novas.
+    }
+
+    private void nfsOpen(GURL u) {
+        if (!"https".equals(u.getScheme()) || !u.getPort().isEmpty() || !u.getUsername().isEmpty()
+                || !u.getPassword().isEmpty()) return;
+        String h = u.getHost();
+        String spec = u.getSpec();
+        if ("open.spotify.com".equals(h) || "fm.bot".equals(h)) {
+            try {
+                ContextUtils.getApplicationContext()
+                        .startActivity(
+                                new android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW, android.net.Uri.parse(spec))
+                                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK));
+            } catch (RuntimeException e) {
+                // Sem navegador no aparelho: não abre nada.
+            }
+        } else if ("www.last.fm".equals(h) || "last.fm".equals(h)) {
+            ThreadUtils.postOnUiThread(() -> {
+                if (!mTab.isDestroyed()) {
+                    mTab.loadUrl(new org.chromium.content_public.browser.LoadUrlParams(spec));
+                }
+            });
+        }''')
     return sub1(t, '''        mDelegate.openNewTab(url, extraHeaders, postData, disposition, isRendererInitiated);''',
                 '''        // NFS Launcher: sem abas novas.''')
 
