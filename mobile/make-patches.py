@@ -345,7 +345,12 @@ def patch_game_activity(t):
                             nfsSaveDns();
                             if (!nfsFresh) {
                                 nfsFresh = true;
-                                nfsClean(t);
+                                t.reloadIgnoringCache();
+                                try {
+                                    nfsClean(t);
+                                } catch (Throwable e) {
+                                    // A limpeza nunca segura o jogo.
+                                }
                             }
                         }
                     }
@@ -401,27 +406,15 @@ def patch_game_activity(t):
      * jogo deixa no armazenamento (nunca saves: só a pasta "cache"); no máximo 10 s. Depois, a recarga sem cache.
      */
     private void nfsClean(Tab t) {
-        if (!nfsGameHost(t.getUrl().getHost())) {
-            t.reloadIgnoringCache();
-            return;
-        }
+        if (!nfsGameHost(t.getUrl().getHost())) return;
         String list = "https://" + t.getUrl().getHost() + "/data-manifest";
-        org.chromium.content_public.browser.WebContents w;
-        try {
-            w = org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
-                    t.getProfile(), true, true);
-        } catch (RuntimeException e) {
-            t.reloadIgnoringCache();
-            return;
-        }
-        t.stopLoading();
+        org.chromium.content_public.browser.WebContents w =
+                org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
+                        t.getProfile(), true, true);
         Runnable done = () -> {
             if (nfsCleanDone) return;
             nfsCleanDone = true;
-            getWindow().getDecorView().post(() -> {
-                w.destroy();
-                if (!t.isDestroyed()) t.reloadIgnoringCache();
-            });
+            getWindow().getDecorView().post(w::destroy);
         };
         new org.chromium.content_public.browser.WebContentsObserver(w) {
             private boolean ran;
