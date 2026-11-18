@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..64e39c7d22bec 100644
+index 4e773273b1667..0cc6d0b926f75 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..64e39c7d22bec 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,286 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,279 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -103,7 +103,12 @@ index 4e773273b1667..64e39c7d22bec 100644
 +                            nfsSaveDns();
 +                            if (!nfsFresh) {
 +                                nfsFresh = true;
-+                                nfsClean(t);
++                                t.reloadIgnoringCache();
++                                try {
++                                    nfsClean(t);
++                                } catch (Throwable e) {
++                                    // A limpeza nunca segura o jogo.
++                                }
 +                            }
 +                        }
 +                    }
@@ -159,27 +164,15 @@ index 4e773273b1667..64e39c7d22bec 100644
 +     * jogo deixa no armazenamento (nunca saves: só a pasta "cache"); no máximo 10 s. Depois, a recarga sem cache.
 +     */
 +    private void nfsClean(Tab t) {
-+        if (!nfsGameHost(t.getUrl().getHost())) {
-+            t.reloadIgnoringCache();
-+            return;
-+        }
++        if (!nfsGameHost(t.getUrl().getHost())) return;
 +        String list = "https://" + t.getUrl().getHost() + "/data-manifest";
-+        org.chromium.content_public.browser.WebContents w;
-+        try {
-+            w = org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
-+                    t.getProfile(), true, true);
-+        } catch (RuntimeException e) {
-+            t.reloadIgnoringCache();
-+            return;
-+        }
-+        t.stopLoading();
++        org.chromium.content_public.browser.WebContents w =
++                org.chromium.chrome.browser.content.WebContentsFactory.createWebContents(
++                        t.getProfile(), true, true);
 +        Runnable done = () -> {
 +            if (nfsCleanDone) return;
 +            nfsCleanDone = true;
-+            getWindow().getDecorView().post(() -> {
-+                w.destroy();
-+                if (!t.isDestroyed()) t.reloadIgnoringCache();
-+            });
++            getWindow().getDecorView().post(w::destroy);
 +        };
 +        new org.chromium.content_public.browser.WebContentsObserver(w) {
 +            private boolean ran;
@@ -297,7 +290,7 @@ index 4e773273b1667..64e39c7d22bec 100644
      }
  
      @Override
-@@ -338,12 +619,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +612,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
