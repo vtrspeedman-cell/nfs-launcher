@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
             GAMES = new Game[]{ new Game("nfsu2", "NFSU2", "Need for Speed: Underground 2", "https://nfsu2.xyz", "https://nfsu2.xyz/#crew=U2BR", "games/nfsu2.png", true) };
         }
     }
-    static final String VERSION = "1.6.12"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
+    static final String VERSION = "1.7.0"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
     static final long LOW_DISK_BYTES = 3L * 1024 * 1024 * 1024; // o maior jogo baixa cerca de 3 GB
     // Tela de entrada do motor (o mesmo pacote deste app). Pelo nome exato: o motor não recebe links de fora.
     static final String MOTOR_ENTRY = "com.google.android.apps.chrome.IntentDispatcher";
@@ -874,7 +874,10 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void setOption(String key, boolean on) {
             if (!"prepareGame".equals(key) && !"hdTextures".equals(key) && !"lightMode".equals(key)) return;
-            prefs.edit().putBoolean(key, on).commit(); // commit: o processo do jogo lê este arquivo ao abrir
+            SharedPreferences.Editor ed = prefs.edit().putBoolean(key, on);
+            // Modo leve (igual ao PC, lightBasic): desliga as Texturas HD uma vez só, ao ligar; se o jogador religar, fica.
+            if ("lightMode".equals(key) && on && !prefs.getBoolean("lightMode", false)) ed.putBoolean("hdTextures", false);
+            ed.commit(); // commit: o processo do jogo lê este arquivo ao abrir
             runOnUiThread(MainActivity.this::refreshHome);
         }
         @JavascriptInterface public void checkUpdate() { runOnUiThread(MainActivity.this::checkUpdate); }
@@ -970,9 +973,10 @@ public class MainActivity extends Activity {
             // (patch 0005). Antes de abrir qualquer jogo, as pastas novas do navegador ficam com o jogo anterior
             // (SaveCopy.launched): é assim que o app sabe qual pasta é de qual NFSU2.
             Context app = getApplicationContext();
-            // Modo leve (igual ao PC 3.0.18): desliga as Texturas HD e põe o jogo no mínimo uma vez (ligado, vem depois).
+            // Modo leve (igual ao PC 3.0.18): põe o jogo no mínimo uma vez (ligado, vem depois). As Texturas HD ele só
+            // desliga ao ligar o modo (setOption); se o jogador religar, valem.
             boolean light = prefs.getBoolean("lightMode", false);
-            boolean want = prefs.getBoolean("hdTextures", true) && !light;
+            boolean want = prefs.getBoolean("hdTextures", true);
             new Thread(() -> {
                 if (g.textures) {
                     if (!light) GameSettings.light(app, false);
