@@ -27,6 +27,7 @@ const { SECURE_DNS } = require('./config');
 const { Presence } = require('./discord');
 const profileLock = require('./profileLock');
 const saveCopy = require('./saveCopy');
+const saveEdit = require('./saveEdit');
 const modFiles = require('./modFiles');
 const cacheClean = require('./cacheClean');
 const texPack = require('./texPack');
@@ -1032,6 +1033,126 @@ async function goHome() {
   refresh();
   checkUpdates(false);
 }
+// Editor de save (PsyGARAGE, criado por Psy; só NFSU2 e Modded). Antes de abrir, guarda o save atual
+// (saveEdit.snapshot); o que o editor salva só entra no jogo com o clique do jogador, com o jogo fechado.
+// Nunca restaura sozinho: "Restaurar último save" só pelo botão.
+const editorDirOf = (id) => path.join(savesDirOf(id), 'antes-do-editor');
+let editorWin = null;
+async function closeGameFor() { // o save só é lido e gravado com o jogo fechado; cancelou a saída, nada acontece
+  if (gameStarted) await goHome();
+  return !gameStarted;
+}
+async function editorAsk(parent, opts) {
+  const p = parent && !parent.isDestroyed() ? parent : win;
+  return (await dialog.showMessageBox(p, { noLink: true, title: tr('Editor de save', 'Save editor'), ...opts })).response;
+}
+async function openSaveEditor(id) {
+  if (!SAVE_GAMES.includes(id)) return { ok: false };
+  if (editorWin && !editorWin.isDestroyed()) { editorWin.focus(); return { ok: true }; }
+  const root = gameFsRoot(GAMES[id].partition), dest = editorDirOf(id);
+  const hasCopy = !!(await saveEdit.latest(dest));
+  const buttons = [tr('Abrir o editor', 'Open the editor'), ...(hasCopy ? [tr('Restaurar último save', 'Restore last save')] : []), tr('Cancelar', 'Cancel')];
+  const answer = await editorAsk(win, {
+    type: 'info', buttons, defaultId: 0, cancelId: buttons.length - 1,
+    message: tr('Editor de save, criado por Psy (PsyGARAGE)', 'Save editor, made by Psy (PsyGARAGE)'),
+    detail: tr('Use por diversão! Uma edição pode corromper o save e o jogo pode não iniciar com ele.\n\n'
+      + 'Antes de abrir, o app guarda uma cópia do save atual. Se algo der errado, volte aqui e escolha "Restaurar último save".\n\n'
+      + 'O jogo fecha enquanto você edita: salve na garagem antes.',
+    'Use it for fun! An edit can corrupt the save and the game may not start with it.\n\n'
+      + 'Before opening, the app keeps a copy of the current save. If something goes wrong, come back here and choose "Restore last save".\n\n'
+      + 'The game closes while you edit: save in the garage first.'),
+  });
+  if (answer === buttons.length - 1) return { ok: false, canceled: true };
+  if (hasCopy && answer === 1) return restoreEditorSave(id);
+  if (!(await closeGameFor())) return { ok: false, canceled: true };
+  let snap;
+  try { snap = await saveEdit.snapshot({ root, dest }); } catch (err) { return { ok: false, error: String(err.message || err) }; }
+  if (!snap.ok) {
+    await editorAsk(win, { type: 'info', buttons: ['OK'], message: tr('Nenhum save encontrado', 'No save found'),
+      detail: tr('Abra o jogo, crie ou carregue um perfil e salve na garagem; depois abra o editor.', 'Open the game, create or load a profile and save in the garage; then open the editor.') });
+    return { ok: false, why: snap.why };
+  }
+  const w = new BrowserWindow({
+    parent: win, width: 1200, height: 860, show: true, autoHideMenuBar: true, backgroundColor: '#0b0d12',
+    title: tr('Editor de save · PsyGARAGE, criado por Psy', 'Save editor · PsyGARAGE, made by Psy'),
+    webPreferences: { partition: 'persist:nfs-editor', sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: false },
+  });
+  const ses = w.webContents.session;
+  if (!ses.nfsEditorReady) {
+    ses.nfsEditorReady = true;
+    ses.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] }, (_d, cb) => cb({ cancel: true })); // editor sem internet
+    ses.setPermissionRequestHandler((_wc, _p, cb) => cb(false));
+  }
+  editorWin = w;
+  w.setMenu(null);
+  w.on('page-title-updated', (e) => e.preventDefault());
+  w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  w.webContents.on('will-navigate', (e) => e.preventDefault());
+  ses.removeAllListeners('will-download');
+  ses.on('will-download', (_e, item) => {
+    const tmp = path.join(app.getPath('temp'), `nfs-editor-${Date.now()}.zip`);
+    item.setSavePath(tmp);
+    item.once('done', async (_ev, state) => {
+      let buf = null;
+      try { if (state === 'completed') buf = fs.readFileSync(tmp); } catch { /* ignora */ }
+      fs.promises.unlink(tmp).catch(() => {});
+      if (buf) await editorSaved(id, w, buf, item.getFilename(), snap.map);
+    });
+  });
+  w.on('closed', () => { if (editorWin === w) editorWin = null; ses.removeAllListeners('will-download'); });
+  await w.loadFile(path.join(__dirname, '..', 'renderer', 'editor', 'psygarage.html'));
+  // Abre no editor o save que acabou de ser copiado, como se o jogador tivesse escolhido o arquivo.
+  const b64 = JSON.stringify(snap.zip.toString('base64'));
+  await w.webContents.executeJavaScript(`(() => {
+    const b = atob(${b64}), u = new Uint8Array(b.length);
+    for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+    const inp = document.getElementById('fIn'); if (!inp) return false;
+    const dt = new DataTransfer(); dt.items.add(new File([u], 'save-nfsu2.zip', { type: 'application/zip' }));
+    inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); return true;
+  })()`).catch(() => {});
+  return { ok: true };
+}
+// O editor "baixou" o save editado: aplicar no jogo, guardar como arquivo ou nada.
+async function editorSaved(id, parent, buf, name, map) {
+  const answer = await editorAsk(parent, {
+    type: 'question', buttons: [tr('Aplicar no jogo', 'Apply to the game'), tr('Salvar arquivo', 'Save file'), tr('Cancelar', 'Cancel')], defaultId: 0, cancelId: 2,
+    message: tr('Usar o save editado?', 'Use the edited save?'),
+    detail: tr('Ele substitui o save do jogo (o jogo fecha, se estiver aberto). Se o jogo não iniciar, use "Restaurar último save" no Editor de save.',
+      'It replaces the game save (the game closes if open). If the game does not start, use "Restore last save" in the Save editor.'),
+  });
+  if (answer === 1) {
+    const r = await dialog.showSaveDialog(parent.isDestroyed() ? win : parent, { defaultPath: path.join(app.getPath('downloads'), name || 'save-editado.zip'), filters: [{ name: 'Zip', extensions: ['zip'] }] });
+    if (!r.canceled && r.filePath) { try { fs.writeFileSync(r.filePath, buf); } catch { /* ignora */ } }
+    return;
+  }
+  if (answer !== 0 || !(await closeGameFor())) return;
+  let r;
+  try { r = await saveEdit.apply({ root: gameFsRoot(GAMES[id].partition), zipBuf: buf, map, tmpDir: editorDirOf(id) }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
+  await editorAsk(parent, r.ok
+    ? { type: 'info', buttons: ['OK'], message: tr('Save editado aplicado. Divirta-se!', 'Edited save applied. Have fun!'), detail: tr('Abra o jogo pelo START.', 'Open the game with START.') }
+    : { type: 'warning', buttons: ['OK'], message: tr('O save editado não foi aplicado', 'The edited save was not applied'),
+      detail: tr(`Nada foi mudado no jogo (${r.why}). Abra o editor de novo a partir do save atual.`, `Nothing was changed in the game (${r.why}). Open the editor again from the current save.`) });
+}
+async function restoreEditorSave(id) {
+  if (!SAVE_GAMES.includes(id)) return { ok: false };
+  const dest = editorDirOf(id), file = await saveEdit.latest(dest);
+  if (!file) return { ok: false, why: 'sem-copia' };
+  let when = '';
+  try { when = fs.statSync(file).mtime.toLocaleString(cfg.lang === 'en' ? 'en-US' : 'pt-BR'); } catch { /* ignora */ }
+  const answer = await editorAsk(editorWin || win, {
+    type: 'warning', buttons: [tr('Restaurar', 'Restore'), tr('Cancelar', 'Cancel')], defaultId: 1, cancelId: 1,
+    message: tr('Voltar ao save de antes do editor?', 'Go back to the save from before the editor?'),
+    detail: tr(`Cópia de ${when}. O que mudou no save depois disso será substituído. O jogo fecha, se estiver aberto.`,
+      `Copy from ${when}. Anything that changed in the save after that will be replaced. The game closes if open.`),
+  });
+  if (answer !== 0 || !(await closeGameFor())) return { ok: false, canceled: true };
+  let r;
+  try { r = await saveEdit.restoreLast({ root: gameFsRoot(GAMES[id].partition), dest }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
+  await editorAsk(editorWin || win, r.ok
+    ? { type: 'info', buttons: ['OK'], message: tr('Save restaurado.', 'Save restored.') }
+    : { type: 'warning', buttons: ['OK'], message: tr('Não deu para restaurar', 'Could not restore'), detail: String(r.why || '') });
+  return r;
+}
 // Pedido pelo jogador (botão do topo ou Configurações): lembra de salvar antes. Quem confirma aqui não é perguntado de novo.
 let reloadConfirmed = false;
 async function askReloadGame() {
@@ -1553,6 +1674,8 @@ function registerIpc() {
       return error ? { ok: false, error } : { ok: true };
     } catch (err) { return { ok: false, error: String(err.message || err) }; }
   });
+  handle('saves:editor', (id) => openSaveEditor(id));
+  handle('saves:restoreLast', (id) => restoreEditorSave(id));
   handle('gpu:status', async () => {
     let info = null;
     try { info = await app.getGPUInfo('basic'); } catch { /* ignora */ }

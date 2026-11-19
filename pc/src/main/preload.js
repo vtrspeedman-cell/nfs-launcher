@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('launcher', {
   setCapturing: (on) => call('capture:set', !!on),
   resetCache: () => call('cache:reset'),
   openSaveCopies: () => call('saves:open'),
+  openSaveEditor: (id) => call('saves:editor', id),
+  restoreLastSave: (id) => call('saves:restoreLast', id),
   gpuStatus: () => call('gpu:status'),
   reportGpu: (result) => call('gpu:report', result),
   saveDiagnostics: () => call('diag:save'),

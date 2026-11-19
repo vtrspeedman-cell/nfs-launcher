@@ -425,6 +425,7 @@
     applyCustomBg();
     $('btn-start').textContent = s.gameStarted && selGame === s.game ? t('VOLTAR AO JOGO', 'BACK TO GAME') : 'START';
     $('btn-saves').hidden = !(gameInfo(selGame) || {}).saves; // só os NFSU2 têm cópia do save
+    $('btn-editor').hidden = $('btn-saves').hidden; // editor de save do Psy: mesmos jogos
     // Texturas melhores: só com o NFSU2 aberto e o pacote presente. Colorido quando ligado.
     $('c-tex').hidden = !(s.gameStarted && (gameInfo(s.game) || {}).textures); // também sem mods: a janela é onde se baixa
     $('c-tex').classList.toggle('on', !!s.settings.hdTextures);
@@ -503,6 +504,11 @@
     toast(r.ok ? t('Só restaure se perdeu o save: no jogo, Jogos salvos > Restaurar.', 'Only restore if you lost your save: in the game, Saved games > Restore.') : r.error, !r.ok);
   };
   $('btn-saves').onclick = openSaves;
+  $('btn-editor').onclick = async () => { const r = await api.openSaveEditor(selGame); if (r && r.error) toast(r.error, true); };
+  $('b-saves-restore').onclick = async () => {
+    const r = await api.restoreLastSave(selGame);
+    if (r && r.why === 'sem-copia') toast(t('Nenhuma cópia de antes do editor.', 'No copy from before the editor.'), true);
+  };
   $('b-saves-open').onclick = openSaves;
   $('b-restart').onclick = () => api.restart();
   $('gpu-unblock').onclick = async () => { await api.setSetting('unblockGpu', !state.settings.unblockGpu); api.restart(); };

@@ -67,7 +67,7 @@ async function findExtras(files) {
     let kind = null;
     try { kind = kindOf(await readHead(f.path, 32)); } catch { /* ignora */ }
     if (!kind || found[kind]) continue;
-    try { found[kind] = { data: await fs.readFile(f.path), mtime: f.mtime }; } catch { /* ignora */ }
+    try { found[kind] = { data: await fs.readFile(f.path), mtime: f.mtime, path: f.path }; } catch { /* ignora */ }
   }
   return found;
 }
@@ -115,24 +115,15 @@ async function info(dest) {
   try { return { count: names.length, last: (await fs.stat(path.join(dest, names[0]))).mtimeMs }; } catch { return { count: names.length, last: 0 }; }
 }
 
-async function run({ root, dest, now = new Date() }) {
+// Perfis (mais novo primeiro) e, com um perfil só, a garagem e as configurações do mesmo site; cada item com o caminho no disco.
+async function collect(root) {
   const files = await listFiles(root);
   const profiles = [];
   for (const f of files.filter((x) => x.size === PROFILE_SIZE)) {
     try { const data = await fs.readFile(f.path); if (isProfile(data)) profiles.push({ data, mtime: f.mtime, path: f.path }); } catch { /* ignora */ }
   }
-  if (!profiles.length) return { copied: false, why: 'sem-save' }; // nunca troca uma cópia boa por nada
   profiles.sort((a, b) => b.mtime - a.mtime);
-
-  const hash = crypto.createHash('sha256');
-  for (const p of [...profiles].sort((a, b) => Buffer.compare(a.data, b.data))) hash.update(p.data);
-  const sum = hash.digest('hex');
-  const lastFile = path.join(dest, 'ultima.txt');
-  let last = '';
-  try { last = (await fs.readFile(lastFile, 'utf8')).trim(); } catch { /* primeira vez */ }
-  if (last === sum && (await copies(dest)).length) return { copied: false, why: 'igual' };
-
-  const entries = profiles.map((p, i) => { const n = profileName(p.data, i); return { name: `NFS Underground 2/${n}/${n}`, data: p.data, mtime: p.mtime }; });
+  const entries = profiles.map((p, i) => { const n = profileName(p.data, i); return { name: `NFS Underground 2/${n}/${n}`, data: p.data, mtime: p.mtime, path: p.path }; });
   // Com um perfil só, sai o backup inteiro; com mais de um não dá para saber de quem é a garagem, e o jogo aceita só os perfis.
   if (profiles.length === 1) {
     const origin = path.relative(root, profiles[0].path).split(path.sep)[0]; // só o site do perfil: o outro jogo não conta
@@ -143,14 +134,28 @@ async function run({ root, dest, now = new Date() }) {
       for (const k of ['settings.ini', 'registry.txt', 'autosave-profiles.txt']) if (x[k]) entries.push({ name: k, ...x[k] });
     }
   }
+  return { profiles, entries };
+}
+
+async function run({ root, dest, now = new Date() }) {
+  const { profiles, entries } = await collect(root);
+  if (!profiles.length) return { copied: false, why: 'sem-save' }; // nunca troca uma cópia boa por nada
+
+  const hash = crypto.createHash('sha256');
+  for (const p of [...profiles].sort((a, b) => Buffer.compare(a.data, b.data))) hash.update(p.data);
+  const sum = hash.digest('hex');
+  const lastFile = path.join(dest, 'ultima.txt');
+  let last = '';
+  try { last = (await fs.readFile(lastFile, 'utf8')).trim(); } catch { /* primeira vez */ }
+  if (last === sum && (await copies(dest)).length) return { copied: false, why: 'igual' };
 
   await fs.mkdir(dest, { recursive: true });
   const file = path.join(dest, `nfsu2-saves-${stamp(now)}.zip`);
-  await fs.writeFile(`${file}.tmp`, zip(entries));
+  await fs.writeFile(`${file}.tmp`, zip(entries.map(({ name, data, mtime }) => ({ name, data, mtime }))));
   await fs.rename(`${file}.tmp`, file);
   await fs.writeFile(lastFile, sum);
   for (const old of (await copies(dest)).slice(KEEP)) await fs.unlink(path.join(dest, old)).catch(() => {});
   return { copied: true, file, entries: entries.map((e) => e.name) };
 }
 
-module.exports = { run, info, zip, crc32, kindOf, isProfile, listFiles, readHead, PROFILE_SIZE, GARAGE_SIZE, KEEP };
+module.exports = { run, collect, stamp, info, zip, crc32, kindOf, isProfile, listFiles, readHead, PROFILE_SIZE, GARAGE_SIZE, KEEP };
