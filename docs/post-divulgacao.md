@@ -18,7 +18,7 @@ Já joga no navegador? "Baixar backup" lá e "Restaurar" no app.
 📖 Tudo sobre o app: https://claude.ai/artifact/RKw9JHnui62my5XSLXEZGB
 
 🔒 **SHA-256:**
-PC 3.1.0: `56967E104E663F698CCD2DC2C4CD938DB416628950CF04BAFA725B4FBDFA4876`
+PC 3.1.1: `5F12840A25B5B40B8CA0378EC02A61E84FA1FF804F6E7643768747BDCB649407`
 Android 1.7.0: `06429F881AAC476DE653FF29B011297DDB5DDEB7241221F915D097795B8F7DD3`
 
 @everyone Testa, manda para os amigos e dá uma moral, é nois! 🤝
@@ -42,7 +42,7 @@ Already play in a browser? "Download backup" there and "Restore" in the app.
 📖 Everything about the app: https://claude.ai/artifact/RKw9JHnui62my5XSLXEZGB
 
 🔒 **SHA-256:**
-PC 3.1.0: `56967E104E663F698CCD2DC2C4CD938DB416628950CF04BAFA725B4FBDFA4876`
+PC 3.1.1: `5F12840A25B5B40B8CA0378EC02A61E84FA1FF804F6E7643768747BDCB649407`
 Android 1.7.0: `06429F881AAC476DE653FF29B011297DDB5DDEB7241221F915D097795B8F7DD3`
 
 Try it, share it, and thanks for the support! 🤝
