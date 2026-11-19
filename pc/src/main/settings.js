@@ -13,7 +13,7 @@ const DEFAULTS = Object.freeze({
   showCorner: true,         // botão discreto (semitransparente) sobre o jogo
   prepareGame: true,        // prepara todo o código do jogo ao carregar, em vez de aos poucos na corrida. Vale ao reabrir
   lighterGpu: true,         // tira as checagens de cada comando gráfico (teste; o Chrome não faz isso). Vale ao reabrir
-  unblockGpu: false,        // modo DirectX 11, para placa sem DirectX 12. Só oferecido a quem tem erro de WebGPU. Vale ao reabrir
+  unblockGpu: false,        // modo DirectX 11, para placa sem DirectX 12. Botão sempre na tela inicial (3.1.2). Vale ao reabrir
   unblockTried: false,      // o app já tentou o modo DirectX 11 sozinho (tenta uma vez só)
   newDrawing: true,         // Skia Graphite + Delegated Compositing, juntos e ligados por padrão (decisão do Bruno, depois dos logs jogando). Vale ao reabrir
   secureDns: 'off',         // DNS seguro que fez o jogo abrir: fica ligado nas próximas aberturas (fora das configurações)

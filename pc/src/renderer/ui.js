@@ -57,23 +57,27 @@
   }
 
   let dx11Failed = false;
+  let unblockConfirm = false, unblockTimer = 0;
   function renderChip() {
     const chip = $('gpu-chip');
     const label = chip.querySelector('span');
     chip.className = 'chip';
-    // Na tela inicial só aparece se houver problema; o detalhe fica em Configurações > WebGPU e GPU.
-    // O modo DirectX 11 só é oferecido a quem tem problema; quem está nele continua vendo o aviso, para poder desfazer.
     const problem = !!gpuResult && (!gpuResult.supported || gpuResult.software);
     const unblockOn = !!(state && state.settings.unblockGpu);
-    chip.hidden = !gpuResult || (!problem && !unblockOn);
-    $('unblock-row').hidden = !problem && !unblockOn;
-    $('gpu-unblock').hidden = !problem && !unblockOn;
-    $('gpu-unblock').textContent = unblockOn ? t('Desfazer e reabrir', 'Undo and reopen') : t('Tentar modo DirectX 11', 'Try DirectX 11 mode');
+    // Desde a 3.1.2 (pedido do Bruno): o modo DirectX 11 fica sempre à mão, para quem quiser ligar sem esperar a detecção.
+    chip.hidden = !gpuResult;
+    $('unblock-row').hidden = false;
+    $('gpu-unblock').hidden = false;
+    $('gpu-unblock').className = problem || unblockOn ? 'primary small' : 'small';
+    $('gpu-unblock').textContent = unblockConfirm ? t('Confirmar e reabrir', 'Confirm and reopen')
+      : unblockOn ? t('Desfazer e reabrir', 'Undo and reopen') : t('Modo DirectX 11', 'DirectX 11 mode');
     if (!gpuResult) { label.textContent = t('Verificando WebGPU…', 'Checking WebGPU…'); return; }
     if (!problem && unblockOn) {
       chip.classList.add('caution'); label.textContent = t('Modo DirectX 11 ligado, para placa sem DirectX 12: sem as opções que pesam e com os gráficos do jogo no mínimo. Se a tela do jogo ficar preta, diminua os gráficos do jogo (Options > Display) até a imagem carregar. Se a imagem der erro, desfaça.', 'DirectX 11 mode is on, for graphics without DirectX 12: without the heavy options and with the game graphics at the minimum. If the game screen goes black, lower the game graphics (Options > Display) until the picture loads. If the picture has errors, undo it.');
     } else if (gpuResult.supported && !gpuResult.software) {
-      chip.classList.add('ok'); label.textContent = t(`WebGPU disponível — ${gpuResult.adapter}`, `WebGPU available — ${gpuResult.adapter}`);
+      chip.classList.add('ok'); label.textContent = unblockConfirm
+        ? t('Só para placa sem DirectX 12: desliga as opções que pesam e põe os gráficos do jogo no mínimo.', 'Only for graphics without DirectX 12: turns off the heavy options and sets the game graphics to the minimum.')
+        : t(`Placa de vídeo: ${gpuResult.adapter}`, `Graphics card: ${gpuResult.adapter}`);
     } else if (gpuResult.supported) {
       chip.classList.add('caution'); label.textContent = t('WebGPU em modo software (sem GPU real) — atualize o driver', 'WebGPU in software mode (no real GPU) — update the driver');
     } else {
@@ -511,7 +515,16 @@
   };
   $('b-saves-open').onclick = openSaves;
   $('b-restart').onclick = () => api.restart();
-  $('gpu-unblock').onclick = async () => { await api.setSetting('unblockGpu', !state.settings.unblockGpu); api.restart(); };
+  $('gpu-unblock').onclick = async () => {
+    // Placa com DirectX 12 funcionando: pede um segundo clique, para ninguém perder desempenho sem querer.
+    const ok = gpuResult && gpuResult.supported && !gpuResult.software;
+    if (ok && !state.settings.unblockGpu && !unblockConfirm) {
+      unblockConfirm = true; renderChip(); clearTimeout(unblockTimer);
+      unblockTimer = setTimeout(() => { unblockConfirm = false; renderChip(); }, 6000);
+      return;
+    }
+    await api.setSetting('unblockGpu', !state.settings.unblockGpu); api.restart();
+  };
   $('b-cache').onclick = async () => { const r = await api.resetCache(); toast(r.ok ? t('Cache limpo.', 'Cache cleared.') : r.error, !r.ok); };
   const openUpdates = async () => { const r = await api.openUpdates(); if (!(r && r.ok)) toast((r && r.error) || '', true); };
   $('update-get').onclick = async () => { const r = await api.installUpdate(); if (!(r && r.ok)) toast((r && r.error) || '', true); };
