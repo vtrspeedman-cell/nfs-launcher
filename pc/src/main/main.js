@@ -65,6 +65,11 @@ app.setPath('userData', path.join(app.getPath('appData'), 'NFSU2 Launcher'));
 const savedAtStart = RESET_SETTINGS ? settings.DEFAULTS : settings.load(path.join(app.getPath('userData'), 'settings.json'));
 const VSYNC_OFF = UNCAPPED;
 if (VSYNC_OFF) { sw('disable-frame-rate-limit'); sw('disable-gpu-vsync'); }
+// Placa mais forte (3.1.2, pedido do Bruno): em notebook com duas placas, o jogo usa a dedicada e não a integrada.
+// No Windows o WebGPU segue a placa do ANGLE, e esta opção faz o ANGLE escolher a de alto desempenho (gpu_init.cc).
+// Com uma placa só, não muda nada. A aceleração de hardware já vem ligada (o app nunca chama disableHardwareAcceleration).
+sw('force-high-performance-gpu');
+sw('use-webgpu-power-preference', 'force-high-performance');
 if (argv.includes('--unsafe-webgpu')) sw('enable-unsafe-webgpu'); // drivers fora da lista oficial
 // "Preparar o jogo ao carregar" (opção, desligada por padrão): o código do jogo é otimizado todo de uma vez, em segundo
 // plano, em vez de só quando cada parte é usada. Mais processador nos primeiros segundos, menos trabalho durante a corrida.
