@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.0",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.0/NFS-Launcher-Setup-3.1.0.exe",
-  "tamanho": 104840163,
-  "sha256": "56967e104e663f698ccd2dc2c4cd938db416628950cf04bafa725b4fbdfa4876",
+  "versao": "3.1.1",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.1/NFS-Launcher-Setup-3.1.1.exe",
+  "tamanho": 104888923,
+  "sha256": "5f12840a25b5b40b8ca0378ec02a61e84fa1ff804f6e7643768747bdcb649407",
   "novidades": {
-    "pt": "Editor de save PsyGARAGE (feito por Psy) para o NFSU2 e o NFSU2 Modded, em Configurações. Antes de abrir, o app guarda uma cópia do seu save, e o botão Restaurar último save põe tudo de volta. Use por diversão: um save editado pode estragar e o jogo pode não abrir.",
-    "en": "PsyGARAGE save editor (made by Psy) for NFSU2 and NFSU2 Modded, in Settings. Before opening it, the app keeps a copy of your save, and Restore last save puts it back. Use it for fun: an edited save can break and the game may not start."
+    "pt": "Editor de save trocado pelo UNPSY, a versão nova do Psy (criador do PsyGARAGE), para o NFSU2 e o NFSU2 Modded, em Configurações. O app continua guardando uma cópia do seu save antes de abrir o editor, e o botão Restaurar último save põe tudo de volta.",
+    "en": "Save editor replaced by UNPSY, the new version by Psy (creator of PsyGARAGE), for NFSU2 and NFSU2 Modded, in Settings. The app still keeps a copy of your save before opening the editor, and Restore last save puts it back."
   }
 }
