@@ -1046,9 +1046,16 @@ async function editorAsk(parent, opts) {
   const p = parent && !parent.isDestroyed() ? parent : win;
   return (await dialog.showMessageBox(p, { noLink: true, title: tr('Editor de save', 'Save editor'), ...opts })).response;
 }
-async function openSaveEditor(id) {
-  if (!SAVE_GAMES.includes(id)) return { ok: false };
+async function openSaveEditor(selected) {
   if (editorWin && !editorWin.isDestroyed()) { editorWin.focus(); return { ok: true }; }
+  // O jogador escolhe o jogo: NFSU2 normal ou Modded (cada um tem o seu save).
+  const pick = await editorAsk(win, {
+    type: 'question', buttons: [...SAVE_GAMES.map((g) => GAMES[g].short), tr('Cancelar', 'Cancel')],
+    defaultId: Math.max(0, SAVE_GAMES.indexOf(selected)), cancelId: SAVE_GAMES.length,
+    message: tr('Editar o save de qual jogo?', 'Edit the save of which game?'),
+  });
+  const id = SAVE_GAMES[pick];
+  if (!id) return { ok: false, canceled: true };
   const root = gameFsRoot(GAMES[id].partition), dest = editorDirOf(id);
   const hasCopy = !!(await saveEdit.latest(dest));
   const buttons = [tr('Abrir o editor', 'Open the editor'), ...(hasCopy ? [tr('Restaurar último save', 'Restore last save')] : []), tr('Cancelar', 'Cancel')];
