@@ -1033,7 +1033,7 @@ async function goHome() {
   refresh();
   checkUpdates(false);
 }
-// Editor de save (PsyGARAGE, criado por Psy; só NFSU2 e Modded). Antes de abrir, guarda o save atual
+// Editor de save (UNPSY, do PsyGARAGE, criado por Psy; só NFSU2 e Modded). Antes de abrir, guarda o save atual
 // (saveEdit.snapshot); o que o editor salva só entra no jogo com o clique do jogador, com o jogo fechado.
 // Nunca restaura sozinho: "Restaurar último save" só pelo botão.
 const editorDirOf = (id) => path.join(savesDirOf(id), 'antes-do-editor');
@@ -1061,7 +1061,7 @@ async function openSaveEditor(selected) {
   const buttons = [tr('Abrir o editor', 'Open the editor'), ...(hasCopy ? [tr('Restaurar último save', 'Restore last save')] : []), tr('Cancelar', 'Cancel')];
   const answer = await editorAsk(win, {
     type: 'info', buttons, defaultId: 0, cancelId: buttons.length - 1,
-    message: tr('Editor de save, criado por Psy (PsyGARAGE)', 'Save editor, made by Psy (PsyGARAGE)'),
+    message: tr('Editor de save UNPSY, criado por Psy (PsyGARAGE)', 'UNPSY save editor, made by Psy (PsyGARAGE)'),
     detail: tr('Use por diversão! Uma edição pode corromper o save e o jogo pode não iniciar com ele.\n\n'
       + 'Antes de abrir, o app guarda uma cópia do save atual. Se algo der errado, volte aqui e escolha "Restaurar último save".\n\n'
       + 'O jogo fecha enquanto você edita: salve na garagem antes.',
@@ -1081,7 +1081,7 @@ async function openSaveEditor(selected) {
   }
   const w = new BrowserWindow({
     parent: win, width: 1200, height: 860, show: true, autoHideMenuBar: true, backgroundColor: '#0b0d12',
-    title: tr('Editor de save · PsyGARAGE, criado por Psy', 'Save editor · PsyGARAGE, made by Psy'),
+    title: tr('Editor de save · UNPSY (PsyGARAGE), criado por Psy', 'Save editor · UNPSY (PsyGARAGE), made by Psy'),
     webPreferences: { partition: 'persist:nfs-editor', sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: false },
   });
   const ses = w.webContents.session;
@@ -1097,6 +1097,8 @@ async function openSaveEditor(selected) {
   w.webContents.on('will-navigate', (e) => e.preventDefault());
   ses.removeAllListeners('will-download');
   ses.on('will-download', (_e, item) => {
+    // A cópia do original que o editor baixa sozinho: o app já guardou a dele antes de abrir.
+    if (/^BACKUP_original_/i.test(item.getFilename())) { item.cancel(); return; }
     const tmp = path.join(app.getPath('temp'), `nfs-editor-${Date.now()}.zip`);
     item.setSavePath(tmp);
     item.once('done', async (_ev, state) => {
@@ -1107,7 +1109,7 @@ async function openSaveEditor(selected) {
     });
   });
   w.on('closed', () => { if (editorWin === w) editorWin = null; ses.removeAllListeners('will-download'); });
-  await w.loadFile(path.join(__dirname, '..', 'renderer', 'editor', 'psygarage.html'));
+  await w.loadFile(path.join(__dirname, '..', 'renderer', 'editor', 'unpsy.html'));
   // Abre no editor o save que acabou de ser copiado, como se o jogador tivesse escolhido o arquivo.
   const b64 = JSON.stringify(snap.zip.toString('base64'));
   await w.webContents.executeJavaScript(`(() => {

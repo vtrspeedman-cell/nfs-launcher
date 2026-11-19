@@ -1,5 +1,5 @@
 'use strict';
-// Editor de save (PsyGARAGE, só PC, NFSU2 e Modded). Antes de abrir o editor, o save atual vai para
+// Editor de save (UNPSY, do PsyGARAGE, só PC, NFSU2 e Modded). Antes de abrir o editor, o save atual vai para
 // "antes-do-editor-*.zip" (+ .json com onde cada arquivo fica no disco). O que o editor salva só entra no jogo
 // com o clique do jogador, e só por cima dos mesmos arquivos (perfil e GARAGE.DAT, mesmo tamanho e mesmo tipo).
 // "Restaurar último save" põe de volta a cópia mais nova, pelo mesmo caminho. Nada aqui roda sozinho.
