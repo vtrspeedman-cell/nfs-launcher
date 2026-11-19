@@ -70,7 +70,7 @@
     $('gpu-unblock').hidden = false;
     $('gpu-unblock').className = problem || unblockOn ? 'primary small' : 'small';
     $('gpu-unblock').textContent = unblockConfirm ? t('Confirmar e reabrir', 'Confirm and reopen')
-      : unblockOn ? t('Desfazer e reabrir', 'Undo and reopen') : t('Modo DirectX 11', 'DirectX 11 mode');
+      : unblockOn ? t('Voltar ao DirectX 12', 'Back to DirectX 12') : t('Modo DirectX 11', 'DirectX 11 mode');
     if (!gpuResult) { label.textContent = t('Verificando WebGPU…', 'Checking WebGPU…'); return; }
     if (!problem && unblockOn) {
       chip.classList.add('caution'); label.textContent = t('Modo DirectX 11 ligado, para placa sem DirectX 12: sem as opções que pesam e com os gráficos do jogo no mínimo. Se a tela do jogo ficar preta, diminua os gráficos do jogo (Options > Display) até a imagem carregar. Se a imagem der erro, desfaça.', 'DirectX 11 mode is on, for graphics without DirectX 12: without the heavy options and with the game graphics at the minimum. If the game screen goes black, lower the game graphics (Options > Display) until the picture loads. If the picture has errors, undo it.');
