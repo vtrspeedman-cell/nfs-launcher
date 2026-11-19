@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.20",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.20/NFS-Launcher-Setup-3.0.20.exe",
-  "tamanho": 105630002,
-  "sha256": "2adc920dfdea7a28e29c53d6f15ff3ca55398174bf93d8670c0fc5f3f493f1a9",
+  "versao": "3.0.21",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.21/NFS-Launcher-Setup-3.0.21.exe",
+  "tamanho": 104803809,
+  "sha256": "7ec20096413a72b3252b60559b6f8ca732fdd05d5c74df89d134d0dc627a2ddb",
   "novidades": {
-    "pt": "Corrigido o travamento com as Texturas HD ligadas: as estradas às vezes ficavam esperando o servidor do jogo por mais de um minuto. Agora o app pede as estradas do mesmo jeito que o jogo, mais rápido, e tenta de novo se o servidor demorar.",
-    "en": "Fixed stuttering with HD Textures on: roads sometimes waited over a minute for the game server. The app now requests roads the same way the game does, faster, and retries if the server is slow."
+    "pt": "Motor do app otimizado de novo, agora treinado também no meio do trânsito com muitos carros e troca de texturas, para o jogo rodar mais liso nesses trechos.",
+    "en": "App engine optimized again, now also trained in heavy traffic with many cars and texture swaps, so the game runs smoother there."
   }
 }
