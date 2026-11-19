@@ -1,10 +1,10 @@
 {
-  "versao": "3.0.21",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.0.21/NFS-Launcher-Setup-3.0.21.exe",
-  "tamanho": 104803809,
-  "sha256": "7ec20096413a72b3252b60559b6f8ca732fdd05d5c74df89d134d0dc627a2ddb",
+  "versao": "3.1.0",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.0/NFS-Launcher-Setup-3.1.0.exe",
+  "tamanho": 104840163,
+  "sha256": "56967e104e663f698ccd2dc2c4cd938db416628950cf04bafa725b4fbdfa4876",
   "novidades": {
-    "pt": "Motor do app otimizado de novo, agora treinado também no meio do trânsito com muitos carros e troca de texturas, para o jogo rodar mais liso nesses trechos.",
-    "en": "App engine optimized again, now also trained in heavy traffic with many cars and texture swaps, so the game runs smoother there."
+    "pt": "Editor de save PsyGARAGE (feito por Psy) para o NFSU2 e o NFSU2 Modded, em Configurações. Antes de abrir, o app guarda uma cópia do seu save, e o botão Restaurar último save põe tudo de volta. Use por diversão: um save editado pode estragar e o jogo pode não abrir.",
+    "en": "PsyGARAGE save editor (made by Psy) for NFSU2 and NFSU2 Modded, in Settings. Before opening it, the app keeps a copy of your save, and Restore last save puts it back. Use it for fun: an edited save can break and the game may not start."
   }
 }
