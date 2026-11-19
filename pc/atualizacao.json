@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.1",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.1/NFS-Launcher-Setup-3.1.1.exe",
-  "tamanho": 104888923,
-  "sha256": "5f12840a25b5b40b8ca0378ec02a61e84fa1ff804f6e7643768747bdcb649407",
+  "versao": "3.1.2",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.2/NFS-Launcher-Setup-3.1.2.exe",
+  "tamanho": 104889033,
+  "sha256": "4d48aac3b9c8acbd11bb253ad33017703b0daf063db78ae774a46c1286479695",
   "novidades": {
-    "pt": "Editor de save trocado pelo UNPSY, a versão nova do Psy (criador do PsyGARAGE), para o NFSU2 e o NFSU2 Modded, em Configurações. O app continua guardando uma cópia do seu save antes de abrir o editor, e o botão Restaurar último save põe tudo de volta.",
-    "en": "Save editor replaced by UNPSY, the new version by Psy (creator of PsyGARAGE), for NFSU2 and NFSU2 Modded, in Settings. The app still keeps a copy of your save before opening the editor, and Restore last save puts it back."
+    "pt": "Botão do modo DirectX 11 sempre na tela inicial, para quem tem placa sem DirectX 12 (pede confirmação), e botão Voltar ao DirectX 12. Em notebook com duas placas, o jogo agora usa sempre a placa de vídeo mais forte.",
+    "en": "DirectX 11 mode button always on the start screen, for graphics cards without DirectX 12 (asks for confirmation), and a Back to DirectX 12 button. On laptops with two graphics cards, the game now always uses the stronger one."
   }
 }
