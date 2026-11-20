@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.2",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.2/NFS-Launcher-Setup-3.1.2.exe",
-  "tamanho": 104889033,
-  "sha256": "4d48aac3b9c8acbd11bb253ad33017703b0daf063db78ae774a46c1286479695",
+  "versao": "3.1.3",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.3/NFS-Launcher-Setup-3.1.3.exe",
+  "tamanho": 104889319,
+  "sha256": "88c336e962018b6b81d7b90fb5498d54051c924d56b50246c9b9fdac87cfd395",
   "novidades": {
-    "pt": "Botão do modo DirectX 11 sempre na tela inicial, para quem tem placa sem DirectX 12 (pede confirmação), e botão Voltar ao DirectX 12. Em notebook com duas placas, o jogo agora usa sempre a placa de vídeo mais forte.",
-    "en": "DirectX 11 mode button always on the start screen, for graphics cards without DirectX 12 (asks for confirmation), and a Back to DirectX 12 button. On laptops with two graphics cards, the game now always uses the stronger one."
+    "pt": "Novos pacotes de imagem: Cores frias, Cores quentes, Noturno, Retrô e Desbotado (os de cor seguem o modo foto do jogo). Corrigido: o modo DirectX 11 não volta mais sozinho ao DirectX 12 ao recarregar ou reabrir.",
+    "en": "New image packs: Cool colors, Warm colors, Night, Retro and Faded (the color ones follow the game's photo mode). Fixed: DirectX 11 mode no longer switches back to DirectX 12 by itself after reloading or reopening."
   }
 }
