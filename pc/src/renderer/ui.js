@@ -512,7 +512,7 @@
     $('r-text').value = '';
     $('r-info').textContent = t('Procurando o log da última partida…', 'Looking for the last game log…');
     $('r-send').disabled = false;
-    const r = await Promise.race([api.reportCollect(), new Promise((res) => setTimeout(() => res(null), 20000))]).catch(() => null);
+    const r = await Promise.race([api.reportCollect(), new Promise((res) => setTimeout(() => res(null), 30000))]).catch(() => null);
     repHasLog = !!(r && r.hasLog);
     $('r-log').disabled = !repHasLog;
     $('r-log').checked = repHasLog;

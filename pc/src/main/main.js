@@ -1728,7 +1728,7 @@ function registerIpc() {
   handle('screen:report', () => openReport('botão'));
   handle('report:collect', async () => {
     const wc = gameView && gameView.webContents;
-    reportRec = await reportRead(wc, 15000);
+    reportRec = await reportRead(wc, wc && !wc.isDestroyed() && reportFound.get(wc) ? 3000 : 15000);
     modLog(`relato: tela pediu o log (${reportRec ? 'achado' : 'não achado'})`);
     return {
       ok: true, game: currentGame ? config.GAMES[currentGame].short : null, origin: reportOrigin,
