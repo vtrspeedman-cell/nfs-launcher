@@ -1728,6 +1728,7 @@ function registerIpc() {
   handle('screen:report', () => openReport('botão'));
   handle('report:collect', async () => {
     const wc = gameView && gameView.webContents;
+    modLog('relato: tela começou a pedir o log');
     reportRec = await reportRead(wc, wc && !wc.isDestroyed() && reportFound.get(wc) ? 3000 : 15000);
     modLog(`relato: tela pediu o log (${reportRec ? 'achado' : 'não achado'})`);
     return {
@@ -1899,10 +1900,13 @@ if (gotLock) {
     // Espera o jogo gravar o fim da partida no log (até 30 s) e só então sugere o relato.
     (async () => {
       const wc = gameView?.webContents;
+      let lastLen = -2;
       for (let i = 0; i < 30 && wc && !wc.isDestroyed() && !quitting; i++) {
         await new Promise((r) => setTimeout(r, 1000));
         const rec = await reportRead(wc, 2000);
-        if (rec?.ended && report.when(rec) >= now - 30000) break;
+        const len = rec ? rec.log.length : -1;
+        if (i >= 4 && rec?.ended && report.when(rec) >= now - 30000 && len === lastLen) break; // fim gravado e o log parou de crescer
+        lastLen = len;
       }
       if (wc && !wc.isDestroyed()) await reportSuggest(wc);
       gpuLostAsk();

@@ -512,11 +512,11 @@
     $('r-text').value = '';
     $('r-info').textContent = t('Procurando o log da última partida…', 'Looking for the last game log…');
     $('r-send').disabled = false;
-    const r = await Promise.race([api.reportCollect(), new Promise((res) => setTimeout(() => res(null), 30000))]).catch(() => null);
+    const r = await Promise.race([api.reportCollect(), new Promise((res) => setTimeout(() => res({ why: 'tempo' }), 30000))]).catch((e) => ({ why: String(e && e.message || e) }));
     repHasLog = !!(r && r.hasLog);
     $('r-log').disabled = !repHasLog;
     $('r-log').checked = repHasLog;
-    if (!repHasLog) $('r-info').textContent = t('Sem log de partida (só o NFSU2 e o Modded guardam; abra o jogo uma vez).', 'No game log (only NFSU2 and Modded keep one; open the game once).');
+    if (!repHasLog) $('r-info').textContent = t('Sem log de partida (só o NFSU2 e o Modded guardam; abra o jogo uma vez).', 'No game log (only NFSU2 and Modded keep one; open the game once).') + (r && (r.why || r.error) ? ` [${r.why || r.error}]` : '');
     else {
       const kb = Math.max(1, Math.round(r.logSize / 1024));
       $('r-info').textContent = r.errors.length
