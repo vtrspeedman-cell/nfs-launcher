@@ -25,7 +25,7 @@ const MODES = Object.freeze({
   cinema: { css: 'contrast(1.15) saturate(0.9) brightness(0.95)', fx: { sat: 0.9, con: 1.15, bri: 0.95, vin: 0.3 } },
   pretoBranco: { css: 'grayscale(1) contrast(1.15)', fx: { sat: 0, con: 1.15 } },
   porDoSol: { css: 'sepia(0.25) saturate(1.3) brightness(1.05)', fx: { sepia: 0.25, sat: 1.3, bri: 1.05 } },
-  frio: { css: 'hue-rotate(10deg) saturate(1.05) contrast(1.05)', fx: { r: 0.92, g: 0.98, b: 1.1, sat: 1.05, con: 1.05 } },
+  frio: { css: 'hue-rotate(10deg) saturate(0.8) brightness(1.03)', fx: { r: 0.95, g: 0.99, b: 1.06, sat: 0.8, bri: 1.03 } },
   quente: { css: 'sepia(0.15) saturate(1.15) contrast(1.03)', fx: { r: 1.08, g: 1.02, b: 0.9, sat: 1.1, con: 1.03 } },
   noturno: { css: 'hue-rotate(10deg) saturate(0.85) contrast(1.12) brightness(0.9)', fx: { r: 0.88, g: 0.95, b: 1.12, sat: 0.85, con: 1.12, bri: 0.9, vin: 0.35, bloom: 0.5, limiar: 0.7 } },
   retro: { css: 'sepia(0.35) saturate(0.85) contrast(1.1)', fx: { sepia: 0.35, sat: 0.85, con: 1.1, vin: 0.25 } },
