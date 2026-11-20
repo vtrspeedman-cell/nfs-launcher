@@ -68,8 +68,13 @@ if (VSYNC_OFF) { sw('disable-frame-rate-limit'); sw('disable-gpu-vsync'); }
 // Placa mais forte (3.1.2, pedido do Bruno): em notebook com duas placas, o jogo usa a dedicada e não a integrada.
 // No Windows o WebGPU segue a placa do ANGLE, e esta opção faz o ANGLE escolher a de alto desempenho (gpu_init.cc).
 // Com uma placa só, não muda nada. A aceleração de hardware já vem ligada (o app nunca chama disableHardwareAcceleration).
-sw('force-high-performance-gpu');
-sw('use-webgpu-power-preference', 'force-high-performance');
+// "Outra placa" (20/11): se a placa cair durante o jogo num PC com duas, o app oferece testar a outra (gpuLostAsk).
+const GPU_OTHER = savedAtStart.gpuOther && !SAFE_MODE;
+if (GPU_OTHER) sw('use-webgpu-power-preference', 'force-low-power');
+else {
+  sw('force-high-performance-gpu');
+  sw('use-webgpu-power-preference', 'force-high-performance');
+}
 if (argv.includes('--unsafe-webgpu')) sw('enable-unsafe-webgpu'); // drivers fora da lista oficial
 // "Preparar o jogo ao carregar" (opção, desligada por padrão): o código do jogo é otimizado todo de uma vez, em segundo
 // plano, em vez de só quando cada parte é usada. Mais processador nos primeiros segundos, menos trabalho durante a corrida.
@@ -387,6 +392,38 @@ async function lightAuto(avg) {
     saveCfg(); applyPriority(); applyImageFilter(); refresh();
     modLog('modo leve desfeito pelo jogador');
   } else if (response === 2) relaunchApp();
+}
+// Placa de vídeo caiu durante o jogo (pedido do Bruno, 20/11): depois disso o motor costuma recusar a placa até
+// reabrir (o jogo mostra GPU-LOST). Com duas placas, oferece testar a outra; se já está nela, oferece voltar.
+// Uma pergunta por abertura; a Microsoft Basic Render (0x1414) não conta como placa.
+let gpuLostAsked = false;
+async function gpuLostAsk() {
+  if (gpuLostAsked || SAFE_MODE || !win || win.isDestroyed()) return;
+  gpuLostAsked = true;
+  let devices = [];
+  try { devices = ((await app.getGPUInfo('basic')).gpuDevice || []).filter((d) => d.vendorId !== 0x1414); } catch { /* ignora */ }
+  const two = new Set(devices.map((d) => `${d.vendorId}:${d.deviceId}`)).size > 1 || GPU_OTHER;
+  const buttons = two
+    ? [GPU_OTHER ? tr('Voltar à placa de antes', 'Back to the previous card') : tr('Testar a outra placa', 'Try the other card'), tr('Só reabrir o app', 'Just reopen the app'), tr('Agora não', 'Not now')]
+    : [tr('Reabrir o app', 'Reopen the app'), tr('Agora não', 'Not now')];
+  const detail = two
+    ? (GPU_OTHER
+      ? tr('O jogo já está na outra placa de vídeo e ela também parou. Quer voltar à placa de antes? O app reabre.', 'The game is already on the other graphics card and it stopped too. Go back to the previous card? The app reopens.')
+      : tr('Este PC tem duas placas de vídeo. Quer testar o jogo na outra? O app reabre. Se ficar pior, aparece aqui a opção de voltar.', 'This PC has two graphics cards. Try the game on the other one? The app reopens. If it gets worse, the option to go back shows up here.'))
+    : tr('Reabrir o app costuma resolver. Se repetir, baixe os gráficos do jogo (Options > Display) e atualize o driver da placa de vídeo.', 'Reopening the app usually fixes it. If it keeps happening, lower the game graphics (Options > Display) and update the graphics driver.');
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'warning', buttons, defaultId: 0, cancelId: buttons.length - 1, noLink: true,
+    title: tr('Placa de vídeo', 'Graphics card'),
+    message: tr('A placa de vídeo parou durante o jogo.', 'The graphics card stopped during the game.'),
+    detail,
+  });
+  if (response === buttons.length - 1) return;
+  if (two && response === 0) {
+    cfg = { ...cfg, gpuOther: !GPU_OTHER };
+    saveCfg();
+    modLog(`placa caiu no jogo: ${GPU_OTHER ? 'volta à placa de antes' : 'testando a outra placa'}`);
+  }
+  relaunchApp();
 }
 // Modo DirectX 11 (pedido do Bruno, 08/11): uma vez, com o jogo fechado, os gráficos do próprio jogo vão ao mínimo
 // (registry.txt, gameSettings.minGraphics). Sem o arquivo ainda (jogo nunca aberto), tenta na próxima abertura.
@@ -1771,6 +1808,7 @@ if (gotLock) {
     if (now - lastGpuReload < 30000) return;
     lastGpuReload = now;
     setTimeout(() => { if (gameView && !gameView.webContents.isDestroyed()) gameView.webContents.reload(); }, 1500);
+    gpuLostAsk();
   });
 
   app.whenReady().then(async () => {

@@ -36,6 +36,12 @@ test('configuração: desligado por padrão e a tentativa fica guardada', () => 
   assert.equal(s.applyChange(s.DEFAULTS, 'unblockTried', true).ok, false);
 });
 
+test('outra placa: desligada por padrão, guardada e só o app liga', () => {
+  assert.equal(s.DEFAULTS.gpuOther, false);
+  assert.equal(s.sanitize({ gpuOther: true }).gpuOther, true);
+  assert.equal(s.applyChange(s.DEFAULTS, 'gpuOther', true).ok, false);
+});
+
 test('DirectX 11 ligado continua ligado ao recarregar ou reabrir', () => {
   const fs = require('node:fs');
   const src = fs.readFileSync(require.resolve('../src/main/main.js'), 'utf8');
