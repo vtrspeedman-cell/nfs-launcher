@@ -66,16 +66,11 @@ app.setPath('userData', path.join(app.getPath('appData'), 'NFSU2 Launcher'));
 const savedAtStart = RESET_SETTINGS ? settings.DEFAULTS : settings.load(path.join(app.getPath('userData'), 'settings.json'));
 const VSYNC_OFF = UNCAPPED;
 if (VSYNC_OFF) { sw('disable-frame-rate-limit'); sw('disable-gpu-vsync'); }
-// Placa mais forte (3.1.2, pedido do Bruno): em notebook com duas placas, o jogo usa a dedicada e não a integrada.
-// No Windows o WebGPU segue a placa do ANGLE, e esta opção faz o ANGLE escolher a de alto desempenho (gpu_init.cc).
-// Com uma placa só, não muda nada. A aceleração de hardware já vem ligada (o app nunca chama disableHardwareAcceleration).
-// "Outra placa" (20/11): se a placa cair durante o jogo num PC com duas, o app oferece testar a outra (gpuLostAsk).
+// Placa de vídeo: o Chromium escolhe sozinho, igual ao Chrome. A 3.1.2 forçava a de alto desempenho
+// (placa de alto desempenho) e, em notebook só com a integrada, o jogo ficou sem adaptador WebGPU (20/11): saiu a pedido do Bruno.
+// "Outra placa": botão na tela inicial e pergunta quando a placa cai no jogo (gpuLostAsk). A aceleração de hardware fica ligada.
 const GPU_OTHER = savedAtStart.gpuOther && !SAFE_MODE;
 if (GPU_OTHER) sw('use-webgpu-power-preference', 'force-low-power');
-else {
-  sw('force-high-performance-gpu');
-  sw('use-webgpu-power-preference', 'force-high-performance');
-}
 if (argv.includes('--unsafe-webgpu')) sw('enable-unsafe-webgpu'); // drivers fora da lista oficial
 // "Preparar o jogo ao carregar" (opção, desligada por padrão): o código do jogo é otimizado todo de uma vez, em segundo
 // plano, em vez de só quando cada parte é usada. Mais processador nos primeiros segundos, menos trabalho durante a corrida.
@@ -248,7 +243,7 @@ function buildState() {
       startFullscreen: cfg.startFullscreen, showHome: cfg.showHome, protectFullscreen: cfg.protectFullscreen,
       blockAltSpace: cfg.blockAltSpace, highPriority: cfg.highPriority, showCorner: cfg.showCorner,
       toggleCombo: cfg.toggleCombo, exitCombo: cfg.exitCombo, lang: cfg.lang, game: cfg.game,
-      prepareGame: cfg.prepareGame, lighterGpu: cfg.lighterGpu, unblockGpu: cfg.unblockGpu, newDrawing: cfg.newDrawing, antiAlias: cfg.antiAlias, imageFilter: cfg.imageFilter, imageMode: cfg.imageMode, hdTextures: cfg.hdTextures, lightMode: cfg.lightMode, sounds: cfg.sounds, discord: cfg.discord,
+      prepareGame: cfg.prepareGame, lighterGpu: cfg.lighterGpu, unblockGpu: cfg.unblockGpu, newDrawing: cfg.newDrawing, antiAlias: cfg.antiAlias, imageFilter: cfg.imageFilter, imageMode: cfg.imageMode, hdTextures: cfg.hdTextures, lightMode: cfg.lightMode, gpuOther: GPU_OTHER, sounds: cfg.sounds, discord: cfg.discord,
     },
     customRev, custom: customFlags(),   // quais jogos têm fundo/capa próprios (as imagens vêm por custom:get)
     update: updateInfo,
@@ -1846,7 +1841,24 @@ function registerIpc() {
     return { ok: true };
   });
   // Resultado do teste de WebGPU da tela inicial: placa sem DirectX 12 tenta o modo DirectX 11 sozinha, uma vez.
+  // Troca de placa pelo botão da tela inicial (forte <-> econômica; com uma placa só, tira o pedido de placa forte).
+  handle('gpu:other', () => {
+    cfg = { ...cfg, gpuOther: !GPU_OTHER, gpuOtherTried: true };
+    saveCfg();
+    modLog(`placa: ${GPU_OTHER ? 'volta à placa forte' : 'testando a outra placa'} (botão)`);
+    relaunchApp();
+    return { ok: true };
+  });
   handle('gpu:report', (r) => {
+    // Sem adaptador pedindo a placa forte (desde a 3.1.2): tenta uma vez a outra placa antes do DirectX 11.
+    // Notebook só com a integrada voltou a abrir no site e não no app (20/11).
+    if (r && !r.supported && !GPU_OTHER && !cfg.gpuOtherTried && !UNBLOCK_ON && !SAFE_MODE && !gameStarted) {
+      cfg = { ...cfg, gpuOther: true, gpuOtherTried: true };
+      saveCfg();
+      modLog('placa: sem adaptador, testando a outra placa sozinho');
+      relaunchApp();
+      return { ok: true, action: 'other' };
+    }
     const action = gpuFallback.decide({
       supported: !!(r && r.supported), software: !!(r && r.software),
       unblockOn: UNBLOCK_ON, tried: cfg.unblockTried, safeMode: SAFE_MODE, gameStarted,

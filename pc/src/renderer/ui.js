@@ -68,6 +68,11 @@
     chip.hidden = !gpuResult;
     $('unblock-row').hidden = false;
     $('gpu-unblock').hidden = false;
+    // Outra placa sempre à mão (20/11): no erro fica em destaque; ligada, vira o caminho de volta.
+    const otherOn = !!(state && state.settings.gpuOther);
+    $('gpu-other').hidden = false;
+    $('gpu-other').className = (problem || dx11Failed) && !otherOn ? 'primary small' : 'small';
+    $('gpu-other').textContent = otherOn ? t('Voltar à placa de antes', 'Back to the previous card') : t('Usar a outra placa de vídeo', 'Use the other graphics card');
     $('gpu-unblock').className = problem || unblockOn ? 'primary small' : 'small';
     $('gpu-unblock').textContent = unblockConfirm ? t('Confirmar e reabrir', 'Confirm and reopen')
       : unblockOn ? t('Voltar ao DirectX 12', 'Back to DirectX 12') : t('Modo DirectX 11', 'DirectX 11 mode');
@@ -556,6 +561,7 @@
   };
   $('b-saves-open').onclick = openSaves;
   $('b-restart').onclick = () => api.restart();
+  $('gpu-other').onclick = () => { $('gpu-other').disabled = true; api.gpuOther(); };
   $('gpu-unblock').onclick = async () => {
     // Placa com DirectX 12 funcionando: pede um segundo clique, para ninguém perder desempenho sem querer.
     const ok = gpuResult && gpuResult.supported && !gpuResult.software;

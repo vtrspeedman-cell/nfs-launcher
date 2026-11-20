@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('launcher', {
   openSaveEditor: (id) => call('saves:editor', id),
   restoreLastSave: (id) => call('saves:restoreLast', id),
   gpuStatus: () => call('gpu:status'),
+  gpuOther: () => call('gpu:other'),
   reportGpu: (result) => call('gpu:report', result),
   saveDiagnostics: () => call('diag:save'),
   restart: () => call('app:restart'),

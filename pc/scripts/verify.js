@@ -167,7 +167,7 @@ check('Gráficos iguais ao Chrome (sem flags que mudam a composição)', () => {
   for (const f of ['ignore-gpu-blocklist', 'enable-zero-copy', 'enable-gpu-rasterization', 'CalculateNativeWinOcclusion', 'force-device-scale-factor']) {
     assert(!new RegExp(`sw\\('${f}`).test(m) && !m.includes(`'disable-features', '${f}`), `flag ativa: ${f}`);
   }
-  assert(/^  sw\('force-high-performance-gpu'\);$/m.test(m) && /if \(GPU_OTHER\) sw\('use-webgpu-power-preference', 'force-low-power'\);/.test(m) &&!/disableHardwareAcceleration\(/.test(m), 'placa mais forte desligada ou aceleração de hardware desligada');
+  assert(!/force-high-performance/.test(m) &&/if \(GPU_OTHER\) sw\('use-webgpu-power-preference', 'force-low-power'\);/.test(m) &&!/disableHardwareAcceleration\(/.test(m), 'placa forçada (quebrou notebook só com integrada) ou aceleração de hardware desligada');
   assert(!/backgroundThrottling:\s*false/.test(m), 'backgroundThrottling:false (página nunca fica "escondida", diferente do Chrome)');
   // O app não mexe no VSync: só o --uncapped, digitado à mão, tira.
   assert(/if \(VSYNC_OFF\) \{ sw\('disable-frame-rate-limit'\); sw\('disable-gpu-vsync'\); \}/.test(m) &&
