@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.5",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.5/NFS-Launcher-Setup-3.1.5.exe",
-  "tamanho": 104894214,
-  "sha256": "31983e6b5ff1803fc466cb4e177b705c19c90a720f2566038961c1ab407a705d",
+  "versao": "3.1.6",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.6/NFS-Launcher-Setup-3.1.6.exe",
+  "tamanho": 104895562,
+  "sha256": "465ab905690773ab94b2fc5bc6ccf4745a716b2567543e28adbe0006614d342b",
   "novidades": {
-    "pt": "Reportar problema agora manda o log da última partida também quando a placa de vídeo cai, e espera o jogo terminar de gravar o log antes de sugerir o relato.",
-    "en": "Report a problem now sends the last match log even when the graphics card crashes, and waits for the game to finish writing the log before suggesting a report."
+    "pt": "O jogo volta a abrir em notebook só com a placa integrada: o app não força mais a placa mais forte, o sistema escolhe sozinho como no Chrome. Novo botão na tela inicial: Usar a outra placa de vídeo.",
+    "en": "The game opens again on laptops with only integrated graphics: the app no longer forces the stronger card, the system picks it like Chrome does. New home screen button: Use the other graphics card."
   }
 }
