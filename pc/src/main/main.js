@@ -1732,7 +1732,7 @@ function registerIpc() {
     reportRec = await reportRead(wc, wc && !wc.isDestroyed() && reportFound.get(wc) ? 3000 : 15000);
     modLog(`relato: tela pediu o log (${reportRec ? 'achado' : 'não achado'})`);
     return {
-      ok: true, game: currentGame ? config.GAMES[currentGame].short : null, origin: reportOrigin,
+      ok: true, game: currentGame ? GAMES[currentGame].short : null, origin: reportOrigin,
       hasLog: !!reportRec, logSize: reportRec ? reportRec.log.length : 0, errors: reportRec ? report.errorLines(reportRec.log, 8) : [],
     };
   });
@@ -1741,7 +1741,7 @@ function registerIpc() {
     let diag = '';
     if (d.withDiag) { try { diag = diagnostics.formatReport(await collectDiagnostics()); } catch { /* vai sem */ } }
     const body = report.payload({
-      texto: d.texto, jogo: currentGame ? config.GAMES[currentGame].short : '', app: `PC ${app.getVersion()}`,
+      texto: d.texto, jogo: currentGame ? GAMES[currentGame].short : '', app: `PC ${app.getVersion()}`,
       origem: reportOrigin, diag, rec: reportRec, withDiag: !!d.withDiag, withLog: !!d.withLog,
     });
     try {
