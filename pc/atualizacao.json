@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.3",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.3/NFS-Launcher-Setup-3.1.3.exe",
-  "tamanho": 104889319,
-  "sha256": "88c336e962018b6b81d7b90fb5498d54051c924d56b50246c9b9fdac87cfd395",
+  "versao": "3.1.4",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.4/NFS-Launcher-Setup-3.1.4.exe",
+  "tamanho": 104889594,
+  "sha256": "2ab3d591095e20fec1599da6d8d7ddb816009efb14a283b20cad85c1ca2377d5",
   "novidades": {
-    "pt": "Novos pacotes de imagem: Cores frias, Cores quentes, Noturno, Retrô e Desbotado (os de cor seguem o modo foto do jogo). Corrigido: o modo DirectX 11 não volta mais sozinho ao DirectX 12 ao recarregar ou reabrir.",
-    "en": "New image packs: Cool colors, Warm colors, Night, Retro and Faded (the color ones follow the game's photo mode). Fixed: DirectX 11 mode no longer switches back to DirectX 12 by itself after reloading or reopening."
+    "pt": "Se a placa de vídeo cair durante o jogo, o app pergunta se você quer testar a outra placa (ou voltar à de antes).",
+    "en": "If the graphics card crashes during the game, the app asks whether you want to try the other card (or go back to the previous one)."
   }
 }
