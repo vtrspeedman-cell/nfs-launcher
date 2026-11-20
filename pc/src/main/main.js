@@ -398,6 +398,7 @@ async function lightAuto(avg) {
 // reabrir (o jogo mostra GPU-LOST). Com duas placas, oferece testar a outra; se já está nela, oferece voltar.
 // Uma pergunta por abertura; a Microsoft Basic Render (0x1414) não conta como placa.
 let gpuLostAsked = false;
+let gpuLostShowing = null; // a sugestão de relato espera esta pergunta fechar (não abre as duas juntas)
 async function gpuLostAsk() {
   if (gpuLostAsked || SAFE_MODE || !win || win.isDestroyed()) return;
   gpuLostAsked = true;
@@ -412,12 +413,14 @@ async function gpuLostAsk() {
       ? tr('O jogo já está na outra placa de vídeo e ela também parou. Quer voltar à placa de antes? O app reabre.', 'The game is already on the other graphics card and it stopped too. Go back to the previous card? The app reopens.')
       : tr('Este PC tem duas placas de vídeo. Quer testar o jogo na outra? O app reabre. Se ficar pior, aparece aqui a opção de voltar.', 'This PC has two graphics cards. Try the game on the other one? The app reopens. If it gets worse, the option to go back shows up here.'))
     : tr('Reabrir o app costuma resolver. Se repetir, baixe os gráficos do jogo (Options > Display) e atualize o driver da placa de vídeo.', 'Reopening the app usually fixes it. If it keeps happening, lower the game graphics (Options > Display) and update the graphics driver.');
-  const { response } = await dialog.showMessageBox(win, {
+  gpuLostShowing = dialog.showMessageBox(win, {
     type: 'warning', buttons, defaultId: 0, cancelId: buttons.length - 1, noLink: true,
     title: tr('Placa de vídeo', 'Graphics card'),
     message: tr('A placa de vídeo parou durante o jogo.', 'The graphics card stopped during the game.'),
     detail,
   });
+  const { response } = await gpuLostShowing;
+  gpuLostShowing = null;
   if (response === buttons.length - 1) return;
   if (two && response === 0) {
     cfg = { ...cfg, gpuOther: !GPU_OTHER };
@@ -560,6 +563,10 @@ async function reportSuggest(wc) {
   const rec = await reportRead(wc);
   const seen = rec ? report.when(rec) : 0;
   if (!(crashed || report.endedBadly(rec)) || (rec && seen <= (cfg.reportSeen || 0))) return;
+  // Pergunta da placa aberta: espera; se o app reabrir, a sugestão vem depois (ainda não marcada como vista).
+  if (!gpuLostShowing) await new Promise((res) => setTimeout(res, 1500));
+  while (gpuLostShowing) await gpuLostShowing.catch(() => {});
+  if (quitting || relaunching || !win || win.isDestroyed() || wc.isDestroyed()) return;
   if (seen) { cfg = { ...cfg, reportSeen: seen }; saveCfg(); }
   if (screen !== 'none' && screen !== 'loading') return;
   const { response } = await dialog.showMessageBox(win, {
@@ -1648,7 +1655,8 @@ function runningProcessNames() {
 }
 async function collectDiagnostics() {
   let gpu = null;
-  try { gpu = await app.getGPUInfo('complete'); } catch { /* ignora */ }
+  // Com a placa de vídeo caída, o getGPUInfo pode nunca responder: espera no máximo 5 s.
+  try { gpu = await Promise.race([app.getGPUInfo('complete'), new Promise((r) => setTimeout(() => r(null), 5000))]); } catch { /* ignora */ }
   const current = win && !win.isDestroyed() ? displays.getDisplayMatching(win.getBounds()).id : null;
   const cpus = os.cpus();
   const { bounds, ...settingsShown } = cfg; // posição da janela não interessa
@@ -1717,7 +1725,7 @@ function registerIpc() {
   handle('screen:report', () => openReport('botão'));
   handle('report:collect', async () => {
     const wc = gameView && gameView.webContents;
-    reportRec = await reportRead(wc);
+    reportRec = await Promise.race([reportRead(wc), new Promise((r) => setTimeout(() => r(null), 5000))]);
     return {
       ok: true, game: currentGame ? config.GAMES[currentGame].short : null, origin: reportOrigin,
       hasLog: !!reportRec, logSize: reportRec ? reportRec.log.length : 0, errors: reportRec ? report.errorLines(reportRec.log, 8) : [],

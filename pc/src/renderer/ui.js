@@ -512,7 +512,7 @@
     $('r-text').value = '';
     $('r-info').textContent = t('Procurando o log da última partida…', 'Looking for the last game log…');
     $('r-send').disabled = false;
-    const r = await api.reportCollect();
+    const r = await Promise.race([api.reportCollect(), new Promise((res) => setTimeout(() => res(null), 8000))]).catch(() => null);
     repHasLog = !!(r && r.hasLog);
     $('r-log').disabled = !repHasLog;
     $('r-log').checked = repHasLog;
@@ -529,8 +529,13 @@
     const texto = $('r-text').value.trim();
     if (texto.length < 5 && !(repHasLog && $('r-log').checked)) { toast(t('Escreva o que aconteceu.', 'Describe what happened.'), true); $('r-text').focus(); return; }
     $('r-send').disabled = true;
-    const r = await api.reportSend({ texto, withDiag: $('r-diag').checked, withLog: $('r-log').checked });
+    $('r-info').textContent = t('Enviando…', 'Sending…');
+    const r = await Promise.race([
+      api.reportSend({ texto, withDiag: $('r-diag').checked, withLog: $('r-log').checked }),
+      new Promise((res) => setTimeout(() => res({ ok: false, error: 'tempo' }), 60000)),
+    ]).catch(() => ({ ok: false, error: 'falha' }));
     $('r-send').disabled = false;
+    if (!r.ok) $('r-info').textContent = '';
     if (r.ok) { toast(t(`Relato enviado (nº ${r.number}). Obrigado!`, `Report sent (#${r.number}). Thanks!`)); api.back(); }
     else toast(r.error === 'limite' ? t('Muitos relatos seguidos; tente daqui a uma hora.', 'Too many reports; try again in an hour.')
       : t('Não deu para enviar agora. Confira a internet e tente de novo.', 'Could not send now. Check your internet and try again.'), true);
