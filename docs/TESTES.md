@@ -63,6 +63,7 @@ Automatizados, na pasta `pc`: `npm test` (141 testes) e `npm run verify` (27 ver
 | 46j | Texturas HD ligadas (3.0.19): ver a aba Mods do jogo e andar por estradas e pelo estacionamento; na janela Texturas HD, escolher a parte "Faixas do estacionamento" | "Estradas mais nítidas" fica ligada e as estradas do jogo aparecem por baixo dos mods; com a melhor opção da dica, as listras do estacionamento aparecem (com o NextGen sozinho, somem). Títulos das partes sempre em cima dos botões. |
 | 46k | NFSU2 ou Modded com save: Configurações > Editor de save; abrir o editor, mudar o dinheiro, baixar e escolher "Aplicar no jogo"; depois "Restaurar save de antes do editor" | Aviso amigável com crédito ao Psy; o jogo fecha antes; editor abre com o save carregado e sem internet; o dinheiro novo aparece no jogo; restaurar volta o dinheiro antigo. Arquivo estranho ou de outro save: recusa e nada muda. |
 | 46l | Depois de o jogo ou a placa de vídeo cair (3.1.5): Reportar problema, escrever o texto com a caixa do log marcada e Enviar | A caixa do log aparece marcada com a partida que caiu; o envio termina e vira uma issue no Reportar-problema com o log em comentários. |
+| 46m | Celular (1.7.1): tela inicial > Editor de save, escolher NFSU2 ou Modded, mudar algo, Aplicar no jogo; depois Restaurar | Botões em grade 2x2 sem cortar; o editor abre com o save; o jogo mostra a mudança; Restaurar volta o save de antes. |
 
 ## Celular (Android)
 
