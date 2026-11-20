@@ -106,7 +106,8 @@ code { background: #0c0f1e; border: 1px solid var(--line); padding: 6px 10px; bo
   button.disc img { width: 104px; height: 104px; }
   button { min-height: 40px; padding: 8px 10px; font-size: 14px; }
   button.primary { padding: 12px 60px; font-size: 18px; }
-  #home > .row { gap: 6px; flex-wrap: nowrap; }
+  #home > .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: min(100%, 360px); }
+  #home > .row button { white-space: nowrap; width: 100%; }
   .update-box { flex-wrap: nowrap; padding: 4px 6px 4px 12px; font-size: 13px; text-align: left; }
   .footer { padding: 6px 0; }
   h3 { margin-top: 12px; }

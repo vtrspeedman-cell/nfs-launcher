@@ -77,6 +77,8 @@
     $('btn-start').textContent = 'START';
     $('btn-saves').textContent = t('Meus saves', 'My saves');
     $('btn-saves').hidden = !info(sel).textures; // só os NFSU2 têm cópia do save (a pasta é a mesma)
+    $('btn-editor').textContent = t('Editor de save', 'Save editor');
+    $('btn-editor').hidden = !info(sel).textures;
     $('btn-settings').textContent = t('Configurações', 'Settings');
     $('btn-quit').textContent = t('Fechar', 'Close');
     $('versions').textContent = `v${st.version}`;
@@ -346,6 +348,7 @@
   $('btn-saves').onclick = openSaves;
   $('b-saves-open').onclick = openSaves;
   $('b-editor').onclick = () => api.openEditor();
+  $('btn-editor').onclick = () => api.openEditor();
   $('btn-settings').onclick = () => { texWant = true; setScreen('settings'); };
   $('update-get').onclick = () => ((st.update || {}).status === 'ready' ? api.installUpdate() : api.downloadUpdate());
   $('btn-quit').onclick = () => api.quit();
