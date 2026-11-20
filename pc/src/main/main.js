@@ -1731,7 +1731,7 @@ function registerIpc() {
       saveCfg();
       relaunchApp();
     } else if (action === 'failed') {
-      cfg = { ...cfg, unblockGpu: false, unblockTried: true };
+      cfg = { ...cfg, unblockTried: true }; // DirectX 11 fica ligado: só o jogador volta ao DX12 (pedido de 20/11)
       saveCfg();
       refresh();
     }
