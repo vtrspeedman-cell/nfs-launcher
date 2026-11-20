@@ -1,10 +1,10 @@
 {
-  "versao": "1.7.0",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.0/NFS-Launcher-Android-1.7.0.apk",
-  "tamanho": 255395201,
-  "sha256": "06429f881aac476de653ff29b011297ddb5ddeb7241221f915d097795b8f7dd3",
+  "versao": "1.7.1",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.1/NFS-Launcher-Android-1.7.1.apk",
+  "tamanho": 255519971,
+  "sha256": "7e631ff2d7e30c9cce6633917006b68aad2c961a6baf42d82acbb0e820b4b517",
   "novidades": {
-    "pt": "Modo leve em Configurações: deixa o jogo no mínimo uma vez, e o que você religar no jogo fica. Texturas HD: as estradas nítidas do jogo entram por baixo do pacote, nova parte \"Faixas do estacionamento\" e só entra o mod que você escolher. Spotify abre no navegador e o login do Last.fm funciona.",
-    "en": "Light mode in Settings: sets the game to minimum once, and whatever you turn back on in the game stays. HD Textures: the game's sharp roads now sit under the pack, new \"Parking lot lines\" part, and only the mod you choose is used. Spotify opens in the browser and the Last.fm login works."
+    "pt": "Editor de save UNPSY (por Psy) na tela inicial e em Configurações: guarda uma cópia antes, \"Aplicar no jogo\" e \"Restaurar\" o save de antes do editor.",
+    "en": "UNPSY save editor (by Psy) on the home screen and in Settings: keeps a copy first, \"Apply to game\" and \"Restore\" the save from before the editor."
   }
 }
