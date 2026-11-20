@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.4",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.4/NFS-Launcher-Setup-3.1.4.exe",
-  "tamanho": 104889594,
-  "sha256": "2ab3d591095e20fec1599da6d8d7ddb816009efb14a283b20cad85c1ca2377d5",
+  "versao": "3.1.5",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.5/NFS-Launcher-Setup-3.1.5.exe",
+  "tamanho": 104894214,
+  "sha256": "31983e6b5ff1803fc466cb4e177b705c19c90a720f2566038961c1ab407a705d",
   "novidades": {
-    "pt": "Se a placa de vídeo cair durante o jogo, o app pergunta se você quer testar a outra placa (ou voltar à de antes).",
-    "en": "If the graphics card crashes during the game, the app asks whether you want to try the other card (or go back to the previous one)."
+    "pt": "Reportar problema agora manda o log da última partida também quando a placa de vídeo cai, e espera o jogo terminar de gravar o log antes de sugerir o relato.",
+    "en": "Report a problem now sends the last match log even when the graphics card crashes, and waits for the game to finish writing the log before suggesting a report."
   }
 }
