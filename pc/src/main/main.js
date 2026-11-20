@@ -401,21 +401,18 @@ let gpuLostAsked = false;
 async function gpuLostAsk() {
   if (gpuLostAsked || SAFE_MODE || !win || win.isDestroyed()) return;
   gpuLostAsked = true;
-  // Primeiro a sugestão de relato (3 s depois da queda, sem recarregar); esta pergunta só depois dela e da tela de relato.
-  await Promise.race([new Promise((r) => reportWaiters.push(r)), new Promise((r) => setTimeout(r, 25000))]);
+  // Chamada só depois da sugestão de relato; espera também a tela de relato fechar.
   while (screen === 'report' && !quitting && win && !win.isDestroyed()) await new Promise((r) => setTimeout(r, 500));
   if (quitting || relaunching || !win || win.isDestroyed()) return;
   let devices = [];
   try { devices = ((await app.getGPUInfo('basic')).gpuDevice || []).filter((d) => d.vendorId !== 0x1414); } catch { /* ignora */ }
-  const two = new Set(devices.map((d) => `${d.vendorId}:${d.deviceId}`)).size > 1 || GPU_OTHER;
-  const buttons = two
-    ? [GPU_OTHER ? tr('Voltar à placa de antes', 'Back to the previous card') : tr('Testar a outra placa', 'Try the other card'), tr('Só reabrir o app', 'Just reopen the app'), tr('Agora não', 'Not now')]
-    : [tr('Reabrir o app', 'Reopen the app'), tr('Agora não', 'Not now')];
-  const detail = two
-    ? (GPU_OTHER
-      ? tr('O jogo já está na outra placa de vídeo e ela também parou. Quer voltar à placa de antes? O app reabre.', 'The game is already on the other graphics card and it stopped too. Go back to the previous card? The app reopens.')
-      : tr('Este PC tem duas placas de vídeo. Quer testar o jogo na outra? O app reabre. Se ficar pior, aparece aqui a opção de voltar.', 'This PC has two graphics cards. Try the game on the other one? The app reopens. If it gets worse, the option to go back shows up here.'))
-    : tr('Reabrir o app costuma resolver. Se repetir, baixe os gráficos do jogo (Options > Display) e atualize o driver da placa de vídeo.', 'Reopening the app usually fixes it. If it keeps happening, lower the game graphics (Options > Display) and update the graphics driver.');
+  // Com uma placa só não pergunta nada (pedido do Bruno, 20/11: nada de oferecer reabrir ou recarregar).
+  if (!(new Set(devices.map((d) => `${d.vendorId}:${d.deviceId}`)).size > 1 || GPU_OTHER)) return;
+  const two = true;
+  const buttons = [GPU_OTHER ? tr('Voltar à placa de antes', 'Back to the previous card') : tr('Testar a outra placa', 'Try the other card'), tr('Agora não', 'Not now')];
+  const detail = GPU_OTHER
+    ? tr('O jogo já está na outra placa de vídeo e ela também parou. Quer voltar à placa de antes? O app reabre.', 'The game is already on the other graphics card and it stopped too. Go back to the previous card? The app reopens.')
+    : tr('Este PC tem duas placas de vídeo. Quer testar o jogo na outra? O app reabre. Se ficar pior, aparece aqui a opção de voltar.', 'This PC has two graphics cards. Try the game on the other one? The app reopens. If it gets worse, the option to go back shows up here.');
   const { response } = await dialog.showMessageBox(win, {
     type: 'warning', buttons, defaultId: 0, cancelId: buttons.length - 1, noLink: true,
     title: tr('Placa de vídeo', 'Graphics card'),
@@ -548,7 +545,7 @@ function openReport(origin) {
   return { ok: true };
 }
 async function reportRead(wc, wait = 3000) {
-  if (!wc || wc.isDestroyed() || !['nfsu2', 'nfsu2mod'].includes(currentGame)) return null;
+  if (!wc || wc.isDestroyed()) { modLog('relato: sem a página do jogo'); return null; }
   try {
     const raw = await Promise.race([
       wc.executeJavaScriptInIsolatedWorld(report.WORLD, [{ code: report.readCode }]),
@@ -1732,6 +1729,7 @@ function registerIpc() {
   handle('report:collect', async () => {
     const wc = gameView && gameView.webContents;
     reportRec = await reportRead(wc, 15000);
+    modLog(`relato: tela pediu o log (${reportRec ? 'achado' : 'não achado'})`);
     return {
       ok: true, game: currentGame ? config.GAMES[currentGame].short : null, origin: reportOrigin,
       hasLog: !!reportRec, logSize: reportRec ? reportRec.log.length : 0, errors: reportRec ? report.errorLines(reportRec.log, 8) : [],
@@ -1904,11 +1902,11 @@ if (gotLock) {
       for (let i = 0; i < 30 && wc && !wc.isDestroyed() && !quitting; i++) {
         await new Promise((r) => setTimeout(r, 1000));
         const rec = await reportRead(wc, 2000);
-        if (rec?.ended && report.when(rec) >= now - 5000) break;
+        if (rec?.ended && report.when(rec) >= now - 30000) break;
       }
-      if (wc && !wc.isDestroyed()) reportSuggest(wc);
+      if (wc && !wc.isDestroyed()) await reportSuggest(wc);
+      gpuLostAsk();
     })();
-    gpuLostAsk();
   });
 
   app.whenReady().then(async () => {
