@@ -29,7 +29,7 @@ const EN = {
   sAntiAlias: 'Anti-aliasing (FXAA) <small>(makes edges smoother, right away. Costs ~0.2 ms per frame and takes a little sharpness from text and details. Stays out when the game\'s own anti-aliasing is on)</small>',
   hImage: 'Game picture',
   sImage: 'Picture pack (CAS sharpening, bloom, color and vignette, done by the app engine) <small>(changes the picture right away, without reopening the app. In NFSU2 it costs little, ~0.15 to 0.3 ms per frame; check with F8. In Most Wanted and Carbon only color and sharpness apply, through CSS filter)</small>',
-  imgMode: 'Pack', imgNeon: 'Neon (glowing lights)', imgReal: 'Realistic',imgSoft: 'Soft', imgVivid: 'Vivid', imgStrong: 'Intense', imgSharp: 'Sharp', imgVividSharp: 'Vivid and sharp', imgCinema: 'Cinema', imgBw: 'Black and white', imgSunset: 'Sunset',
+  imgMode: 'Pack', imgNeon: 'Neon (glowing lights)', imgReal: 'Realistic',imgSoft: 'Soft', imgVivid: 'Vivid', imgStrong: 'Intense', imgSharp: 'Sharp', imgVividSharp: 'Vivid and sharp', imgCinema: 'Cinema', imgBw: 'Black and white', imgSunset: 'Sunset', imgCold: 'Cool colors', imgWarm: 'Warm colors', imgNight: 'Night', imgRetro: 'Retro', imgFaded: 'Faded',
   advanced: 'Advanced',
   sPrepare: 'Prepare the game while loading <small>(optimizes the whole game at the start, not during the race. Heavier in the first seconds and may reduce stutters later)</small>',
   hPerf: 'Performance',

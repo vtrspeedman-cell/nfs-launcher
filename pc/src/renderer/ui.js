@@ -379,6 +379,11 @@
     cinema: ['Cinema', 'Cinema'],
     pretoBranco: ['Preto e branco', 'Black and white'],
     porDoSol: ['Pôr do sol', 'Sunset'],
+    frio: ['Cores frias', 'Cool colors'],
+    quente: ['Cores quentes', 'Warm colors'],
+    noturno: ['Noturno', 'Night'],
+    retro: ['Retrô', 'Retro'],
+    desbotado: ['Desbotado', 'Faded'],
     neon: ['Neon', 'Neon'],
     realista: ['Realista', 'Realistic'],
   };
