@@ -33,9 +33,9 @@ import java.util.zip.ZipOutputStream;
  * a pedido da pessoa, porque a cópia pode estar desatualizada. O zip vai para Download/NFS Launcher.
  */
 final class SaveCopy {
-    private static final int PROFILE_SIZE = 54966;
+    static final int PROFILE_SIZE = 54966;
     private static final int NAME_AT = 36 + 53761;
-    private static final int GARAGE_SIZE = 10202;
+    static final int GARAGE_SIZE = 10202;
     private static final int KEEP = 2; // pedido do Bruno: as 2 últimas versões
     private static final String FOLDER = "Download/NFS Launcher/";
 
@@ -66,7 +66,7 @@ final class SaveCopy {
         }
     }
 
-    private static boolean isProfile(byte[] b) {
+    static boolean isProfile(byte[] b) {
         return b.length == PROFILE_SIZE && b[0] == '2' && b[1] == '0' && b[2] == 'C' && b[3] == 'M';
     }
 
@@ -113,7 +113,7 @@ final class SaveCopy {
         return o == null ? new File[0] : o;
     }
 
-    private static List<File> filesOf(File origin) {
+    static List<File> filesOf(File origin) {
         List<File> files = new ArrayList<>();
         walk(new File(origin, "t"), files);
         return files;
@@ -161,7 +161,17 @@ final class SaveCopy {
         }
     }
 
-    private static void runFor(Context c, String game, Map<String, String> dirs) throws Exception {
+    /** O que vai no zip de um site: nome no zip, conteúdo e arquivo de onde veio (o editor de save usa o mesmo). */
+    static final class Collected {
+        final List<String> names = new ArrayList<>();
+        final List<byte[]> datas = new ArrayList<>();
+        final List<File> files = new ArrayList<>();
+        final List<byte[]> profiles = new ArrayList<>();
+        private void add(String n, byte[] d, File f) { names.add(n); datas.add(d); files.add(f); }
+    }
+
+    static Collected collect(Context c, String game, Map<String, String> dirs) throws IOException {
+        Collected out = new Collected();
         List<Found> profiles = new ArrayList<>();
         List<File> originFiles = new ArrayList<>();
         for (File o : originDirs(c)) {
@@ -173,52 +183,72 @@ final class SaveCopy {
                 if (isProfile(data)) { profiles.add(new Found(f, data)); originFiles = files; }
             }
         }
-        if (profiles.isEmpty()) return;
+        if (profiles.isEmpty()) return out;
         profiles.sort(Comparator.comparingLong((Found p) -> -p.file.lastModified()));
+        for (Found p : profiles) out.profiles.add(p.data);
+        for (int i = 0; i < profiles.size(); i++) {
+            String n = profileName(profiles.get(i).data, i);
+            String entry = "NFS Underground 2/" + n + "/" + n;
+            if (out.names.contains(entry)) continue; // mesmo nome duas vezes: fica o mais novo (o zip não aceita repetido)
+            out.add(entry, profiles.get(i).data, profiles.get(i).file);
+        }
+        // Com um perfil só, sai o backup inteiro; com mais de um não dá para saber de quem é a garagem.
+        if (profiles.size() == 1) {
+            originFiles.sort(Comparator.comparingLong((File f) -> -f.lastModified()));
+            File garage = null, settings = null, registry = null, autosave = null;
+            for (File f : originFiles) {
+                if (!mayBeExtra(f.length())) continue;
+                String k = kindOf(f);
+                if (k == null) continue;
+                if (k.equals("garage") && garage == null) garage = f;
+                else if (k.equals("settings.ini") && settings == null) settings = f;
+                else if (k.equals("registry.txt") && registry == null) registry = f;
+                else if (k.equals("autosave-profiles.txt") && autosave == null) autosave = f;
+            }
+            if (garage != null && (settings != null || registry != null)) {
+                String n = profileName(profiles.get(0).data, 0);
+                out.add("NFS Underground 2/" + n + "/GARAGE.DAT", Files.readAllBytes(garage.toPath()), garage);
+                if (settings != null) out.add("settings.ini", Files.readAllBytes(settings.toPath()), settings);
+                if (registry != null) out.add("registry.txt", Files.readAllBytes(registry.toPath()), registry);
+                if (autosave != null) out.add("autosave-profiles.txt", Files.readAllBytes(autosave.toPath()), autosave);
+            }
+        }
+        return out;
+    }
 
+    private static void runFor(Context c, String game, Map<String, String> dirs) throws Exception {
+        Collected got = collect(c, game, dirs);
+        if (got.profiles.isEmpty()) return;
         MessageDigest md = MessageDigest.getInstance("SHA-256");
-        List<byte[]> sorted = new ArrayList<>();
-        for (Found p : profiles) sorted.add(p.data);
+        List<byte[]> sorted = new ArrayList<>(got.profiles);
         sorted.sort(Arrays::compareUnsigned);
         for (byte[] d : sorted) md.update(d);
         String sum = hex(md.digest());
         File state = stateFile(c, game);
         if (state.exists() && sum.equals(new String(Files.readAllBytes(state.toPath()), StandardCharsets.UTF_8).trim())) return;
-
-        List<String> names = new ArrayList<>();
-        List<byte[]> datas = new ArrayList<>();
-        for (int i = 0; i < profiles.size(); i++) {
-            String n = profileName(profiles.get(i).data, i);
-            String entry = "NFS Underground 2/" + n + "/" + n;
-            if (names.contains(entry)) continue; // mesmo nome duas vezes: fica o mais novo (o zip não aceita repetido)
-            names.add(entry);
-            datas.add(profiles.get(i).data);
-        }
-        // Com um perfil só, sai o backup inteiro; com mais de um não dá para saber de quem é a garagem.
-        if (profiles.size() == 1) {
-            originFiles.sort(Comparator.comparingLong((File f) -> -f.lastModified()));
-            byte[] garage = null, settings = null, registry = null, autosave = null;
-            for (File f : originFiles) {
-                if (!mayBeExtra(f.length())) continue;
-                String k = kindOf(f);
-                if (k == null) continue;
-                if (k.equals("garage") && garage == null) garage = Files.readAllBytes(f.toPath());
-                else if (k.equals("settings.ini") && settings == null) settings = Files.readAllBytes(f.toPath());
-                else if (k.equals("registry.txt") && registry == null) registry = Files.readAllBytes(f.toPath());
-                else if (k.equals("autosave-profiles.txt") && autosave == null) autosave = Files.readAllBytes(f.toPath());
-            }
-            if (garage != null && (settings != null || registry != null)) {
-                String n = profileName(profiles.get(0).data, 0);
-                names.add("NFS Underground 2/" + n + "/GARAGE.DAT");
-                datas.add(garage);
-                if (settings != null) { names.add("settings.ini"); datas.add(settings); }
-                if (registry != null) { names.add("registry.txt"); datas.add(registry); }
-                if (autosave != null) { names.add("autosave-profiles.txt"); datas.add(autosave); }
-            }
-        }
-        write(c, game, names, datas);
+        write(c, game, got.names, got.datas);
         Files.write(state.toPath(), sum.getBytes(StandardCharsets.UTF_8));
         prune(c, game);
+    }
+
+    /** Arquivo que o editor de save salvou, em Download/NFS Launcher (pelo botão "Salvar arquivo"). */
+    static void saveFile(Context c, String name, byte[] data) throws IOException {
+        ContentResolver cr = c.getContentResolver();
+        ContentValues v = new ContentValues();
+        v.put(MediaStore.Downloads.DISPLAY_NAME, name.replaceAll("[\\\\/:*?\"<>|]", "_"));
+        v.put(MediaStore.Downloads.RELATIVE_PATH, FOLDER);
+        v.put(MediaStore.Downloads.IS_PENDING, 1);
+        Uri uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+        if (uri == null) throw new IOException("sem acesso a Downloads");
+        try (OutputStream out = cr.openOutputStream(uri)) {
+            out.write(data);
+        } catch (IOException e) {
+            cr.delete(uri, null, null);
+            throw e;
+        }
+        v.clear();
+        v.put(MediaStore.Downloads.IS_PENDING, 0);
+        cr.update(uri, v, null, null);
     }
 
     private static void write(Context c, String game, List<String> names, List<byte[]> datas) throws IOException {
