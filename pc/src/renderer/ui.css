@@ -172,3 +172,5 @@ body.windowed .screen, body.windowed .intro { top: 32px; }
 .custom-cell { display: flex; align-items: center; gap: 8px; }
 .thumb-bg { width: 96px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); background: #000; }
 .thumb-disc { width: 54px; height: 54px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); }
+#report textarea { width: 100%; box-sizing: border-box; margin: 10px 0 6px; font: inherit; font-size: 14px; color: var(--txt); background: #12152a; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; user-select: text; }
+#report textarea:focus { outline: none; border-color: var(--neon); }

@@ -40,6 +40,7 @@ const DEFAULTS = Object.freeze({
   maximized: false,
   lang: 'pt',               // idioma do app e das dicas ('pt' ou 'en'), escolhido na tela inicial ou nas configurações
   game: 'nfsu2',            // último jogo iniciado (vem selecionado na tela inicial; 1ª vez: NFSU2)
+  reportSeen: 0,            // data da última partida com erro já sugerida para relato
   crewInvites: 0,           // quantas vezes o START abriu com o convite da equipe (config.CREW_MAX)
   lightMode: false,         // modo leve: mods pesados e anti-serrilhado do jogo desligados (gameSettings.lightMode)
   lightAuto: false,         // o FPS baixo já ligou (ou ofereceu) o modo leve uma vez (fpsWatch.js)
@@ -91,6 +92,7 @@ function sanitize(raw) {
   if (GAME_IDS.includes(r.game)) out.game = r.game;
   if (Object.hasOwn(SECURE_DNS, r.secureDns)) out.secureDns = r.secureDns;
   if (Number.isInteger(r.crewInvites) && r.crewInvites >= 0) out.crewInvites = Math.min(r.crewInvites, 99);
+  if (Number.isFinite(r.reportSeen) && r.reportSeen >= 0) out.reportSeen = r.reportSeen;
   out.texParts = require('./texPack').sanitizeChoice(r.texParts);
   for (const k of ['texUiPrev', 'texUiPrevMod', 'texRoadPrev', 'texRoadPrevMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && !/[\r\n]/.test(r[k])) out[k] = r[k];
   // Linhas de antes do modo leve: { ini: {chave: linha}, aa: 'número' }.

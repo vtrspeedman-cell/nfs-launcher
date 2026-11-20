@@ -162,6 +162,7 @@
         <p class="muted small" data-t="diagNote"><b>Relatório</b>: salva um arquivo de texto com as versões, a placa de vídeo e o driver, os monitores (resolução e Hz) e as opções do app, com os problemas conhecidos que o app consegue detectar. Fica só no seu PC; mande para quem for ajudar. Gere com o jogo aberto, logo depois de um engasgo.</p>
         <div class="row left">
           <button id="b-diag" data-t="diag">Salvar relatório de diagnóstico</button>
+          <button id="b-report" data-t="report">Reportar problema</button>
         </div>
       </section>
       <section>
@@ -180,6 +181,21 @@
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Texturas HD (NFSU2): janela de sistema. Várias trocas, depois "Aplicar" pede para reiniciar. -->
+  <main id="report" class="screen" hidden>
+    <div class="panel">
+      <div class="screen-head"><h2 data-t="repTitle">Reportar problema</h2></div>
+      <p class="muted small" data-t="repNote">Conte o que aconteceu (o que você fazia, se travou, fechou ou ficou lento). O relato vai para a equipe; nome de usuário do Windows e e-mails saem antes de enviar.</p>
+      <textarea id="r-text" rows="6" maxlength="4000"></textarea>
+      <label class="switch"><input type="checkbox" id="r-diag" checked><span data-t="repDiag">Mandar o diagnóstico <small>(versões, placa de vídeo, driver, monitores, opções do app)</small></span></label>
+      <label class="switch"><input type="checkbox" id="r-log" checked><span data-t="repLog">Mandar o log da última partida <small>(registro do jogo)</small></span></label>
+      <p id="r-info" class="muted small"></p>
+      <div class="row right footer">
+        <span class="muted small" data-t="repHint">Esc volta</span>
+        <button id="r-cancel" class="small" data-t="texCancel">Voltar</button>
+        <button id="r-send" class="primary small" data-t="repSend">Enviar</button>
+      </div>
+    </div>
+  </main>
   <main id="textures" class="screen" hidden>
     <div class="panel">
       <div class="screen-head"><h2 data-t="texTitle">Texturas HD</h2></div>

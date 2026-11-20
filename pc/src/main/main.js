@@ -34,6 +34,7 @@ const texPack = require('./texPack');
 const maskPack = require('./maskPack');
 const gameSettings = require('./gameSettings');
 const fpsWatch = require('./fpsWatch');
+const report = require('./report');
 
 // ───────────────────────── Argumentos de linha de comando ─────────────────────────
 const argv = process.argv.slice(1);
@@ -528,6 +529,47 @@ function installMods(mods) {
   };
 }
 let modsOn = null; // installMods (null = sem mods)
+// "Reportar problema" (report.js): tela do app; o log vem da cópia que o jogo guarda da última partida.
+let reportReturn = 'none';
+let reportOrigin = 'botão';     // botão | erro (sugerido depois de uma partida que terminou com erro)
+let reportRec = null;
+let reportCrashed = false;      // a página do jogo caiu: a próxima abertura sugere o relato mesmo sem linha de erro
+const reportLoadedAt = new WeakMap();
+function openReport(origin) {
+  if (NO_UI) return { ok: false };
+  if (screen !== 'report') reportReturn = screen;
+  reportOrigin = origin;
+  setScreen('report');
+  return { ok: true };
+}
+async function reportRead(wc) {
+  if (!wc || wc.isDestroyed() || !['nfsu2', 'nfsu2mod'].includes(currentGame)) return null;
+  try {
+    const raw = await Promise.race([
+      wc.executeJavaScriptInIsolatedWorld(report.WORLD, [{ code: report.readCode }]),
+      new Promise((res) => setTimeout(() => res([]), 3000)),
+    ]);
+    return report.pickLast(Array.isArray(raw) ? raw : [], reportLoadedAt.get(wc) || Date.now());
+  } catch { return null; }
+}
+// Uma vez por partida: a anterior terminou com erro (ou a página caiu) -> pergunta se quer mandar o relato.
+async function reportSuggest(wc) {
+  if (quitting || SAFE_MODE || NO_UI || !win || win.isDestroyed() || wc.isDestroyed() || gameView?.webContents !== wc) return;
+  const crashed = reportCrashed;
+  reportCrashed = false;
+  const rec = await reportRead(wc);
+  const seen = rec ? report.when(rec) : 0;
+  if (!(crashed || report.endedBadly(rec)) || (rec && seen <= (cfg.reportSeen || 0))) return;
+  if (seen) { cfg = { ...cfg, reportSeen: seen }; saveCfg(); }
+  if (screen !== 'none' && screen !== 'loading') return;
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question', buttons: [tr('Reportar problema', 'Report problem'), tr('Agora não', 'Not now')],
+    defaultId: 0, cancelId: 1, noLink: true, title: tr('Reportar problema', 'Report problem'),
+    message: tr('A última partida terminou com erro.', 'The last game ended with an error.'),
+    detail: tr('Quer mandar um relato para a equipe? Você vê o que vai junto antes de enviar.', 'Send a report to the team? You see what goes with it before sending.'),
+  });
+  if (response === 0) openReport('erro');
+}
 let texReturn = null; // tela de onde a janela de texturas foi aberta (Voltar/Aplicar voltam para ela)
 // Registro curto do que houve com os mods (refeito a cada abertura, no máximo 300 linhas): NFS Launcher Mods\registro.txt
 // para quem tem a pasta; senão (ou se ela não aceitar gravação), na pasta temporária (nfs-mods-registro.txt).
@@ -1515,6 +1557,8 @@ function wireGameContents(wc) {
     wc.setZoomFactor(1);
     wc.setVisualZoomLevelLimits(1, 1).catch(() => {});
     if (mine()) applyPriority();
+    reportLoadedAt.set(wc, Date.now());
+    if (mine()) setTimeout(() => reportSuggest(wc), 4000);
   });
   wc.on('zoom-changed', () => wc.setZoomFactor(1));
 
@@ -1571,6 +1615,7 @@ function wireGameContents(wc) {
   wc.on('render-process-gone', (_e, details) => {
     if (quitting || details.reason === 'clean-exit' || !mine()) return;
     logCrash('jogo', details);
+    reportCrashed = true;
     const now = Date.now();
     crashes = crashes.filter((t) => now - t < 60000);
     crashes.push(now);
@@ -1665,7 +1710,37 @@ function registerIpc() {
   handle('window:toggle-fullscreen', () => { if (!locked()) toggleFullscreen(); return { ok: true }; });
   handle('window:exit-protected', () => { exitProtected(); return { ok: true }; });
   handle('screen:settings', () => { if (!locked()) setScreen('settings'); return { ok: true }; });
-  handle('screen:back', () => { setScreen(screen === 'textures' ? texBackScreen() : backScreen()); return { ok: true }; });
+  handle('screen:back', () => {
+    setScreen(screen === 'textures' ? texBackScreen() : screen === 'report' ? (reportReturn === 'settings' ? 'settings' : backScreen()) : backScreen());
+    return { ok: true };
+  });
+  handle('screen:report', () => openReport('botão'));
+  handle('report:collect', async () => {
+    const wc = gameView && gameView.webContents;
+    reportRec = await reportRead(wc);
+    return {
+      ok: true, game: currentGame ? config.GAMES[currentGame].short : null, origin: reportOrigin,
+      hasLog: !!reportRec, logSize: reportRec ? reportRec.log.length : 0, errors: reportRec ? report.errorLines(reportRec.log, 8) : [],
+    };
+  });
+  handle('report:send', async (d) => {
+    d = d && typeof d === 'object' ? d : {};
+    let diag = '';
+    if (d.withDiag) { try { diag = diagnostics.formatReport(await collectDiagnostics()); } catch { /* vai sem */ } }
+    const body = report.payload({
+      texto: d.texto, jogo: currentGame ? config.GAMES[currentGame].short : '', app: `PC ${app.getVersion()}`,
+      origem: reportOrigin, diag, rec: reportRec, withDiag: !!d.withDiag, withLog: !!d.withLog,
+    });
+    try {
+      const r = await net.fetch(report.RELAY_URL, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-nfs-launcher': '1' },
+        body: JSON.stringify(body), signal: AbortSignal.timeout(30000),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j.ok) { modLog(`relato enviado: #${j.numero}`); reportOrigin = 'botão'; return { ok: true, number: j.numero }; }
+      return { ok: false, error: j.erro || `http ${r.status}` };
+    } catch { return { ok: false, error: 'rede' }; }
+  });
   handle('capture:set', (on) => { capturing = !!on; syncAltSpaceCatch(); return { ok: true }; });
   handle('settings:set', (key, value) => {
     const r = settings.applyChange(cfg, key, value);

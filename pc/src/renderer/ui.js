@@ -417,9 +417,10 @@
         `To leave fullscreen: ${s.settings.toggleCombo} (or the ⛶ button up here)`);
     }
     const was = document.body.dataset.shown;
-    for (const id of ['launcher', 'settings', 'error', 'loading', 'textures']) $(id).hidden = s.screen !== id;
+    for (const id of ['launcher', 'settings', 'error', 'loading', 'textures', 'report']) $(id).hidden = s.screen !== id;
     // Janela de texturas: rascunho novo a cada vez que abre (o que não foi aplicado some ao voltar).
     if (s.screen === 'textures') { if (was !== 'textures') texDraft = null; renderTexScreen(s); } else texDraft = null;
+    if (s.screen === 'report' && was !== 'report') reportOpen();
     document.body.dataset.shown = s.screen;
     // Foco no botão principal de cada tela: Enter já funciona sem usar o mouse.
     if (was !== s.screen) {
@@ -477,7 +478,7 @@
   window.addEventListener('keydown', async (e) => {
     if (!capturingFor) {
       // Esc nas configurações volta (para o jogo, se ele já foi iniciado).
-      if (e.code === 'Escape' && state && ['settings', 'textures'].includes(state.screen) && !e.ctrlKey && !e.altKey) { e.preventDefault(); api.back(); }
+      if (e.code === 'Escape' && state && ['settings', 'textures', 'report'].includes(state.screen) && !e.ctrlKey && !e.altKey) { e.preventDefault(); api.back(); }
       return;
     }
     e.preventDefault(); e.stopPropagation();
@@ -504,6 +505,36 @@
   $('b-back').onclick = () => api.back();
   $('b-reload').onclick = () => api.reloadAsk();
   $('b-gpu-test').onclick = async () => { gpuResult = null; renderChip(); gpuResult = await testWebGPU(); renderChip(); renderGpuDetail(); };
+  $('b-report').onclick = () => api.openReport();
+  $('r-cancel').onclick = () => api.back();
+  let repHasLog = false;
+  async function reportOpen() {
+    $('r-text').value = '';
+    $('r-info').textContent = t('Procurando o log da última partida…', 'Looking for the last game log…');
+    $('r-send').disabled = false;
+    const r = await api.reportCollect();
+    repHasLog = !!(r && r.hasLog);
+    $('r-log').disabled = !repHasLog;
+    $('r-log').checked = repHasLog;
+    if (!repHasLog) $('r-info').textContent = t('Sem log de partida (só o NFSU2 e o Modded guardam; abra o jogo uma vez).', 'No game log (only NFSU2 and Modded keep one; open the game once).');
+    else {
+      const kb = Math.max(1, Math.round(r.logSize / 1024));
+      $('r-info').textContent = r.errors.length
+        ? t(`Log: ${kb} KB, com erro: ${r.errors[0]}`, `Log: ${kb} KB, with error: ${r.errors[0]}`)
+        : t(`Log: ${kb} KB, sem linha de erro.`, `Log: ${kb} KB, no error line.`);
+    }
+    setTimeout(() => $('r-text').focus(), 50);
+  }
+  $('r-send').onclick = async () => {
+    const texto = $('r-text').value.trim();
+    if (texto.length < 5 && !(repHasLog && $('r-log').checked)) { toast(t('Escreva o que aconteceu.', 'Describe what happened.'), true); $('r-text').focus(); return; }
+    $('r-send').disabled = true;
+    const r = await api.reportSend({ texto, withDiag: $('r-diag').checked, withLog: $('r-log').checked });
+    $('r-send').disabled = false;
+    if (r.ok) { toast(t(`Relato enviado (nº ${r.number}). Obrigado!`, `Report sent (#${r.number}). Thanks!`)); api.back(); }
+    else toast(r.error === 'limite' ? t('Muitos relatos seguidos; tente daqui a uma hora.', 'Too many reports; try again in an hour.')
+      : t('Não deu para enviar agora. Confira a internet e tente de novo.', 'Could not send now. Check your internet and try again.'), true);
+  };
   $('b-diag').onclick = async () => {
     const r = await api.saveDiagnostics();
     if (r.ok) toast(t(`Relatório salvo: ${r.name}`, `Report saved: ${r.name}`)); else if (r.error !== 'Cancelado.') toast(r.error, true);
