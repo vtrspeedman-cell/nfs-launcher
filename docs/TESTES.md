@@ -62,6 +62,7 @@ Automatizados, na pasta `pc`: `npm test` (141 testes) e `npm run verify` (27 ver
 | 46i | NFSU2: Options > Audio, Last.fm > Conectar; depois clicar em .fmbot > Adicionar | Abre uma janela do app com o login do Last.fm; depois de entrar e autorizar, ela fecha sozinha e o jogo mostra a conta ligada. O .fmbot abre no navegador do Windows. |
 | 46j | Texturas HD ligadas (3.0.19): ver a aba Mods do jogo e andar por estradas e pelo estacionamento; na janela Texturas HD, escolher a parte "Faixas do estacionamento" | "Estradas mais nítidas" fica ligada e as estradas do jogo aparecem por baixo dos mods; com a melhor opção da dica, as listras do estacionamento aparecem (com o NextGen sozinho, somem). Títulos das partes sempre em cima dos botões. |
 | 46k | NFSU2 ou Modded com save: Configurações > Editor de save; abrir o editor, mudar o dinheiro, baixar e escolher "Aplicar no jogo"; depois "Restaurar save de antes do editor" | Aviso amigável com crédito ao Psy; o jogo fecha antes; editor abre com o save carregado e sem internet; o dinheiro novo aparece no jogo; restaurar volta o dinheiro antigo. Arquivo estranho ou de outro save: recusa e nada muda. |
+| 46l | Depois de o jogo ou a placa de vídeo cair (3.1.5): Reportar problema, escrever o texto com a caixa do log marcada e Enviar | A caixa do log aparece marcada com a partida que caiu; o envio termina e vira uma issue no Reportar-problema com o log em comentários. |
 
 ## Celular (Android)
 
