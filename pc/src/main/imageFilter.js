@@ -25,11 +25,11 @@ const MODES = Object.freeze({
   cinema: { css: 'contrast(1.15) saturate(0.9) brightness(0.95)', fx: { sat: 0.9, con: 1.15, bri: 0.95, vin: 0.3 } },
   pretoBranco: { css: 'grayscale(1) contrast(1.15)', fx: { sat: 0, con: 1.15 } },
   porDoSol: { css: 'sepia(0.25) saturate(1.3) brightness(1.05)', fx: { sepia: 0.25, sat: 1.3, bri: 1.05 } },
-  frio: { css: 'hue-rotate(10deg) saturate(0.8) brightness(1.03)', fx: { r: 0.95, g: 0.99, b: 1.06, sat: 0.8, bri: 1.03 } },
-  quente: { css: 'sepia(0.15) saturate(1.15) contrast(1.03)', fx: { r: 1.08, g: 1.02, b: 0.9, sat: 1.1, con: 1.03 } },
+  frio: { css: 'hue-rotate(10deg) saturate(0.95) contrast(1.04)', fx: { r: 0.88, g: 0.98, b: 1.1, sat: 0.95, con: 1.04 } }, // = 'cool' do modo foto do jogo (photolook.ts)
+  quente: { css: 'sepia(0.15) saturate(1.08) contrast(1.04)', fx: { r: 1.08, g: 1, b: 0.86, sat: 1.08, con: 1.04 } }, // = 'warm' do modo foto
   noturno: { css: 'hue-rotate(10deg) saturate(0.85) contrast(1.12) brightness(0.9)', fx: { r: 0.88, g: 0.95, b: 1.12, sat: 0.85, con: 1.12, bri: 0.9, vin: 0.35, bloom: 0.5, limiar: 0.7 } },
   retro: { css: 'sepia(0.35) saturate(0.85) contrast(1.1)', fx: { sepia: 0.35, sat: 0.85, con: 1.1, vin: 0.25 } },
-  desbotado: { css: 'saturate(0.7) contrast(0.9) brightness(1.05)', fx: { sat: 0.7, con: 0.9, bri: 1.05, gama: 1.1 } },
+  desbotado: { css: 'saturate(0.7) contrast(0.88) brightness(1.04)', fx: { r: 1.02, b: 0.96, sat: 0.7, con: 0.88, gama: 0.93 } }, // = 'faded' do modo foto (pretos levantados pela gama)
   // Pacotes que só o motor faz por inteiro (pedido do Bruno, 10/11: o "ReShade nosso"); nos outros jogos, só a cor.
   neon: { css: 'saturate(1.35) contrast(1.06) brightness(1.03)', fx: { nit: 0.4, sat: 1.3, vib: 0.3, con: 1.06, bloom: 0.9, limiar: 0.6 } },
   realista: { css: 'saturate(0.92) contrast(1.1)', fx: { nit: 0.5, sat: 0.92, con: 1.1, vin: 0.15, bloom: 0.3, limiar: 0.75, r: 1.02, b: 0.97 } },
