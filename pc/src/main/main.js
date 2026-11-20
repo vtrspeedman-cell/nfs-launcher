@@ -401,7 +401,7 @@ let gpuLostAsked = false;
 async function gpuLostAsk() {
   if (gpuLostAsked || SAFE_MODE || !win || win.isDestroyed()) return;
   gpuLostAsked = true;
-  // Primeiro a sugestão de relato (vem depois que o jogo recarrega); esta pergunta só depois dela e da tela de relato.
+  // Primeiro a sugestão de relato (3 s depois da queda, sem recarregar); esta pergunta só depois dela e da tela de relato.
   await Promise.race([new Promise((r) => reportWaiters.push(r)), new Promise((r) => setTimeout(r, 25000))]);
   while (screen === 'report' && !quitting && win && !win.isDestroyed()) await new Promise((r) => setTimeout(r, 500));
   if (quitting || relaunching || !win || win.isDestroyed()) return;
@@ -555,9 +555,10 @@ async function reportRead(wc, wait = 3000) {
       new Promise((res) => setTimeout(() => res(null), wait)),
     ]);
     const rec = Array.isArray(raw) ? report.pickLast(raw, reportLoadedAt.get(wc) || Date.now()) : null;
+    modLog(`relato: ${Array.isArray(raw) ? `${raw.length} registro(s)` : 'leitura sem resposta'}, log ${rec ? `${rec.log.length} caracteres (${rec.ended?.why || 'sem fim'})` : 'não achado'}`);
     if (rec) reportFound.set(wc, rec);
     return rec || reportFound.get(wc) || null;
-  } catch { return null; }
+  } catch (e) { modLog(`relato: erro na leitura (${e.message})`); return null; }
 }
 // Uma vez por partida: a anterior terminou com erro (ou a página caiu) -> pergunta se quer mandar o relato.
 let reportWaiters = []; // a pergunta da placa espera a próxima sugestão terminar
@@ -1885,7 +1886,8 @@ if (gotLock) {
     contents.on('will-attach-webview', (e) => e.preventDefault()); // nenhuma <webview>
   });
 
-  // Se o processo de GPU cair (contexto WebGPU perdido), recarrega o jogo.
+  // Se o processo de GPU cair (contexto WebGPU perdido), a página NÃO recarrega (pedido do Bruno, 20/11): o jogo mostra
+  // o GPU-LOST e grava o log da partida; o app sugere o relato e depois pergunta sobre a placa.
   app.on('child-process-gone', (_e, details) => {
     if (!quitting && details.reason !== 'clean-exit') {
       const net = /network/i.test(`${details.serviceName || ''} ${details.name || ''}`);
@@ -1895,7 +1897,17 @@ if (gotLock) {
     const now = Date.now();
     if (now - lastGpuReload < 30000) return;
     lastGpuReload = now;
-    setTimeout(() => { if (gameView && !gameView.webContents.isDestroyed()) gameView.webContents.reload(); }, 1500);
+    reportCrashed = true;
+    // Espera o jogo gravar o fim da partida no log (até 30 s) e só então sugere o relato.
+    (async () => {
+      const wc = gameView?.webContents;
+      for (let i = 0; i < 30 && wc && !wc.isDestroyed() && !quitting; i++) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const rec = await reportRead(wc, 2000);
+        if (rec?.ended && report.when(rec) >= now - 5000) break;
+      }
+      if (wc && !wc.isDestroyed()) reportSuggest(wc);
+    })();
     gpuLostAsk();
   });
 

@@ -11,6 +11,11 @@ test('escolhe a partida mais recente que começou antes da página abrir', () =>
   const agora = rec({ started: '2026-11-20T12:00:00Z', saved: '2026-11-20T12:05:00Z', log: 'agora' });
   assert.equal(r.pickLast([a, b, agora, 'lixo{'], Date.parse('2026-11-20T11:00:00Z')).log, 'b');
   assert.equal(r.pickLast([], 0), null);
+  // a partida desta página caiu (sem recarregar): já tem fim, então conta
+  const caiu = rec({ started: '2026-11-20T12:00:00Z', saved: '2026-11-20T12:05:00Z', ended: { code: -1, why: 'GPU-LOST' }, log: 'caiu' });
+  assert.equal(r.pickLast([b, caiu], Date.parse('2026-11-20T11:00:00Z')).log, 'caiu');
+  // registro sem log não conta
+  assert.equal(r.pickLast([b, rec({ log: '' , saved: '2026-11-20T10:59:00Z' })], Date.parse('2026-11-20T11:00:00Z')).log, 'b');
 });
 
 test('saída normal não pede relato; queda e erro pedem', () => {

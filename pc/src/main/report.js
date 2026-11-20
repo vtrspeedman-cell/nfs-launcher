@@ -14,13 +14,15 @@ const readCode = `(() => { const out = []; try { for (let i = 0; i < localStorag
 
 const when = (r) => Number(new Date(r.saved || r.started || 0)) || 0;
 
-// A partida mais recente que começou antes desta página abrir (a de agora ainda está rodando).
+// A partida mais recente que já terminou ou que começou antes desta página abrir (a de agora ainda está rodando).
+// Registro sem log (partida recém-começada) não conta.
 function pickLast(raw, before = Infinity) {
   let best = null;
   for (const s of raw || []) {
     let r;
     try { r = JSON.parse(s); } catch { continue; }
-    if (!r || typeof r.log !== 'string' || !(Number(new Date(r.started)) < before)) continue;
+    if (!r || typeof r.log !== 'string' || !r.log.trim()) continue;
+    if (!r.ended && !(Number(new Date(r.started)) < before)) continue;
     if (!best || when(r) > when(best)) best = r;
   }
   return best;
