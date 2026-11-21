@@ -3,6 +3,11 @@ const {
   app, BrowserWindow, WebContentsView, Menu, powerSaveBlocker, session, globalShortcut,
   ipcMain, dialog, Notification, net, powerMonitor, screen: displays, shell, nativeImage,
 } = require('electron');
+// Avisos do app sem o som do Windows (pedido do Bruno, 21/11): tipo "none" não toca o alerta.
+for (const k of ['showMessageBox', 'showMessageBoxSync']) {
+  const orig = dialog[k].bind(dialog);
+  dialog[k] = (a, b) => (b === undefined ? orig({ ...a, type: 'none' }) : orig(a, { ...b, type: 'none' }));
+}
 const { execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -1981,7 +1986,7 @@ if (gotLock) {
     // Antes de tocar nos dados do jogo: a cópia que está fechando precisa ter saído, senão os saves são apagados.
     const onlyCopy = await profileLock.acquire({ pidFile: path.join(app.getPath('userData'), 'nfs.pid') });
     if (!onlyCopy) {
-      dialog.showErrorBox('NFS Launcher', tr('O jogo ainda está fechando. Espere alguns segundos e abra de novo.', 'The game is still closing. Wait a few seconds and open it again.'));
+      dialog.showMessageBoxSync({ title: 'NFS Launcher', message: tr('O jogo ainda está fechando. Espere alguns segundos e abra de novo.', 'The game is still closing. Wait a few seconds and open it again.') });
       app.exit(0);
       return;
     }
