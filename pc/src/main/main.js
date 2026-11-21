@@ -1136,7 +1136,10 @@ async function editorAsk(parent, opts) {
   return (await dialog.showMessageBox(p, { noLink: true, title: tr('Editor de save', 'Save editor'), ...opts })).response;
 }
 async function openSaveEditor(selected) {
-  if (editorWin && !editorWin.isDestroyed()) { editorWin.focus(); return { ok: true }; }
+  if (editorWin && !editorWin.isDestroyed()) {
+    if (editorWin.isMinimized()) editorWin.restore();
+    editorWin.show(); editorWin.focus(); return { ok: true };
+  }
   // O jogador escolhe o jogo: NFSU2 normal ou Modded (cada um tem o seu save).
   const pick = await editorAsk(win, {
     type: 'question', buttons: [...SAVE_GAMES.map((g) => GAMES[g].short), tr('Cancelar', 'Cancel')],
@@ -1184,6 +1187,12 @@ async function openSaveEditor(selected) {
   w.on('page-title-updated', (e) => e.preventDefault());
   w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   w.webContents.on('will-navigate', (e) => e.preventDefault());
+  // O editor avisa "alterações não salvas" ao fechar; sem isto o Electron cancela o fechar calado.
+  w.webContents.on('will-prevent-unload', (e) => {
+    const n = dialog.showMessageBoxSync(w, { type: 'question', buttons: [tr('Fechar', 'Close'), tr('Continuar editando', 'Keep editing')], defaultId: 1, cancelId: 1,
+      message: tr('Fechar o editor?', 'Close the editor?'), detail: tr('O que não foi salvo no editor se perde. O save do jogo não muda.', 'Unsaved editor changes are lost. The game save does not change.') });
+    if (n === 0) e.preventDefault();
+  });
   ses.removeAllListeners('will-download');
   ses.on('will-download', (_e, item) => {
     // A cópia do original que o editor baixa sozinho: o app já guardou a dele antes de abrir.
