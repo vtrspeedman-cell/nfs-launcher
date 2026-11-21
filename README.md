@@ -55,7 +55,7 @@ node node_modules\electron\install.js
 - **Saves:**
   - Nada apaga a pasta de dados nem os saves.
   - `profileLock.js` evita a perda ao fechar e abrir rápido.
-  - **Editor de save (PC, NFSU2 e Modded):** o UNPSY (PsyGARAGE), criado por **Psy**, abre numa janela própria, sem internet, com o save atual já carregado. Antes, o app guarda uma cópia (`antes-do-editor-*.zip`, as 3 últimas, em `NFS Launcher Saves`). O que for editado só entra no jogo com o clique em "Aplicar no jogo" (só perfil e garagem, mesmo tamanho e mesmo tipo, tudo ou nada); "Restaurar save de antes do editor" põe a cópia de volta (`saveEdit.js`). Aviso ao abrir: use por diversão, uma edição pode corromper o save.
+  - **Editor de save (PC, NFSU2 e Modded):** o UNPSY (PsyGARAGE), criado por **Psy**, abre numa janela própria, sem internet, com o save atual já carregado (cada perfil com a garagem dele, `GARAGE.DAT`: todos os carros aparecem). Antes, o app guarda uma cópia (`antes-do-editor-*.zip`, as 3 últimas, em `NFS Launcher Saves`). O que for editado só entra no jogo com o clique em "Aplicar no jogo" (só perfil e garagem, mesmo tamanho e mesmo tipo, tudo ou nada); "Restaurar save de antes do editor" põe a cópia de volta (`saveEdit.js`). Aviso ao abrir: use por diversão, uma edição pode corromper o save.
   - O NFSU2 ganha uma cópia ao abrir (2 últimas versões) em `%APPDATA%\NFS Launcher Saves`.
   - A cópia nunca volta sozinha: restaurar é pelo "Restaurar" do jogo.
 - **Conexão:**
