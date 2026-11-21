@@ -1187,11 +1187,23 @@ async function openSaveEditor(selected) {
   w.on('page-title-updated', (e) => e.preventDefault());
   w.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   w.webContents.on('will-navigate', (e) => e.preventDefault());
-  // O editor avisa "alterações não salvas" ao fechar; sem isto o Electron cancela o fechar calado.
-  w.webContents.on('will-prevent-unload', (e) => {
-    const n = dialog.showMessageBoxSync(w, { type: 'question', buttons: [tr('Fechar', 'Close'), tr('Continuar editando', 'Keep editing')], defaultId: 1, cancelId: 1,
-      message: tr('Fechar o editor?', 'Close the editor?'), detail: tr('O que não foi salvo no editor se perde. O save do jogo não muda.', 'Unsaved editor changes are lost. The game save does not change.') });
-    if (n === 0) e.preventDefault();
+  // Fechar pergunta: só fechar ou aplicar o save editado no jogo e fechar. O aviso "não salvo" do editor fica de fora (já perguntamos).
+  w.webContents.on('will-prevent-unload', (e) => e.preventDefault());
+  let closeOk = false, applyClose = null;
+  w.on('close', async (e) => {
+    if (closeOk || quitting) return;
+    e.preventDefault();
+    if (applyClose) return;
+    const n = await editorAsk(w, { type: 'question', buttons: [tr('Aplicar e fechar', 'Apply and close'), tr('Só fechar', 'Just close')], defaultId: 0, cancelId: 1,
+      message: tr('Fechar o editor?', 'Close the editor?'),
+      detail: tr('Aplicar e fechar: o save editado vai para o jogo. Só fechar: o save do jogo não muda.', 'Apply and close: the edited save goes to the game. Just close: the game save does not change.') });
+    if (n !== 0) { closeOk = true; w.destroy(); return; }
+    // Pede ao editor o save editado (o mesmo do botão de exportar dele); o download vira "aplicar no jogo".
+    let started;
+    const got = new Promise((res) => { started = res; setTimeout(() => res(false), 8000); });
+    applyClose = { started };
+    const ok = await w.webContents.executeJavaScript('(typeof save === "function" && S.W) ? (save(), true) : false').catch(() => false);
+    if (!ok || !(await got)) { applyClose = null; if (!ok) { closeOk = true; w.destroy(); } }
   });
   ses.removeAllListeners('will-download');
   ses.on('will-download', (_e, item) => {
@@ -1203,7 +1215,12 @@ async function openSaveEditor(selected) {
       let buf = null;
       try { if (state === 'completed') buf = fs.readFileSync(tmp); } catch { /* ignora */ }
       fs.promises.unlink(tmp).catch(() => {});
-      if (buf) await editorSaved(id, w, buf, item.getFilename(), snap.map);
+      if (!buf) return;
+      if (!applyClose) { await editorSaved(id, w, buf, item.getFilename(), snap.map); return; }
+      applyClose.started(true);
+      const ok = await editorSaved(id, w, buf, item.getFilename(), snap.map, true);
+      applyClose = null;
+      if (ok && !w.isDestroyed()) { closeOk = true; w.destroy(); }
     });
   });
   // Fechou o editor: a janela do app volta à frente, na tela inicial (o jogo não reabre sozinho).
@@ -1226,8 +1243,8 @@ async function openSaveEditor(selected) {
   return { ok: true };
 }
 // O editor "baixou" o save editado: aplicar no jogo, guardar como arquivo ou nada.
-async function editorSaved(id, parent, buf, name, map) {
-  const answer = await editorAsk(parent, {
+async function editorSaved(id, parent, buf, name, map, direct = false) {
+  const answer = direct ? 0 : await editorAsk(parent, {
     type: 'question', buttons: [tr('Aplicar no jogo', 'Apply to the game'), tr('Salvar arquivo', 'Save file'), tr('Cancelar', 'Cancel')], defaultId: 0, cancelId: 2,
     message: tr('Usar o save editado?', 'Use the edited save?'),
     detail: tr('Ele substitui o save do jogo (o jogo fecha, se estiver aberto). Se o jogo não iniciar, use "Restaurar último save" no Editor de save.',
@@ -1238,13 +1255,14 @@ async function editorSaved(id, parent, buf, name, map) {
     if (!r.canceled && r.filePath) { try { fs.writeFileSync(r.filePath, buf); } catch { /* ignora */ } }
     return;
   }
-  if (answer !== 0 || !(await closeGameFor())) return;
+  if (answer !== 0 || !(await closeGameFor())) return false;
   let r;
   try { r = await saveEdit.apply({ root: gameFsRoot(GAMES[id].partition), zipBuf: buf, map, tmpDir: editorDirOf(id) }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
   await editorAsk(parent, r.ok
     ? { type: 'info', buttons: ['OK'], message: tr('Save editado aplicado. Divirta-se!', 'Edited save applied. Have fun!'), detail: tr('Abra o jogo pelo START.', 'Open the game with START.') }
     : { type: 'warning', buttons: ['OK'], message: tr('O save editado não foi aplicado', 'The edited save was not applied'),
       detail: tr(`Nada foi mudado no jogo (${r.why}). Abra o editor de novo a partir do save atual.`, `Nothing was changed in the game (${r.why}). Open the editor again from the current save.`) });
+  return r.ok;
 }
 async function restoreEditorSave(id) {
   if (!SAVE_GAMES.includes(id)) return { ok: false };
