@@ -1224,7 +1224,7 @@ async function openSaveEditor(selected) {
       if (!buf) return;
       // Arquivo que não é o save inteiro (ex.: carro .u2car): só salvar, com o nome e o formato que o editor deu.
       const name = item.getFilename() || '';
-      if (!/\.zip$/i.test(name) || buf.toString('latin1', 0, 2) !== 'PK') { await editorSaveAs(w, buf, name); return; }
+      if (!/^(editado_|backup_).*\.zip$/i.test(name) || buf.toString('latin1', 0, 2) !== 'PK') { await editorSaveAs(w, buf, name); return; }
       if (!applyClose) { if (await editorSaved(id, w, buf, item.getFilename(), snap.map)) applied = true; return; }
       applyClose.started(true);
       const ok = await editorSaved(id, w, buf, item.getFilename(), snap.map, true);
