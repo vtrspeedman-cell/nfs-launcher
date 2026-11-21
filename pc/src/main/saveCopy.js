@@ -66,8 +66,10 @@ async function findExtras(files) {
   for (const f of files.filter((x) => mayBeExtra(x.size)).sort((a, b) => b.mtime - a.mtime)) {
     let kind = null;
     try { kind = kindOf(await readHead(f.path, 32)); } catch { /* ignora */ }
-    if (!kind || found[kind]) continue;
-    try { found[kind] = { data: await fs.readFile(f.path), mtime: f.mtime, path: f.path }; } catch { /* ignora */ }
+    if (!kind || (found[kind] && kind !== 'garage')) continue;
+    let item;
+    try { item = { data: await fs.readFile(f.path), mtime: f.mtime, path: f.path }; } catch { continue; }
+    if (kind === 'garage') { if (item.data.length === GARAGE_SIZE) (found.garages = found.garages || []).push(item); } else found[kind] = item;
   }
   return found;
 }
@@ -115,7 +117,8 @@ async function info(dest) {
   try { return { count: names.length, last: (await fs.stat(path.join(dest, names[0]))).mtimeMs }; } catch { return { count: names.length, last: 0 }; }
 }
 
-// Perfis (mais novo primeiro) e, com um perfil só, a garagem e as configurações do mesmo site; cada item com o caminho no disco.
+// Perfis (mais novo primeiro), a garagem de cada um e as configurações do mesmo site; cada item com o caminho no disco.
+// O jogo grava perfil e garagem juntos: cada perfil fica com a garagem de data mais perto da dele (uma garagem por perfil).
 async function collect(root) {
   const files = await listFiles(root);
   const profiles = [];
@@ -124,16 +127,27 @@ async function collect(root) {
   }
   profiles.sort((a, b) => b.mtime - a.mtime);
   const entries = profiles.map((p, i) => { const n = profileName(p.data, i); return { name: `NFS Underground 2/${n}/${n}`, data: p.data, mtime: p.mtime, path: p.path }; });
-  // Com um perfil só, sai o backup inteiro; com mais de um não dá para saber de quem é a garagem, e o jogo aceita só os perfis.
-  if (profiles.length === 1) {
-    const origin = path.relative(root, profiles[0].path).split(path.sep)[0]; // só o site do perfil: o outro jogo não conta
-    const x = await findExtras(files.filter((f) => path.relative(root, f.path).split(path.sep)[0] === origin));
-    if (x.garage && (x['settings.ini'] || x['registry.txt'])) {
-      const n = profileName(profiles[0].data, 0);
-      entries.push({ name: `NFS Underground 2/${n}/GARAGE.DAT`, ...x.garage });
-      for (const k of ['settings.ini', 'registry.txt', 'autosave-profiles.txt']) if (x[k]) entries.push({ name: k, ...x[k] });
+  if (!profiles.length) return { profiles, entries };
+  const site = (f) => path.relative(root, f.path).split(path.sep)[0]; // só o site do perfil: o outro jogo não conta
+  const bySite = {};
+  for (const p of profiles) (bySite[site(p)] = bySite[site(p)] || []).push(p);
+  const extras = {};
+  for (const o of Object.keys(bySite)) extras[o] = await findExtras(files.filter((f) => site(f) === o));
+  for (const o of Object.keys(bySite)) {
+    const free = [...(extras[o].garages || [])];
+    const pairs = [];
+    for (const p of bySite[o]) for (const g of free) pairs.push({ p, g, d: Math.abs(p.mtime - g.mtime) });
+    pairs.sort((a, b) => a.d - b.d);
+    const usedP = new Set(), usedG = new Set();
+    for (const { p, g } of pairs) {
+      if (usedP.has(p) || usedG.has(g)) continue;
+      usedP.add(p); usedG.add(g);
+      const n = profileName(p.data, profiles.indexOf(p));
+      entries.push({ name: `NFS Underground 2/${n}/GARAGE.DAT`, ...g });
     }
   }
+  const x = extras[site(profiles[0])];
+  for (const k of ['settings.ini', 'registry.txt', 'autosave-profiles.txt']) if (x[k]) entries.push({ name: k, ...x[k] });
   return { profiles, entries };
 }
 
@@ -142,7 +156,7 @@ async function run({ root, dest, now = new Date() }) {
   if (!profiles.length) return { copied: false, why: 'sem-save' }; // nunca troca uma cópia boa por nada
 
   const hash = crypto.createHash('sha256');
-  for (const p of [...profiles].sort((a, b) => Buffer.compare(a.data, b.data))) hash.update(p.data);
+  for (const e of [...entries].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) { hash.update(e.name); hash.update(e.data); }
   const sum = hash.digest('hex');
   const lastFile = path.join(dest, 'ultima.txt');
   let last = '';

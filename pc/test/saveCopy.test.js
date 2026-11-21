@@ -15,6 +15,7 @@ function profile(name, fill = 7) {
   b.write(name, NAME_AT, 'latin1');
   return b;
 }
+const pad = (text, size) => { const b = Buffer.alloc(size, 0x20); b.write(text, 0, 'latin1'); return b; };
 function put(root, rel, data) {
   const p = path.join(root, rel);
   fs.mkdirSync(path.dirname(p), { recursive: true });
@@ -66,7 +67,6 @@ test('um perfil: sai o backup inteiro, no formato que o Restaurar do jogo aceita
   const { root, dest } = setup();
   const prof = profile('Iskanda');
   put(root, '000/t/74/00007461', prof);
-  const pad = (text, size) => { const b = Buffer.alloc(size, 0x20); b.write(text, 0, 'latin1'); return b; };
   put(root, '000/t/74/00007459', pad('N2GAgaragem', saveCopy.GARAGE_SIZE));
   put(root, '000/t/74/00007467', pad('# NFSU2 settings, read at every launch.\n', 16770));
   put(root, '000/t/75/00007563', pad('d NotFirstTime=1\n', 701));
@@ -115,13 +115,28 @@ test('arquivo do tamanho do perfil que não é perfil fica de fora', async () =>
   assert.ok(!fs.existsSync(dest));
 });
 
-test('dois perfis: vão só os perfis, sem misturar a garagem', async () => {
+test('dois perfis: cada um com a garagem de data mais perto', async () => {
   const { root, dest } = setup();
-  put(root, '000/t/74/1', profile('Um'));
-  put(root, '000/t/74/2', profile('Dois'));
-  put(root, '000/t/74/3', Buffer.alloc(saveCopy.GARAGE_SIZE, 'N2GA'));
+  const t = (f, s) => { const d = new Date(2026, 10, 21, 12, 0, s); fs.utimesSync(f, d, d); };
+  t(put(root, '000/t/74/1', profile('Um')), 0);
+  t(put(root, '000/t/74/2', profile('Dois')), 40);
+  t(put(root, '000/t/74/3', pad('N2GAum', saveCopy.GARAGE_SIZE)), 1);
+  t(put(root, '000/t/74/4', pad('N2GAdois', saveCopy.GARAGE_SIZE)), 41);
   const r = await saveCopy.run({ root, dest });
-  assert.deepStrictEqual(Object.keys(readZip(r.file)).sort(), ['NFS Underground 2/Dois/Dois', 'NFS Underground 2/Um/Um']);
+  const z = readZip(r.file);
+  assert.deepStrictEqual(Object.keys(z).sort(), ['NFS Underground 2/Dois/Dois', 'NFS Underground 2/Dois/GARAGE.DAT', 'NFS Underground 2/Um/GARAGE.DAT', 'NFS Underground 2/Um/Um']);
+  assert.strictEqual(z['NFS Underground 2/Um/GARAGE.DAT'].toString('latin1', 0, 6), 'N2GAum');
+  assert.strictEqual(z['NFS Underground 2/Dois/GARAGE.DAT'].toString('latin1', 0, 8), 'N2GAdois');
+});
+
+test('garagem entra mesmo sem as configurações, e mudar só ela faz cópia nova', async () => {
+  const { root, dest } = setup();
+  put(root, '000/t/74/1', profile('Solo'));
+  const g = put(root, '000/t/74/2', pad('N2GAa', saveCopy.GARAGE_SIZE));
+  const r = await saveCopy.run({ root, dest, now: new Date(2026, 10, 21, 10) });
+  assert.ok(readZip(r.file)['NFS Underground 2/Solo/GARAGE.DAT']);
+  fs.writeFileSync(g, pad('N2GAb', saveCopy.GARAGE_SIZE));
+  assert.ok((await saveCopy.run({ root, dest, now: new Date(2026, 10, 21, 11) })).copied);
 });
 
 test('não mexe nos dados do jogo nem falha com pasta ausente', async () => {
