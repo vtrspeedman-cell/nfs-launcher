@@ -1222,6 +1222,9 @@ async function openSaveEditor(selected) {
       try { if (state === 'completed') buf = fs.readFileSync(tmp); } catch { /* ignora */ }
       fs.promises.unlink(tmp).catch(() => {});
       if (!buf) return;
+      // Arquivo que não é o save inteiro (ex.: carro .u2car): só salvar, com o nome e o formato que o editor deu.
+      const name = item.getFilename() || '';
+      if (!/\.zip$/i.test(name) || buf.toString('latin1', 0, 2) !== 'PK') { await editorSaveAs(w, buf, name); return; }
       if (!applyClose) { if (await editorSaved(id, w, buf, item.getFilename(), snap.map)) applied = true; return; }
       applyClose.started(true);
       const ok = await editorSaved(id, w, buf, item.getFilename(), snap.map, true);
@@ -1256,11 +1259,7 @@ async function editorSaved(id, parent, buf, name, map, direct = false) {
     detail: tr('Ele substitui o save do jogo (o jogo fecha, se estiver aberto). Se o jogo não iniciar, use "Restaurar último save" no Editor de save.',
       'It replaces the game save (the game closes if open). If the game does not start, use "Restore last save" in the Save editor.'),
   });
-  if (answer === 1) {
-    const r = await dialog.showSaveDialog(parent.isDestroyed() ? win : parent, { defaultPath: path.join(app.getPath('downloads'), name || 'save-editado.zip'), filters: [{ name: 'Zip', extensions: ['zip'] }] });
-    if (!r.canceled && r.filePath) { try { fs.writeFileSync(r.filePath, buf); } catch { /* ignora */ } }
-    return;
-  }
+  if (answer === 1) { await editorSaveAs(parent, buf, name || 'save-editado.zip'); return; }
   if (answer !== 0 || !(await closeGameFor())) return false;
   let r;
   try { r = await saveEdit.apply({ root: gameFsRoot(GAMES[id].partition), zipBuf: buf, map, tmpDir: editorDirOf(id) }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
@@ -1270,6 +1269,13 @@ async function editorSaved(id, parent, buf, name, map, direct = false) {
     : { type: 'warning', buttons: ['OK'], message: tr('O save editado não foi aplicado', 'The edited save was not applied'),
       detail: tr(`Nada foi mudado no jogo (${r.why}). Abra o editor de novo a partir do save atual.`, `Nothing was changed in the game (${r.why}). Open the editor again from the current save.`) });
   return r.ok;
+}
+async function editorSaveAs(parent, buf, name) {
+  const base = path.basename(name || 'arquivo');
+  const ext = path.extname(base).slice(1);
+  const filters = ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [];
+  const r = await dialog.showSaveDialog(parent.isDestroyed() ? win : parent, { defaultPath: path.join(app.getPath('downloads'), base), filters });
+  if (!r.canceled && r.filePath) { try { fs.writeFileSync(r.filePath, buf); } catch { /* ignora */ } }
 }
 async function restoreEditorSave(id) {
   if (!SAVE_GAMES.includes(id)) return { ok: false };
