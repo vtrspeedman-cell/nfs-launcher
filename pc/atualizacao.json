@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.6",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.6/NFS-Launcher-Setup-3.1.6.exe",
-  "tamanho": 104895562,
-  "sha256": "465ab905690773ab94b2fc5bc6ccf4745a716b2567543e28adbe0006614d342b",
+  "versao": "3.1.7",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.7/NFS-Launcher-Setup-3.1.7.exe",
+  "tamanho": 104896705,
+  "sha256": "4306b7c6f9bd7b59550c566bf23f85e5d46192edb853c4a8a6ef8aba542213d9",
   "novidades": {
-    "pt": "O jogo volta a abrir em notebook só com a placa integrada: o app não força mais a placa mais forte, o sistema escolhe sozinho como no Chrome. Novo botão na tela inicial: Usar a outra placa de vídeo.",
-    "en": "The game opens again on laptops with only integrated graphics: the app no longer forces the stronger card, the system picks it like Chrome does. New home screen button: Use the other graphics card."
+    "pt": "Editor de save: ao fechar, escolha Aplicar e fechar (o save editado vai para o jogo) ou Só fechar; depois de aplicar, fecha direto. Fechar o editor volta à tela inicial. Avisos do app sem o som do Windows.",
+    "en": "Save editor: when closing, choose Apply and close (the edited save goes to the game) or Just close; after applying, it closes right away. Closing the editor goes back to the home screen. App messages without the Windows sound."
   }
 }
