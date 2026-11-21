@@ -1135,6 +1135,7 @@ async function editorAsk(parent, opts) {
   const p = parent && !parent.isDestroyed() ? parent : win;
   return (await dialog.showMessageBox(p, { noLink: true, title: tr('Editor de save', 'Save editor'), ...opts })).response;
 }
+let editorBusy = null, editorApplied = false; // gravando o save editado; save aplicado (o jogo reabre ao fechar o editor)
 async function openSaveEditor(selected) {
   if (editorWin && !editorWin.isDestroyed()) {
     if (editorWin.isMinimized()) editorWin.restore();
@@ -1163,6 +1164,7 @@ async function openSaveEditor(selected) {
   });
   if (answer === buttons.length - 1) return { ok: false, canceled: true };
   if (hasCopy && answer === 1) return restoreEditorSave(id);
+  const wasPlaying = gameStarted;
   if (!(await closeGameFor())) return { ok: false, canceled: true };
   let snap;
   try { snap = await saveEdit.snapshot({ root, dest }); } catch (err) { return { ok: false, error: String(err.message || err) }; }
@@ -1203,10 +1205,18 @@ async function openSaveEditor(selected) {
       let buf = null;
       try { if (state === 'completed') buf = fs.readFileSync(tmp); } catch { /* ignora */ }
       fs.promises.unlink(tmp).catch(() => {});
-      if (buf) await editorSaved(id, w, buf, item.getFilename(), snap.map);
+      if (buf) { editorBusy = editorSaved(id, w, buf, item.getFilename(), snap.map); await editorBusy; editorBusy = null; }
     });
   });
-  w.on('closed', () => { if (editorWin === w) editorWin = null; ses.removeAllListeners('will-download'); });
+  // Fechou o editor: a janela do app volta à frente e o jogo reabre (se estava aberto ou se o save foi aplicado), depois de gravar o save.
+  w.on('closed', async () => {
+    if (editorWin === w) editorWin = null; ses.removeAllListeners('will-download');
+    if (quitting || !win || win.isDestroyed()) return;
+    if (win.isMinimized()) win.restore();
+    win.show(); win.focus();
+    await editorBusy;
+    if (!quitting && (wasPlaying || editorApplied) && !gameStarted) { editorApplied = false; startGame(id); }
+  });
   await w.loadFile(path.join(__dirname, '..', 'renderer', 'editor', 'unpsy.html'));
   // Abre no editor o save que acabou de ser copiado, como se o jogador tivesse escolhido o arquivo.
   const b64 = JSON.stringify(snap.zip.toString('base64'));
@@ -1235,8 +1245,9 @@ async function editorSaved(id, parent, buf, name, map) {
   if (answer !== 0 || !(await closeGameFor())) return;
   let r;
   try { r = await saveEdit.apply({ root: gameFsRoot(GAMES[id].partition), zipBuf: buf, map, tmpDir: editorDirOf(id) }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
+  if (r.ok) editorApplied = true;
   await editorAsk(parent, r.ok
-    ? { type: 'info', buttons: ['OK'], message: tr('Save editado aplicado. Divirta-se!', 'Edited save applied. Have fun!'), detail: tr('Abra o jogo pelo START.', 'Open the game with START.') }
+    ? { type: 'info', buttons: ['OK'], message: tr('Save editado aplicado. Divirta-se!', 'Edited save applied. Have fun!'), detail: tr('O jogo abre quando você fechar o editor.', 'The game opens when you close the editor.') }
     : { type: 'warning', buttons: ['OK'], message: tr('O save editado não foi aplicado', 'The edited save was not applied'),
       detail: tr(`Nada foi mudado no jogo (${r.why}). Abra o editor de novo a partir do save atual.`, `Nothing was changed in the game (${r.why}). Open the editor again from the current save.`) });
 }
