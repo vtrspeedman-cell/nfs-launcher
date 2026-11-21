@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.7",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.7/NFS-Launcher-Setup-3.1.7.exe",
-  "tamanho": 104896705,
-  "sha256": "4306b7c6f9bd7b59550c566bf23f85e5d46192edb853c4a8a6ef8aba542213d9",
+  "versao": "3.1.8",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.8/NFS-Launcher-Setup-3.1.8.exe",
+  "tamanho": 104895856,
+  "sha256": "a9459824d3f792b046dde78e9756e4ebc3e0be59317923e1f30b8ab64915af7b",
   "novidades": {
-    "pt": "Editor de save: ao fechar, escolha Aplicar e fechar (o save editado vai para o jogo) ou Só fechar; depois de aplicar, fecha direto. Fechar o editor volta à tela inicial. Avisos do app sem o som do Windows.",
-    "en": "Save editor: when closing, choose Apply and close (the edited save goes to the game) or Just close; after applying, it closes right away. Closing the editor goes back to the home screen. App messages without the Windows sound."
+    "pt": "Cópia do save e editor de save agora levam a garagem (GARAGE.DAT) de cada perfil: o editor mostra todos os carros, não só os 5 da carreira.",
+    "en": "Save copy and save editor now include each profile's garage (GARAGE.DAT): the editor shows all cars, not just the 5 career ones."
   }
 }
