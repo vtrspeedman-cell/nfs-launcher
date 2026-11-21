@@ -1194,11 +1194,12 @@ async function openSaveEditor(selected) {
   w.webContents.on('will-navigate', (e) => e.preventDefault());
   // Fechar pergunta: só fechar ou aplicar o save editado no jogo e fechar. O aviso "não salvo" do editor fica de fora (já perguntamos).
   w.webContents.on('will-prevent-unload', (e) => e.preventDefault());
-  let closeOk = false, applyClose = null;
+  let closeOk = false, applyClose = null, applied = false;
   w.on('close', async (e) => {
     if (closeOk || quitting) return;
     e.preventDefault();
     if (applyClose) return;
+    if (applied) { closeOk = true; w.destroy(); return; } // já exportou e aplicou: não pergunta de novo
     const n = await editorAsk(w, { type: 'question', buttons: [tr('Aplicar e fechar', 'Apply and close'), tr('Só fechar', 'Just close')], defaultId: 0, cancelId: 1,
       message: tr('Fechar o editor?', 'Close the editor?'),
       detail: tr('Aplicar e fechar: o save editado vai para o jogo. Só fechar: o save do jogo não muda.', 'Apply and close: the edited save goes to the game. Just close: the game save does not change.') });
@@ -1207,7 +1208,7 @@ async function openSaveEditor(selected) {
     let started;
     const got = new Promise((res) => { started = res; setTimeout(() => res(false), 8000); });
     applyClose = { started };
-    const ok = await w.webContents.executeJavaScript('(typeof save === "function" && S.W) ? (save(), true) : false').catch(() => false);
+    const ok = await w.webContents.executeJavaScript('(typeof save === "function" && S.W) ? (() => { const c = window.confirm; window.confirm = () => true; try { save(); } finally { window.confirm = c; } return true; })() : false').catch(() => false);
     if (!ok || !(await got)) { applyClose = null; if (!ok) { closeOk = true; w.destroy(); } }
   });
   ses.removeAllListeners('will-download');
@@ -1221,7 +1222,7 @@ async function openSaveEditor(selected) {
       try { if (state === 'completed') buf = fs.readFileSync(tmp); } catch { /* ignora */ }
       fs.promises.unlink(tmp).catch(() => {});
       if (!buf) return;
-      if (!applyClose) { await editorSaved(id, w, buf, item.getFilename(), snap.map); return; }
+      if (!applyClose) { if (await editorSaved(id, w, buf, item.getFilename(), snap.map)) applied = true; return; }
       applyClose.started(true);
       const ok = await editorSaved(id, w, buf, item.getFilename(), snap.map, true);
       applyClose = null;
@@ -1263,6 +1264,7 @@ async function editorSaved(id, parent, buf, name, map, direct = false) {
   if (answer !== 0 || !(await closeGameFor())) return false;
   let r;
   try { r = await saveEdit.apply({ root: gameFsRoot(GAMES[id].partition), zipBuf: buf, map, tmpDir: editorDirOf(id) }); } catch (err) { r = { ok: false, why: String(err.message || err) }; }
+  if (direct && r.ok) return true; // "Aplicar e fechar": fecha calado
   await editorAsk(parent, r.ok
     ? { type: 'info', buttons: ['OK'], message: tr('Save editado aplicado. Divirta-se!', 'Edited save applied. Have fun!'), detail: tr('Abra o jogo pelo START.', 'Open the game with START.') }
     : { type: 'warning', buttons: ['OK'], message: tr('O save editado não foi aplicado', 'The edited save was not applied'),
