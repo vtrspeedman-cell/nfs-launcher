@@ -2004,7 +2004,10 @@ function goldSets(i){const r=[];for(let k=0;k<5;k++){const o=so(i,k);let g=false
 function stats(i){const b=sb(i)+PERF,cat=CATS.map(()=>0);let tot=0;PARTS.forEach(p=>{if(S.W[b+p.i]&&act(p.i)){cat[p.c]+=p.lv;tot+=p.lv}});
  const uni=Array.from({length:9},(_,k)=>dv(S.W).getUint32(sb(i)+UNI+k*4,true)!=0),nu=uni.filter(Boolean).length;
  const catf=cat.map((v,c)=>CATMAX[c]?Math.min(1,v/CATMAX[c]):0),pf=Math.min(1,tot/TOTMAX);
- return{catf,uni,nu,pf,score:Math.round(pf*80+nu/9*20),gold:goldSets(i)}}
+ let score=Math.round(pf*80+nu/9*20);
+ if(isCor(i)){const bl=BLK333(),bad=bl.some(k=>S.W[b+k])||uni[1];let t=0,m=0;PARTS.forEach(p=>{if(bl.includes(p.i))return;if(MAXS.has(p.i))m+=p.lv;if(S.W[b+p.i]&&act(p.i))t+=p.lv});
+  const u=uni.filter((x,k)=>x&&k!=1).length;score=Math.round(Math.min(1,m?t/m:1)*80+u/8*20);if(bad)score=Math.min(score,90)}
+ return{catf,uni,nu,pf,score,gold:goldSets(i)}}
 const heat=f=>`hsl(${Math.round(215-215*f)} 85% 50%)`,GC='#f5c518';
 const tierName=s=>s<10?'Stock':s<35?'Street':s<60?'Pro':s<85?'Extreme':'Máximo';
 const statCol=st=>(st.nu==9||st.gold.length)?GC:heat(st.score/100);
