@@ -78,6 +78,7 @@ node node_modules\electron\install.js
   - **Atualizações:** `mobile/atualizacao.json`; no Wi-Fi o APK baixa sozinho (dados móveis: só pelo botão), e "Atualizar agora" o entrega ao instalador do Android (`AppUpdate.java`).
   - **Ligado por padrão:** "Preparar o jogo ao carregar" (para todos, uma vez).
   - **START:** lembra de pôr o app no modo jogo do celular (Game Turbo, Game Booster, Game Space) e de baixar o jogo inteiro antes (no NFSU2, aba Game > "Game data on this device"), com "Não lembrar mais".
+  - **Editor de save (1.7.3, só no celular; o PC não tem desde a 3.2.0):** botão "Editor de save" na tela inicial abre o UNPSY, de **Psy** (`mobile/app/editor/unpsy.html`, copiado pelo `setup.py`), com o save do NFSU2 ou do Modded; antes guarda uma cópia, depois "Aplicar no jogo" e "Restaurar" (`SaveEdit.java`).
 
 ## Publicar uma versão
 
@@ -121,4 +122,4 @@ Checklist de testes manuais: [`docs/TESTES.md`](docs/TESTES.md).
 
 ## Licença
 
-O código está sob a licença MIT ([`LICENSE`](LICENSE)). Need for Speed e a arte dos jogos (capas e CDs) pertencem aos seus donos e não entram na licença. Este app não é oficial e não tem ligação com a EA nem com os autores dos sites.
+O código está sob a licença MIT ([`LICENSE`](LICENSE)). Need for Speed e a arte dos jogos (capas e CDs) pertencem aos seus donos e não entram na licença. O editor de save do celular, UNPSY (PsyGARAGE), é obra de Psy, incluído com os créditos dele; a física dele usa código MIT de Christopher Hack e starladdey (licenças em `mobile/app/editor/licencas`). Este app não é oficial e não tem ligação com a EA nem com os autores dos sites.

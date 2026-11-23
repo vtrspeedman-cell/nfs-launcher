@@ -120,7 +120,7 @@ public class MainActivity extends Activity {
             GAMES = new Game[]{ new Game("nfsu2", "NFSU2", "Need for Speed: Underground 2", "https://nfsu2.xyz", "https://nfsu2.xyz/#crew=U2BR", "games/nfsu2.png", true) };
         }
     }
-    static final String VERSION = "1.7.2"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
+    static final String VERSION = "1.7.3"; // também dá o nome do APK (quick.sh/build.sh leem daqui)
     static final long LOW_DISK_BYTES = 3L * 1024 * 1024 * 1024; // o maior jogo baixa cerca de 3 GB
     // Tela de entrada do motor (o mesmo pacote deste app). Pelo nome exato: o motor não recebe links de fora.
     static final String MOTOR_ENTRY = "com.google.android.apps.chrome.IntentDispatcher";
@@ -644,6 +644,212 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ───────────────────────── Editor de save (UNPSY, do Psy; igual ao PC) ─────────────────────────
+    // Só NFSU2 e Modded. Antes de abrir, o save vai para SaveEdit.snapshot; o editor roda numa WebView local, sem rede,
+    // por cima da tela inicial. O que ele "baixa" só entra no jogo com o clique do jogador.
+    private WebView editor;
+    private String editorGame;
+    private File editorSnap;
+
+    private void openEditor() {
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>(SaveCopy.siteDirs(this).values());
+        List<String> ids = new ArrayList<>();
+        for (String id : new String[]{"nfsu2", "nfsu2mod"}) if (seen.contains(id)) ids.add(id);
+        if (ids.isEmpty()) { noSave(); return; }
+        if (ids.size() == 1) { editorWarn(ids.get(0)); return; }
+        String[] names = new String[ids.size()];
+        for (int i = 0; i < names.length; i++) names[i] = gameOf(ids.get(i)).name;
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Editar o save de qual jogo?", "Edit the save of which game?"))
+                .setItems(names, (d, w) -> editorWarn(ids.get(w)))
+                .setNegativeButton(tr("Cancelar", "Cancel"), null).show();
+    }
+
+    private void noSave() {
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Nenhum save encontrado", "No save found"))
+                .setMessage(tr("Abra o jogo, crie ou carregue um perfil e salve na garagem; depois abra o editor.",
+                        "Open the game, create or load a profile and save in the garage; then open the editor."))
+                .setPositiveButton("OK", null).show();
+    }
+
+    private void editorWarn(String game) {
+        AlertDialog.Builder b = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Editor de save UNPSY, criado por Psy (PsyGARAGE)", "UNPSY save editor, made by Psy (PsyGARAGE)"))
+                .setMessage(tr("Use por diversão! Uma edição pode corromper o save e o jogo pode não iniciar com ele.\n\n"
+                        + "Antes de abrir, o app guarda uma cópia do save atual. Se algo der errado, volte aqui e escolha \"Restaurar último save\".\n\n"
+                        + "O jogo fecha enquanto você edita: salve na garagem antes.",
+                        "Use it for fun! An edit can corrupt the save and the game may not start with it.\n\n"
+                        + "Before opening, the app keeps a copy of the current save. If something goes wrong, come back here and choose \"Restore last save\".\n\n"
+                        + "The game closes while you edit: save in the garage first."))
+                .setPositiveButton(tr("Abrir o editor", "Open the editor"), (d, w) -> startEditor(game))
+                .setNegativeButton(tr("Cancelar", "Cancel"), null);
+        if (SaveEdit.latest(this, game) != null)
+            b.setNeutralButton(tr("Restaurar último save", "Restore last save"), (d, w) -> askRestore(game));
+        b.show();
+    }
+
+    private void startEditor(String game) {
+        closeGame(this, getTaskId());
+        new Thread(() -> {
+            SaveEdit.Result r;
+            try { r = SaveEdit.snapshot(this, game); } catch (Exception e) { r = SaveEdit.Result.no("erro"); }
+            SaveEdit.Result got = r;
+            runOnUiThread(() -> {
+                if (!got.ok) {
+                    if ("sem-save".equals(got.why)) noSave();
+                    else toast(tr("Não deu para copiar o save; o editor não abriu.", "Could not copy the save; the editor did not open."));
+                    return;
+                }
+                showEditor(game, got.file, got.zip);
+            });
+        }, "nfs-editor").start();
+    }
+
+    @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
+    private void showEditor(String game, File snap, byte[] zip) {
+        closeEditor();
+        editorGame = game;
+        editorSnap = snap;
+        WebView w = new WebView(this);
+        WebSettings s = w.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setBlockNetworkLoads(true);
+        w.setBackgroundColor(0xFF000000);
+        w.setWebChromeClient(new WebChromeClient());
+        String b64 = Base64.encodeToString(zip, Base64.NO_WRAP);
+        w.setWebViewClient(new WebViewClient() {
+            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return true; }
+            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+                String sc = r.getUrl().getScheme();
+                if ("http".equals(sc) || "https".equals(sc))
+                    return new android.webkit.WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null,
+                            new java.io.ByteArrayInputStream(new byte[0]));
+                return null;
+            }
+            @Override public void onPageFinished(WebView v, String url) {
+                if (v != editor) return;
+                v.evaluateJavascript("(function(){"
+                        + "document.title='Editor de save · UNPSY (PsyGARAGE), criado por Psy';"
+                        + "var c=HTMLAnchorElement.prototype.click;"
+                        + "HTMLAnchorElement.prototype.click=function(){"
+                        + " if(this.download&&/^blob:/.test(this.href)){var n=this.download;"
+                        + "  fetch(this.href).then(function(r){return r.blob()}).then(function(b){var f=new FileReader();"
+                        + "   f.onload=function(){NfsEditor.saved(n,String(f.result).split(',')[1]||'')};f.readAsDataURL(b)});return;}"
+                        + " return c.apply(this,arguments)};"
+                        + "var s=atob('" + b64 + "'),a=new Uint8Array(s.length);for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i);"
+                        + "var i=document.getElementById('fIn');if(!i)return;var t=new DataTransfer();"
+                        + "t.items.add(new File([a],'save-nfsu2.zip',{type:'application/zip'}));i.files=t.files;"
+                        + "i.dispatchEvent(new Event('change',{bubbles:true}));})()", null);
+            }
+        });
+        w.addJavascriptInterface(new EditorBridge(), "NfsEditor");
+        editor = w;
+        root.addView(w, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        w.loadUrl("file:///android_asset/nfs/unpsy.html");
+        toast(tr("Editor de save · UNPSY (PsyGARAGE), criado por Psy. Voltar fecha o editor.",
+                "Save editor · UNPSY (PsyGARAGE), made by Psy. Back closes the editor."));
+    }
+
+    private void closeEditor() {
+        if (editor == null) return;
+        WebView w = editor;
+        editor = null;
+        root.removeView(w);
+        w.destroy();
+    }
+
+    private final class EditorBridge {
+        @JavascriptInterface public void saved(String name, String b64) {
+            if (name == null || name.startsWith("BACKUP_original_")) return; // cópia que o editor faz sozinho: o app já guardou a dele
+            byte[] data;
+            try { data = Base64.decode(b64, Base64.DEFAULT); } catch (IllegalArgumentException e) { return; }
+            runOnUiThread(() -> askApply(name, data));
+        }
+    }
+
+    private void askApply(String name, byte[] data) {
+        String game = editorGame;
+        File snap = editorSnap;
+        if (game == null || snap == null) return;
+        boolean zip = data.length > 4 && data[0] == 'P' && data[1] == 'K';
+        AlertDialog.Builder b = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Usar o save editado?", "Use the edited save?"))
+                .setMessage(tr("Ele substitui o save do jogo (o jogo fecha, se estiver aberto). Se o jogo não iniciar, use \"Restaurar último save\" no Editor de save.",
+                        "It replaces the game save (the game closes, if open). If the game does not start, use \"Restore last save\" in the Save editor."))
+                .setNegativeButton(tr("Cancelar", "Cancel"), null)
+                .setNeutralButton(tr("Salvar arquivo", "Save file"), (d, w) -> saveEdited(name, data));
+        if (zip) b.setPositiveButton(tr("Aplicar no jogo", "Apply to the game"), (d, w) -> applyEdited(game, snap, data));
+        b.show();
+    }
+
+    private void saveEdited(String name, byte[] data) {
+        new Thread(() -> {
+            boolean ok;
+            try { SaveCopy.saveFile(this, name, data); ok = true; } catch (Exception e) { ok = false; }
+            boolean done = ok;
+            runOnUiThread(() -> toast(done ? tr("Salvo em Download/NFS Launcher.", "Saved in Download/NFS Launcher.")
+                    : tr("Não deu para salvar o arquivo.", "Could not save the file.")));
+        }, "nfs-editor").start();
+    }
+
+    private String whyText(String why) {
+        if ("estragado".equals(why)) return tr("o arquivo editado está fora do formato", "the edited file is not in the right format");
+        if ("sumiu".equals(why)) return tr("o save do jogo não está mais lá", "the game save is gone");
+        if ("diferente".equals(why)) return tr("o save do jogo mudou desde a cópia", "the game save changed since the copy");
+        if ("nada".equals(why)) return tr("nenhum perfil ou garagem no arquivo", "no profile or garage in the file");
+        if ("sem-copia".equals(why)) return tr("não há cópia", "there is no copy");
+        return tr("o arquivo não abriu", "the file did not open");
+    }
+
+    private void applyEdited(String game, File snap, byte[] data) {
+        closeGame(this, getTaskId());
+        new Thread(() -> {
+            SaveEdit.Result r;
+            try { r = SaveEdit.applyEdited(this, game, snap, data); } catch (Exception e) { r = SaveEdit.Result.no("erro"); }
+            SaveEdit.Result got = r;
+            runOnUiThread(() -> {
+                AlertDialog.Builder b = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setPositiveButton("OK", null);
+                if (got.ok) {
+                    closeEditor();
+                    b.setTitle(tr("Save editado aplicado. Divirta-se!", "Edited save applied. Have fun!"))
+                            .setMessage(tr("Abra o jogo pelo START.", "Open the game with START."));
+                } else {
+                    b.setTitle(tr("O save editado não foi aplicado", "The edited save was not applied"))
+                            .setMessage(tr("Nada foi mudado no jogo (" + whyText(got.why) + "). Abra o editor de novo a partir do save atual.",
+                                    "Nothing was changed in the game (" + whyText(got.why) + "). Open the editor again from the current save."));
+                }
+                b.show();
+            });
+        }, "nfs-editor").start();
+    }
+
+    private void askRestore(String game) {
+        File z = SaveEdit.latest(this, game);
+        if (z == null) return;
+        String when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(new java.util.Date(z.lastModified()));
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Voltar ao save de antes do editor?", "Go back to the save from before the editor?"))
+                .setMessage(tr("Cópia de " + when + ". O que mudou no save depois disso será substituído. O jogo fecha, se estiver aberto.",
+                        "Copy from " + when + ". What changed in the save after that will be replaced. The game closes, if open."))
+                .setPositiveButton(tr("Restaurar", "Restore"), (d, w) -> {
+                    closeGame(this, getTaskId());
+                    new Thread(() -> {
+                        SaveEdit.Result r;
+                        try { r = SaveEdit.restoreLast(this, game); } catch (Exception e) { r = SaveEdit.Result.no("erro"); }
+                        SaveEdit.Result got = r;
+                        runOnUiThread(() -> new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                                .setTitle(got.ok ? tr("Save restaurado.", "Save restored.") : tr("Não deu para restaurar", "Could not restore"))
+                                .setMessage(got.ok ? tr("Abra o jogo pelo START.", "Open the game with START.") : whyText(got.why))
+                                .setPositiveButton("OK", null).show());
+                    }, "nfs-editor").start();
+                })
+                .setNegativeButton(tr("Cancelar", "Cancel"), null).show();
+    }
+
     // ───────────────────────── Erro ao abrir o jogo ─────────────────────────
     // Quem falhou volta para cá; a cada 5 s vê se o site responde e, respondendo, abre o jogo sozinho.
     private final Runnable retryTick = () -> {
@@ -767,6 +973,7 @@ public class MainActivity extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
+        if (editor != null) { closeEditor(); return; }
         home.evaluateJavascript("window.goBack ? goBack() : 'exit'", v -> { if ("\"exit\"".equals(v)) finish(); });
     }
 
@@ -903,6 +1110,7 @@ public class MainActivity extends Activity {
             });
         }
         @JavascriptInterface public void openSaves() { runOnUiThread(MainActivity.this::openSaves); }
+        @JavascriptInterface public void openEditor() { runOnUiThread(MainActivity.this::openEditor); }
         @JavascriptInterface public void openAppSettings() {
             runOnUiThread(() -> {
                 try {

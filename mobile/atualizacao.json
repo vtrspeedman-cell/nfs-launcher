@@ -1,10 +1,10 @@
 {
-  "versao": "1.7.2",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.2/NFS-Launcher-Android-1.7.2.apk",
-  "tamanho": 255394444,
-  "sha256": "00018e5886c68f4d0f3e9f5416a25649764c46b0ce2a94393f5450c2b6261247",
+  "versao": "1.7.3",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.3/NFS-Launcher-Android-1.7.3.apk",
+  "tamanho": 255517283,
+  "sha256": "89f247c7f70c94826cad5a242d63545f13348f898d8cf0b0ad9d69d322a8c480",
   "novidades": {
-    "pt": "O editor de save saiu do app. A cópia automática do save e o botão \"Meus saves\" continuam iguais.",
-    "en": "The save editor was removed from the app. The automatic save copy and the \"My saves\" button stay the same."
+    "pt": "O editor de save (UNPSY, por Psy) voltou ao celular: botão \"Editor de save\" na tela inicial, com cópia do save antes, Aplicar no jogo e Restaurar.",
+    "en": "The save editor (UNPSY, by Psy) is back on the phone: \"Save editor\" button on the home screen, with a save copy first, Apply to game and Restore."
   }
 }
