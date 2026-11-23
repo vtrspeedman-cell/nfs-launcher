@@ -55,7 +55,6 @@ node node_modules\electron\install.js
 - **Saves:**
   - Nada apaga a pasta de dados nem os saves.
   - `profileLock.js` evita a perda ao fechar e abrir rápido.
-  - **Editor de save (PC, NFSU2 e Modded):** o UNPSY (PsyGARAGE), criado por **Psy**, abre numa janela própria, sem internet, com o save atual já carregado (cada perfil com a garagem dele, `GARAGE.DAT`: todos os carros aparecem). Antes, o app guarda uma cópia (`antes-do-editor-*.zip`, as 3 últimas, em `NFS Launcher Saves`). O que for editado só entra no jogo com o clique em "Aplicar no jogo" (só perfil e garagem, mesmo tamanho e mesmo tipo, tudo ou nada); "Restaurar save de antes do editor" põe a cópia de volta (`saveEdit.js`). Aviso ao abrir: use por diversão, uma edição pode corromper o save.
   - O NFSU2 ganha uma cópia ao abrir (2 últimas versões) em `%APPDATA%\NFS Launcher Saves`.
   - A cópia nunca volta sozinha: restaurar é pelo "Restaurar" do jogo.
 - **Conexão:**
@@ -122,4 +121,4 @@ Checklist de testes manuais: [`docs/TESTES.md`](docs/TESTES.md).
 
 ## Licença
 
-O código está sob a licença MIT ([`LICENSE`](LICENSE)). Need for Speed e a arte dos jogos (capas e CDs) pertencem aos seus donos e não entram na licença. O editor de save UNPSY (PsyGARAGE) é obra de Psy, incluído com os créditos dele; a física dele usa código MIT de Christopher Hack e starladdey (licenças em `pc/src/renderer/editor/licencas`). Este app não é oficial e não tem ligação com a EA nem com os autores dos sites.
+O código está sob a licença MIT ([`LICENSE`](LICENSE)). Need for Speed e a arte dos jogos (capas e CDs) pertencem aos seus donos e não entram na licença. Este app não é oficial e não tem ligação com a EA nem com os autores dos sites.

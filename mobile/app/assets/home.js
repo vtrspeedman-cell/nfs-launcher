@@ -77,8 +77,6 @@
     $('btn-start').textContent = 'START';
     $('btn-saves').textContent = t('Meus saves', 'My saves');
     $('btn-saves').hidden = !info(sel).textures; // só os NFSU2 têm cópia do save (a pasta é a mesma)
-    $('btn-editor').textContent = t('Editor de save', 'Save editor');
-    $('btn-editor').hidden = !info(sel).textures;
     $('btn-settings').textContent = t('Configurações', 'Settings');
     $('btn-quit').textContent = t('Fechar', 'Close');
     $('versions').textContent = `v${st.version}`;
@@ -241,7 +239,6 @@
     $('saves-note').textContent = t('Ao abrir, o app guarda uma cópia do seu save em Download/NFS Launcher, só se ele mudou. Ficam as 2 últimas versões e nada é enviado. O app nunca coloca uma cópia de volta sozinho. Só restaure se perdeu o save: a cópia pode estar mais antiga que o seu jogo e substitui o que estiver nele. Para voltar: no jogo, em Jogos salvos > Restaurar, escolha o arquivo mais novo da pasta.',
       'When it opens, the app keeps a copy of your save in Download/NFS Launcher, only if it changed. The last 2 versions stay and nothing is sent. The app never puts a copy back by itself. Only restore if you lost your save: a copy may be older than your game and replaces what is in it. To bring one back: in the game, under Saved games > Restore, pick the newest file in the folder.');
     $('b-saves-open').textContent = t('Abrir a pasta das cópias', 'Open the copies folder');
-    $('b-editor').textContent = t('Editor de save (UNPSY, por Psy)', 'Save editor (UNPSY, by Psy)');
     $('saves-status').textContent = st.lastCopy
       ? t(`Última cópia: ${new Date(st.lastCopy).toLocaleString('pt-BR')}`, `Last copy: ${new Date(st.lastCopy).toLocaleString('en-US')}`)
       : t('Nenhuma cópia ainda: ela é feita ao abrir o app, depois de você salvar no jogo.', 'No copy yet: it is made when the app opens, after you save in the game.');
@@ -347,8 +344,6 @@
   const openSaves = () => { api.openSaves(); toast(t('Só restaure se perdeu o save: no jogo, Jogos salvos > Restaurar.', 'Only restore if you lost your save: in the game, Saved games > Restore.')); };
   $('btn-saves').onclick = openSaves;
   $('b-saves-open').onclick = openSaves;
-  $('b-editor').onclick = () => api.openEditor();
-  $('btn-editor').onclick = () => api.openEditor();
   $('btn-settings').onclick = () => { texWant = true; setScreen('settings'); };
   $('update-get').onclick = () => ((st.update || {}).status === 'ready' ? api.installUpdate() : api.downloadUpdate());
   $('btn-quit').onclick = () => api.quit();

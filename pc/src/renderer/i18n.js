@@ -65,7 +65,6 @@ const EN = {
   hSaves: 'Save copies (NFSU2)',
   savesNote: 'When it opens, the app keeps a copy of your save, only if it changed. The last 2 versions stay, only on your PC, and nothing is sent. The app never puts a copy back by itself. <b>Only restore if you lost your save:</b> a copy may be older than your game and replaces what is in it. To bring one back: in the game, under <b>Saved games &gt; Restore</b>, pick the newest file in the folder.',
   savesOpen: 'Open the copies folder', mySaves: 'My saves',
-  saveEditor: 'Save editor', savesRestoreEd: 'Restore save from before the editor',
 };
 
 const orig = new Map(); // português original de cada elemento (lido do ui.html na primeira troca)

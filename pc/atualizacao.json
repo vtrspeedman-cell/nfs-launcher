@@ -1,10 +1,10 @@
 {
-  "versao": "3.1.9",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.1.9/NFS-Launcher-Setup-3.1.9.exe",
-  "tamanho": 104895794,
-  "sha256": "99d5cbf2a5d37e9f76e4ac0b2e32ce4982a5a7fc6505243702cb4e2fa71ce65d",
+  "versao": "3.2.0",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.0/NFS-Launcher-Setup-3.2.0.exe",
+  "tamanho": 104814641,
+  "sha256": "ba345935e70cd03d630746aa39ff2d77e9c0b822c8e640be2bcba3a77f7b92b2",
   "novidades": {
-    "pt": "Editor de save: carros (.u2car) e outros arquivos baixados saem com o nome e o formato certos, sem virar .zip corrompido. \"Aplicar no jogo\" só aparece para o save inteiro.",
-    "en": "Save editor: cars (.u2car) and other downloads are saved with the right name and format, no longer as a broken .zip. \"Apply to game\" only shows for the full save."
+    "pt": "O editor de save saiu do app. A cópia automática do save e o botão \"Meus saves\" continuam iguais.",
+    "en": "The save editor was removed from the app. The automatic save copy and the \"My saves\" button stay the same."
   }
 }

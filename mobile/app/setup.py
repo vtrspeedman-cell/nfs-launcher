@@ -31,7 +31,6 @@ for f in sorted((HERE / 'assets').glob('home.*')):
 renderer = PROJ / 'pc' / 'src' / 'renderer'
 for name in ('sounds.js', 'icon.png'):
     shutil.copy(renderer / name, assets / name)
-shutil.copy(renderer / 'editor' / 'unpsy.html', assets / 'unpsy.html')  # editor de save do Psy
 shutil.copytree(renderer / 'games', assets / 'games')
 shutil.copytree(renderer / 'bg', assets / 'bg')
 shutil.copytree(HERE / 'res', DEST / 'res')  # res/xml/nfs_game_mode_config.xml (modo de jogo do Android)
