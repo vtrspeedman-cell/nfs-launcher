@@ -33,6 +33,7 @@ const { Presence } = require('./discord');
 const profileLock = require('./profileLock');
 const saveCopy = require('./saveCopy');
 const saveEdit = require('./saveEdit');
+const globalBun = require('./globalBun');
 const modFiles = require('./modFiles');
 const cacheClean = require('./cacheClean');
 const texPack = require('./texPack');
@@ -1169,6 +1170,8 @@ async function openSaveEditor(selected) {
   if (answer === buttons.length - 1) return { ok: false, canceled: true };
   if (hasCopy && answer === 1) return restoreEditorSave(id);
   if (!(await closeGameFor())) return { ok: false, canceled: true };
+  // GLOBALB.BUN do jogo escolhido (dados dos carros do editor), baixado enquanto o editor abre.
+  const bun = globalBun.load({ id, origin: GAMES[id].url, dir: path.join(app.getPath('userData'), 'editor-globalb'), fetchFn: net.fetch });
   let snap;
   try { snap = await saveEdit.snapshot({ root, dest }); } catch (err) { return { ok: false, error: String(err.message || err) }; }
   if (!snap.ok) {
@@ -1249,7 +1252,21 @@ async function openSaveEditor(selected) {
     const dt = new DataTransfer(); dt.items.add(new File([u], 'save-nfsu2.zip', { type: 'application/zip' }));
     inp.files = dt.files; inp.dispatchEvent(new Event('change', { bubbles: true })); return true;
   })()`).catch(() => {});
+  await editorBun(w, await bun);
   return { ok: true };
+}
+// Entrega o GLOBALB.BUN ao editor como se o jogador o tivesse carregado (depois do que ele guardou no navegador).
+async function editorBun(w, buf) {
+  if (!buf || w.isDestroyed()) return;
+  const b64 = JSON.stringify(buf.toString('base64'));
+  await w.webContents.executeJavaScript(`(async () => {
+    if (typeof setBun !== 'function') return false;
+    if (typeof idb === 'function') await idb('get');
+    await new Promise((r) => setTimeout(r, 0));
+    const b = atob(${b64}), u = new Uint8Array(b.length);
+    for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+    setBun([u.buffer], true); return true;
+  })()`).catch(() => {});
 }
 // O editor "baixou" o save editado: aplicar no jogo, guardar como arquivo ou nada.
 async function editorSaved(id, parent, buf, name, map, direct = false) {
