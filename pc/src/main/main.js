@@ -88,14 +88,17 @@ if (LIGHTER_ON) sw('enable-dawn-features', 'skip_validation');
 const UNBLOCK_ON = savedAtStart.unblockGpu && !SAFE_MODE;
 if (UNBLOCK_ON) sw('disable-dawn-features', 'adapter_blocklist');
 if (UNBLOCK_ON) sw('use-webgpu-adapter', 'd3d11');
-// Desenho da tela (opções de teste, desligadas por padrão): o que o Chrome liga por teste de campo e o Electron não recebe.
+// Desenho da tela (ligado por padrão no DX12): o que o Chrome liga por teste de campo no Windows e o Electron não recebe.
 // Medido fora da tela: o desenho novo sem ganho, o Windows juntando a imagem com ~0,3 ms a menos por quadro. Só o F8 no jogo decide.
+// Junto, desde 24/11 (também testes de campo do Chrome no Windows): o sinal de cada quadro da tela chega sem esperar outra thread
+// acordar (ExternalBeginFrameSourceWinUsesRunOrPostTask) e mexer o mouse não faz a thread do jogo parar esperando o quadro
+// (RestrictPendingInputEventType; tecla continua como no Chrome, controle não manda evento).
 // Um único switch: appendSwitch repetido sobrescreve o anterior, inclusive o que veio na linha de comando.
 // No modo DirectX 11 fica desligado: placa antiga, e esse desenho só foi medido numa RTX 4060.
 const NEW_DRAWING_ON = savedAtStart.newDrawing && !SAFE_MODE && !UNBLOCK_ON;
 const DRAW_FEATURES = [
   app.commandLine.getSwitchValue('enable-features'),
-  NEW_DRAWING_ON && 'SkiaGraphite:dawn_backend_validation/false/dawn_skip_validation/true/dawn_use_persistent_cache/true,SkiaGraphiteWinIntel,DelegatedCompositing',
+  NEW_DRAWING_ON && 'SkiaGraphite:dawn_backend_validation/false/dawn_skip_validation/true/dawn_use_persistent_cache/true,SkiaGraphiteWinIntel,DelegatedCompositing,ExternalBeginFrameSourceWinUsesRunOrPostTask,RestrictPendingInputEventType',
 ].filter(Boolean).join(',');
 if (NEW_DRAWING_ON) sw('enable-features', DRAW_FEATURES);
 // Anti-serrilhado (FXAA) e pacotes de imagem: efeitos do nosso motor (motor/nfs-imagem.wgsl) sobre a imagem pronta,

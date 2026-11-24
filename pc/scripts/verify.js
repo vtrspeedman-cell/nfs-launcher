@@ -301,7 +301,9 @@ check('Opções de desempenho e qualidade ligadas por padrão (DX12); no DX11 s�
   assert((m.match(/sw\('disable-dawn-features'/g) || []).length === 1 && /if \(UNBLOCK_ON\) sw\('disable-dawn-features', 'adapter_blocklist'\)/.test(m), 'liberar a placa fora da opção');
   assert((m.match(/sw\('use-webgpu-adapter'/g) || []).length === 1 && /if \(UNBLOCK_ON\) sw\('use-webgpu-adapter', 'd3d11'\)/.test(m), 'DirectX 11 fora da opção');
   assert(s.newDrawing === true, 'Graphite e Delegated deveriam vir ligados por padrão');
-  assert(/NEW_DRAWING_ON && '[^']*SkiaGraphite[^']*DelegatedCompositing'/.test(m), 'Graphite e Delegated deveriam ligar juntos, na mesma opção');
+  assert(/NEW_DRAWING_ON && '[^']*SkiaGraphite[^']*DelegatedCompositing[^']*'/.test(m), 'Graphite e Delegated deveriam ligar juntos, na mesma opção');
+  for (const f of ['ExternalBeginFrameSourceWinUsesRunOrPostTask', 'RestrictPendingInputEventType'])
+    assert(new RegExp(`NEW_DRAWING_ON && '[^']*\\b${f}\\b[^']*'`).test(m), f + ' fora da opção do desenho novo (teste de campo do Chrome no Windows, 24/11)');
   assert(s.antiAlias === true && s.imageFilter === true, 'anti-serrilhado ou filtro de imagem desligado por padrão');
   assert((m.match(/insertCSS\(/g) || []).length === 1 && /imageFilter\.css\(cfg\.imageFilter, cfg\.imageMode, cfg\.antiAlias && !gameAaNow\(currentGame\)\)/.test(m), 'CSS no jogo fora do pacote de imagem, ou FXAA por cima do anti-serrilhado do próprio jogo');
   assert((m.match(/sw\('enable-features'/g) || []).length === 1 && /if \(NEW_DRAWING_ON\) sw\('enable-features', DRAW_FEATURES\)/.test(m), 'desenho da tela fora da opção');
