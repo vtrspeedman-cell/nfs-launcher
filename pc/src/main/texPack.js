@@ -190,7 +190,7 @@ function compose(sources, choice) {
 }
 
 // Lê [start, end) do pacote virtual, juntando cabeçalho e trechos dos arquivos de origem.
-function readVirtual(v, start, end) {
+async function readVirtual(v, start, end) {
   const out = Buffer.alloc(end - start);
   const fds = new Map();
   try {
@@ -198,16 +198,16 @@ function readVirtual(v, start, end) {
       if (s.end <= start || s.start >= end) continue;
       const a = Math.max(start, s.start), b = Math.min(end, s.end);
       if (s.buf) { s.buf.copy(out, a - start, a - s.start, b - s.start); continue; }
-      if (!fds.has(s.file)) fds.set(s.file, fs.openSync(s.file, 'r'));
+      if (!fds.has(s.file)) fds.set(s.file, await fs.promises.open(s.file, 'r'));
       let got = 0;
       while (got < b - a) {
-        const k = fs.readSync(fds.get(s.file), out, a - start + got, b - a - got, s.from + (a - s.start) + got);
+        const { bytesRead: k } = await fds.get(s.file).read(out, a - start + got, b - a - got, s.from + (a - s.start) + got);
         if (k <= 0) return null;
         got += k;
       }
     }
     return out;
-  } finally { for (const fd of fds.values()) fs.closeSync(fd); }
+  } finally { await Promise.all([...fds.values()].map((fh) => fh.close())); }
 }
 
 // Data "de mentira" do pacote: o jogo guarda a cópia como caminho.tamanho.data, então cada escolha precisa de uma data
@@ -228,7 +228,9 @@ function virtualMod(sources, choice, p = 'TEXPACKS/detailed.pak') {
   return {
     p, s: v.size, m: stamp(sources, v.eff), virtual: v,
     read: (a, b) => readVirtual(v, a, b),
-    check: () => files.every((f) => { try { const st = fs.statSync(f.file); return st.size === f.size && Math.floor(st.mtimeMs / 1000) === f.mtime; } catch { return false; } }),
+    check: async () => (await Promise.all(files.map(async (f) => {
+      try { const st = await fs.promises.stat(f.file); return st.size === f.size && Math.floor(st.mtimeMs / 1000) === f.mtime; } catch { return false; }
+    }))).every(Boolean),
   };
 }
 

@@ -112,11 +112,11 @@ test('blockSpan e rangeSpan', () => {
   assert.strictEqual(mf.rangeSpan('bytes=-5', 10), false);
 });
 
-test('readSpan lê o trecho exato', () => {
+test('readSpan lê o trecho exato', async () => {
   const d = tmp();
   const f = put(d, 'a.bin', Buffer.from('0123456789'));
-  assert.strictEqual(mf.readSpan(f, 2, 5).toString(), '234');
-  assert.strictEqual(mf.readSpan(f, 8, 12), null, 'arquivo menor que o esperado');
+  assert.strictEqual((await mf.readSpan(f, 2, 5)).toString(), '234');
+  assert.strictEqual(await mf.readSpan(f, 8, 12), null, 'arquivo menor que o esperado');
 });
 
 test('Passagem ao site: pedido da página volta com Origin (nuvem do jogo); navegação e outros sites ficam iguais', () => {

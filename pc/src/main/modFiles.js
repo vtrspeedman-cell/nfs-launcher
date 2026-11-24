@@ -125,18 +125,24 @@ function rangeSpan(header, size) {
   return { start, end };
 }
 
-function readSpan(file, start, end) {
-  const fd = fs.openSync(file, 'r');
+// Leitura sem travar o processo principal (a janela e os outros pedidos seguem enquanto o disco responde).
+async function readSpan(file, start, end) {
+  const fh = await fs.promises.open(file, 'r');
   try {
     const b = Buffer.alloc(end - start);
     let got = 0;
     while (got < b.length) {
-      const n = fs.readSync(fd, b, got, b.length - got, start + got);
-      if (n <= 0) break;
-      got += n;
+      const { bytesRead } = await fh.read(b, got, b.length - got, start + got);
+      if (bytesRead <= 0) break;
+      got += bytesRead;
     }
     return got === b.length ? b : null;
-  } finally { fs.closeSync(fd); }
+  } finally { await fh.close(); }
+}
+
+async function sameFile(mod) {
+  const st = await fs.promises.stat(mod.file);
+  return st.size === mod.s && Math.floor(st.mtimeMs / 1000) === mod.m;
 }
 
 // Opções do fetch que leva ao site um pedido que não é de mod. Pelo fetch do app, o pedido sai sem "Origin" e o
@@ -190,7 +196,7 @@ function install(ses, { mods, allowed, log = () => {} }) {
       if (!mod || r.kind === 'bad') return fail(400, `pedido inválido ${req.url}`);
       // O arquivo mudou com o app aberto: não entrega pedaço misturado (vale ao reabrir). Pacote virtual (texPack.js):
       // confere os pacotes de origem.
-      if (mod.check ? !mod.check() : (() => { const st = fs.statSync(mod.file); return st.size !== mod.s || Math.floor(st.mtimeMs / 1000) !== mod.m; })()) {
+      if (!(await (mod.check ? mod.check() : sameFile(mod)))) {
         return fail(409, `"${r.p}" mudou com o app aberto (vale ao reabrir)`);
       }
       let span, status = 200;
@@ -204,7 +210,7 @@ function install(ses, { mods, allowed, log = () => {} }) {
         if (span) { status = 206; headers['content-range'] = `bytes ${span.start}-${span.end - 1}/${mod.s}`; } else span = { start: 0, end: mod.s };
       }
       const ctx = { origin: new URL(req.url).origin, url: r.kind === 'blocks' ? req.url : null, fetch: (u, i) => ses.fetch(u, { ...i, bypassCustomProtocolHandlers: true }) };
-      const body = mod.read ? await mod.read(span.start, span.end, ctx) : readSpan(mod.file, span.start, span.end);
+      const body = mod.read ? await mod.read(span.start, span.end, ctx) : await readSpan(mod.file, span.start, span.end);
       if (body && !sent.has(r.p)) { sent.add(r.p); log(`o jogo começou a ler "${r.p}"`); }
       return body ? new Response(body, { status, headers }) : fail(409, `"${r.p}": não deu para ler o arquivo`);
     } catch (e) { return fail(500, String((e && e.message) || e)); }
