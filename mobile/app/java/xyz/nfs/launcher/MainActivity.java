@@ -169,6 +169,7 @@ public class MainActivity extends Activity {
         loadCatalog();
         // Nova execução: "DNS normal só desta vez" acaba e o DNS seguro que já funcionou é tentado de novo.
         if (state == null && !getIntent().hasExtra("error")) prefs.edit().remove("dnsTry").remove("dnsQueue").commit();
+        if (state == null && !getIntent().hasExtra("error")) ui.post(this::prepareOffWarning); // na tela inicial, nunca sobre o jogo
         handleIntent(getIntent());
         // Uma vez ao abrir, fora da tela: guarda o save se ele mudou (só lê os arquivos do jogo).
         if (state == null) {
@@ -185,14 +186,29 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Uma vez por mudança de padrão (pedido do Bruno, 08/11): "Preparar o jogo ao carregar" ligada para todos, inclusive
-     * quem tinha desmarcado; sem bolha desde 11/11.
-     * As texturas que vinham no APK (até a 1.6.4 de teste) saem: agora são baixadas pelo app.
+     * Uma vez por mudança de padrão. Versão 2 (08/11): sem bolha desde 11/11.
+     * Versão 3 (pedido do Bruno, 24/11): "Preparar o jogo ao carregar" desligada para todos (sem ela, o V8 otimiza o jogo
+     * durante a partida, como no Chrome); quem tinha ligada vê um aviso uma vez (prepareOffNote, prepareOffWarning).
      */
     private void migrate() {
-        if (prefs.getInt("prefsVersion", 0) >= 2) return;
-        SharedPreferences.Editor e = prefs.edit().putBoolean("prepareGame", true);
-        e.remove("overlayAsked").putInt("prefsVersion", 2).commit(); // commit: o motor lê este arquivo em outro processo
+        int v = prefs.getInt("prefsVersion", 0);
+        if (v >= 3) return;
+        boolean had = prefs.getBoolean("prepareGame", v >= 2); // a versão 2 gravou ligada para todos; antes, só conta se estava gravada
+        SharedPreferences.Editor e = prefs.edit().putBoolean("prepareGame", false);
+        if (had) e.putBoolean("prepareOffNote", true);
+        if (v < 2) e.remove("overlayAsked");
+        e.putInt("prefsVersion", 3).commit(); // commit: o motor lê este arquivo em outro processo
+    }
+
+    private void prepareOffWarning() {
+        if (isFinishing() || isDestroyed() || !prefs.getBoolean("prepareOffNote", false)) return;
+        prefs.edit().remove("prepareOffNote").commit();
+        new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(tr("Preparar o jogo", "Prepare the game"))
+                .setMessage(tr("A opção \"Preparar o jogo ao carregar\" foi desligada. Sem ela, o jogo é otimizado aos poucos durante a partida, como no Chrome.\n\nSe você perceber que o desempenho piorou, religue em Configurações > Preparar o jogo ao carregar.",
+                               "The \"Prepare the game while loading\" option was turned off. Without it, the game is optimized little by little while you play, like in Chrome.\n\nIf you notice performance got worse, turn it back on in Settings > Prepare the game while loading."))
+                .setPositiveButton("OK", null)
+                .show();
     }
 
     @Override
@@ -1031,7 +1047,7 @@ public class MainActivity extends Activity {
             o.put("lang", lang());
             o.put("game", prefs.getString("game", DEFAULT_GAME));
             o.put("sounds", true); // sempre ligados, como no PC, mesmo para quem tinha desligado
-            o.put("prepareGame", prefs.getBoolean("prepareGame", true));
+            o.put("prepareGame", prefs.getBoolean("prepareGame", false));
             o.put("hdTextures", prefs.getBoolean("hdTextures", true));
             o.put("lightMode", prefs.getBoolean("lightMode", false));
             o.put("tex", texState());

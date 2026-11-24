@@ -71,7 +71,11 @@ test('celular: patches com recarga sem cache, tela de carregar, erro e WebGPU no
   for (const s of ['reloadIgnoringCache', 'nfsShowLoading', 'nfsFail']) assert.ok(p6.includes(s), s);
   const p5 = motor('patches/0005-app-unico-e-leve.patch');
   assert.ok(p5.includes('--disable-dawn-features=adapter_blocklist'));
-  assert.ok(p5.includes('getBoolean("prepareGame", true)'), 'Preparar o jogo ao carregar ligada por padrão (pedido do Bruno, 08/11)');
+  assert.ok(p5.includes('getBoolean("prepareGame", false)'), 'Preparar o jogo ao carregar desligada por padrão (pedido do Bruno, 24/11)');
+  const ma = fs.readFileSync(path.join(__dirname, '..', '..', 'mobile', 'app', 'java', 'xyz', 'nfs', 'launcher', 'MainActivity.java'), 'utf8');
+  assert.match(ma, /putInt\("prefsVersion", 3\)/, 'migração que desliga Preparar o jogo para todos');
+  assert.match(ma, /getBoolean\("prepareGame", false\)/, 'tela de configurações mostra desligada por padrão');
+  assert.match(ma, /prepareOffWarning/, 'aviso para quem tinha ligada');
   assert.match(p5, /nfs-texturas/);
   assert.ok(!p5.includes('SkiaGraphite') && !p5.includes('skip_validation'), 'desempenho do celular só muda se o Bruno pedir');
   assert.ok(!p5.includes('enable-unsafe-webgpu'), 'só a lista de chips, nunca a opção insegura inteira');

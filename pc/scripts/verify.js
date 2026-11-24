@@ -285,11 +285,14 @@ check('Opções de desempenho e qualidade ligadas por padrão (DX12); no DX11 s�
   const m = read('src/main/main.js');
   const s = require('../src/main/settings').DEFAULTS;
   // Pedido do Bruno (08/11): todas ligadas por padrão no DirectX 12 (também o filtro de imagem); o modo DirectX 11
-  // desmarca só as que pesam na placa de vídeo e põe os gráficos do jogo no mínimo.
-  assert(s.prepareGame === true && s.highPriority === true && s.imageFilter === true && s.antiAlias === true, 'opção de desempenho ou qualidade desligada por padrão');
+  // desmarca só as que pesam na placa de vídeo e põe os gráficos do jogo no mínimo. Exceção (24/11): Preparar o jogo
+  // desligada para todos (sem ela o V8 otimiza o wasm durante a partida, como no Chrome), com aviso uma vez.
+  assert(s.prepareGame === false && s.highPriority === true && s.imageFilter === true && s.antiAlias === true, 'padrão de desempenho ou qualidade trocado');
   const st = require('../src/main/settings');
   for (const k of ['hdTextures', 'newDrawing', 'antiAlias', 'imageFilter']) assert(st.DX11_OFF.includes(k), k + ' continua ligado no modo DirectX 11');
-  for (const k of ['highPriority', 'prepareGame', 'lighterGpu']) assert(st.DX11_KEEP.includes(k) && !st.DX11_OFF.includes(k), k + ' desligado no DirectX 11 (alivia o processador)');
+  for (const k of ['highPriority', 'lighterGpu']) assert(st.DX11_KEEP.includes(k) && !st.DX11_OFF.includes(k), k + ' desligado no DirectX 11 (alivia o processador)');
+  assert(!st.PERF_ON.includes('prepareGame') && !st.DX11_KEEP.includes('prepareGame') && st.DEFAULTS.version >= 10, 'Preparar o jogo ligada sozinha por um modo (desligada desde 24/11)');
+  assert(/cfg\.prepareOffNote && !SAFE_MODE/.test(m) && /prepareOffNote: false/.test(m), 'sem o aviso de Preparar o jogo desligada');
   assert(st.dx11Basic({}).dx11GameMin === true && /await dx11MinAtStart\(\)/.test(m), 'DirectX 11 sem os gráficos mínimos do jogo');
   assert((m.match(/sw\('js-flags'/g) || []).length === 1 && /if \(PREPARE_ON\) sw\('js-flags'/.test(m), 'js-flags fora da opção');
   assert(s.lighterGpu === true, 'aliviar o processador desligado por padrão');

@@ -4,14 +4,15 @@ const path = require('path');
 const combo = require('./combo');
 
 const DEFAULTS = Object.freeze({
-  version: 9,
+  version: 10,
   startFullscreen: false,   // iniciar direto em tela cheia
   showHome: true,           // mostrar tela inicial antes do jogo
   protectFullscreen: true,  // tela cheia = modo protegido
   blockAltSpace: true,      // engole Alt+Espaço durante o jogo (menu do Windows)
   highPriority: true,       // prioridade "acima do normal" para o jogo e a GPU. Ligadas por padrão, menos no DX11 (pedido do Bruno, 06/11)
   showCorner: true,         // botão discreto (semitransparente) sobre o jogo
-  prepareGame: true,        // prepara todo o código do jogo ao carregar, em vez de aos poucos na corrida. Vale ao reabrir
+  prepareGame: false,       // prepara todo o código do jogo ao carregar, em vez de aos poucos na corrida. Desligada por padrão desde a versão 10 (pedido do Bruno, 24/11). Vale ao reabrir
+  prepareOffNote: false,    // avisar uma vez que "Preparar o jogo" foi desligada (quem tinha ligada antes da versão 10)
   lighterGpu: true,         // tira as checagens de cada comando gráfico (teste; o Chrome não faz isso). Vale ao reabrir
   unblockGpu: false,        // modo DirectX 11, para placa sem DirectX 12. Botão sempre na tela inicial (3.1.2). Vale ao reabrir
   unblockTried: false,      // o app já tentou o modo DirectX 11 sozinho (tenta uma vez só)
@@ -52,7 +53,7 @@ const LANGS = ['pt', 'en'];
 const USER_BOOLS = ['startFullscreen', 'highPriority', 'prepareGame', 'lighterGpu', 'unblockGpu', 'newDrawing', 'antiAlias', 'imageFilter', 'hdTextures', 'lightMode'];
 // Sempre ligadas e fora das configurações (pedido do Bruno): vale também para quem tinha desligado antes.
 const ALWAYS_ON = ['showHome', 'protectFullscreen', 'blockAltSpace', 'showCorner', 'sounds', 'discord'];
-const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod', 'lightAuto', 'gpuOther', 'gpuOtherTried'];
+const BOOLS = [...USER_BOOLS, 'maximized', 'unblockTried', 'dx11GameMin', 'dx11GameMinMod', 'gameAa', 'gameAaMod', 'lightAuto', 'gpuOther', 'gpuOtherTried', 'prepareOffNote'];
 const OPACITY = (v, d) => (Number.isFinite(v) && v >= 0.3 && v <= 1 ? Math.round(v * 100) / 100 : d);
 
 function sanitizeLightPrev(v) {
@@ -83,6 +84,9 @@ function sanitize(raw) {
   const out = { ...DEFAULTS };
   for (const k of BOOLS) if (typeof r[k] === 'boolean') out[k] = r[k];
   for (const k of ALWAYS_ON) out[k] = true;
+  // Versão 10 (pedido do Bruno, 24/11): "Preparar o jogo" desligada para todos (sem ela, o V8 otimiza o jogo durante a
+  // partida, como no Chrome). Quem tinha ligada recebe um aviso uma vez (prepareOffNote); o que escolher depois fica.
+  if (!(Number(r.version) >= 10)) { if (r.prepareGame === true) out.prepareOffNote = true; out.prepareGame = false; }
   if (combo.validate(r.toggleCombo).ok) out.toggleCombo = r.toggleCombo;
   if (combo.validate(r.exitCombo).ok) out.exitCombo = r.exitCombo;
   if (out.toggleCombo === out.exitCombo) { out.toggleCombo = DEFAULTS.toggleCombo; out.exitCombo = DEFAULTS.exitCombo; }
@@ -112,7 +116,7 @@ function sanitize(raw) {
   // Versão 8 (pedido do Bruno, 06/11): o TexWizard vira o padrão de cada parte que ele tem. Quem tinha aplicado uma
   // escolha (a janela guarda todas as partes, mesmo sem mudar nada) volta ao padrão uma vez; depois, o que escolher fica.
   if (!(Number(r.version) >= 8)) out.texParts = {};
-  // Versão 8 (pedido do Bruno, 06/11): Prioridade, Preparar o jogo, Aliviar o processador, desenho novo e FXAA ligados
+  // Versão 8 (pedido do Bruno, 06/11): Prioridade, Aliviar o processador, desenho novo e FXAA ligados
   // por padrão no DirectX 12; quem tinha o app passa uma vez. No modo DirectX 11, tudo desligado (dx11Basic).
   if (!(Number(r.version) >= 8)) {
     if (out.unblockGpu) return dx11Basic(out);
@@ -121,7 +125,7 @@ function sanitize(raw) {
   // Versão 7: quem já estava no modo DirectX 11 passa uma vez para o jogo "cru" (dx11Basic). Depois, o que religar fica.
   if (!(Number(r.version) >= 7) && out.unblockGpu) return dx11Basic(out);
   // Versão 9 (pedido do Bruno, 08/11): o filtro de imagem também vem ligado. No DirectX 11, só fica desligado o que
-  // costuma pesar numa placa fraca (dx11Basic), Prioridade, Preparar o jogo e Aliviar o processador voltam, e os gráficos
+  // costuma pesar numa placa fraca (dx11Basic), Prioridade e Aliviar o processador voltam, e os gráficos
   // do jogo vão ao mínimo uma vez. Quem já tinha a versão 9 fica com o que escolheu.
   if (!(Number(r.version) >= 9)) {
     if (out.unblockGpu) return dx11Basic(out);
@@ -131,11 +135,12 @@ function sanitize(raw) {
 }
 // Modo DirectX 11 = placa fraca ou antiga (depois da tela preta numa Intel gen-7). Pedido do Bruno (08/11): ao entrar
 // nele, desliga só o que provavelmente traz lag numa placa assim (texturas HD, desenho novo, FXAA e filtro de imagem,
-// que pesam na placa de vídeo); Prioridade, Preparar o jogo e Aliviar o processador aliviam o processador e ficam
+// que pesam na placa de vídeo); Prioridade e Aliviar o processador aliviam o processador e ficam
 // ligadas. E os gráficos do próprio jogo vão ao mínimo uma vez (dx11GameMin, feito ao abrir o app). Quem quiser pode
 // religar cada opção depois; sair do modo não as liga de volta.
-const PERF_ON = ['highPriority', 'prepareGame', 'lighterGpu', 'newDrawing', 'antiAlias'];
-const DX11_KEEP = ['highPriority', 'prepareGame', 'lighterGpu'];
+// "Preparar o jogo" ficou fora das duas listas na versão 10: nenhum modo a liga sozinho.
+const PERF_ON = ['highPriority', 'lighterGpu', 'newDrawing', 'antiAlias'];
+const DX11_KEEP = ['highPriority', 'lighterGpu'];
 const DX11_OFF = ['hdTextures', 'newDrawing', 'antiAlias', 'imageFilter'];
 // Modo leve (pedido do Bruno, 14/11): desliga o que pesa no app (texturas HD, FXAA, pacote de imagem) e liga o que alivia.
 // O desenho novo fica como está (é mais rápido). Sair do modo não religa nada.

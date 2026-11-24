@@ -454,11 +454,23 @@ async function gameAaAtStart() {
   }
 }
 function dx11Warning() {
-  dialog.showMessageBox(win, {
+  return dialog.showMessageBox(win, {
     type: 'info', buttons: ['OK'], noLink: true, title: tr('Modo DirectX 11', 'DirectX 11 mode'),
     message: tr('Os gráficos do jogo foram colocados no mínimo.', 'The game graphics were set to the minimum.'),
     detail: tr('Sua placa de vídeo usa o modo DirectX 11. Para rodar melhor, o app desligou as opções que pesam e colocou os gráficos do jogo no mínimo. Se a tela do jogo ficar preta, diminua mais os gráficos do jogo (Options > Display) até a imagem carregar. Se estiver rodando bem, pode subir aos poucos.',
       'Your graphics card uses DirectX 11 mode. To run better, the app turned off the heavy options and set the game graphics to the minimum. If the game screen goes black, lower the game graphics further (Options > Display) until the picture loads. If it runs well, you can raise them little by little.'),
+  }).catch(() => {});
+}
+// Versão 10 das configurações (pedido do Bruno, 24/11): "Preparar o jogo" desligada para todos; quem tinha ligada vê
+// este aviso uma vez, na tela inicial.
+function prepareOffWarning() {
+  cfg = { ...cfg, prepareOffNote: false };
+  saveCfg();
+  return dialog.showMessageBox(win, {
+    type: 'info', buttons: ['OK'], noLink: true, title: tr('Preparar o jogo', 'Prepare the game'),
+    message: tr('A opção "Preparar o jogo ao carregar" foi desligada.', 'The "Prepare the game while loading" option was turned off.'),
+    detail: tr('Sem ela, o jogo é otimizado aos poucos durante a partida, como no Chrome. Se você perceber que o desempenho piorou, religue em Configurações > Desempenho > Preparar o jogo ao carregar (vale ao reabrir o app).',
+      'Without it, the game is optimized little by little while you play, like in Chrome. If you notice performance got worse, turn it back on in Settings > Performance > Prepare the game while loading (takes effect when you reopen the app).'),
   }).catch(() => {});
 }
 // Antes de o navegador abrir os dados do jogo. Disco muito lento não segura a abertura: a cópia termina sozinha logo depois.
@@ -1397,7 +1409,7 @@ function showWindow() {
   if (!cfg.showHome || NO_UI) startGame();
   refresh();
   if (NO_UI) return;
-  if (dx11MinApplied) dx11Warning();
+  Promise.resolve(dx11MinApplied && dx11Warning()).then(() => { if (cfg.prepareOffNote && !SAFE_MODE && win && !win.isDestroyed()) prepareOffWarning(); });
   setTimeout(() => checkUpdates(false), 4000); // depois da janela, sem atrasar a abertura
   updateTimer = setInterval(() => { if (!gameStarted) checkUpdates(false); }, UPDATE_EVERY_MS);
 }
