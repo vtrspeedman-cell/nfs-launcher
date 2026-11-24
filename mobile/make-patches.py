@@ -207,7 +207,7 @@ def patch_app_startup(t):
                                 // funcionava ligando uma opção escondida no Chrome. Quem já era aceito não muda.
                                 "--disable-dawn-features=adapter_blocklist"
                             });
-            // NFS Launcher: opção "Preparar o jogo ao carregar" (Configurações > Desempenho), ligada por padrão.
+            // NFS Launcher: opção "Preparar o jogo ao carregar" (Configurações > Desempenho), desligada por padrão desde 24/11.
             if (context.getSharedPreferences("nfs", 0).getBoolean("prepareGame", false)) {
                 org.chromium.base.CommandLine.getInstance()
                         .appendSwitchWithValue(
