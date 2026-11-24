@@ -64,6 +64,7 @@ Automatizados, na pasta `pc`: `npm test` (141 testes) e `npm run verify` (27 ver
 | 46l | Depois de o jogo ou a placa de vídeo cair (3.1.5): Reportar problema, escrever o texto com a caixa do log marcada e Enviar | A caixa do log aparece marcada com a partida que caiu; o envio termina e vira uma issue no Reportar-problema com o log em comentários. |
 | 46m | Notebook só com a placa integrada (3.1.6): abrir o NFSU2. Na tela inicial, "Usar a outra placa de vídeo" e "Voltar à placa de antes" | O jogo abre sem "WebGPU indisponível" (o app não força mais a placa forte). Sem adaptador, o app tenta a outra placa sozinho uma vez e reabre; o botão troca e reabre. |
 | 46n | Celular (1.7.3): tela inicial > Editor de save, escolher NFSU2 ou Modded, mudar algo, Aplicar no jogo; depois Restaurar | Botões em grade 2x2 sem cortar; o editor abre com o save; o jogo mostra a mudança; Restaurar volta o save de antes. |
+| 46o | PC 3.2.2 e celular 1.7.4, com "Preparar o jogo" ligada antes: abrir o app | Aviso uma vez na tela inicial de que a opção foi desligada; não volta a aparecer; religar fica ligado. PC: comparar no F8 com a 3.2.1 no mesmo trecho |
 
 ## Celular (Android)
 
