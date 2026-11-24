@@ -154,6 +154,22 @@ CORRECOES += [
     ]),
 ]
 
+# Windows 11 sem aviso decide sozinho economizar energia (EcoQoS) no processo sem janela: em Intel com nucleos de
+# economia e em notebook, o jogo pode ir para o nucleo lento. Jogo na frente e processo grafico: sempre HighQoS.
+CORRECOES += [
+    ("../base/process/process_win.cc", [
+        ("                                   ? win::ProcessPowerState::kUnset\n",
+         "                                   ? win::ProcessPowerState::kDisabled  // NFS: HighQoS\n"),
+    ]),
+    ("../content/gpu/gpu_main.cc", [
+        ("      base::GetCurrentProcessHandle(), base::win::ProcessPowerState::kDisabled);\n\n  // COM",
+         "      base::GetCurrentProcessHandle(), base::win::ProcessPowerState::kDisabled);\n"
+         "  // NFS: processo grafico nunca em modo de economia (EcoQoS).\n"
+         "  base::win::SetProcessEcoQoSState(base::GetCurrentProcessHandle(),\n"
+         "                                   base::win::ProcessPowerState::kDisabled);\n\n  // COM"),
+    ]),
+]
+
 
 def main():
     for nome, marca in VERSAO_ANTIGA.items():
