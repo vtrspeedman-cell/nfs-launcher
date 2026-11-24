@@ -1,10 +1,10 @@
 {
-  "versao": "3.2.0",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.0/NFS-Launcher-Setup-3.2.0.exe",
-  "tamanho": 104814641,
-  "sha256": "ba345935e70cd03d630746aa39ff2d77e9c0b822c8e640be2bcba3a77f7b92b2",
+  "versao": "3.2.1",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.1/NFS-Launcher-Setup-3.2.1.exe",
+  "tamanho": 104822958,
+  "sha256": "3629ea70617cf1e36104944eb84317c15604dbf78e18e26533cccd679630a6f8",
   "novidades": {
-    "pt": "O editor de save saiu do app. A cópia automática do save e o botão \"Meus saves\" continuam iguais.",
-    "en": "The save editor was removed from the app. The automatic save copy and the \"My saves\" button stay the same."
+    "pt": "Motor novo: o Windows não põe mais o jogo em modo de economia de energia (ajuda em notebook e em Intel com núcleos de economia). Texturas HD leem o disco sem travar o app.",
+    "en": "New engine: Windows no longer puts the game in power-saving mode (helps on laptops and Intel CPUs with efficiency cores). HD Textures read the disk without freezing the app."
   }
 }
