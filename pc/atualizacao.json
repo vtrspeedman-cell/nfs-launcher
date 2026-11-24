@@ -1,10 +1,10 @@
 {
-  "versao": "3.2.1",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.1/NFS-Launcher-Setup-3.2.1.exe",
-  "tamanho": 104822958,
-  "sha256": "3629ea70617cf1e36104944eb84317c15604dbf78e18e26533cccd679630a6f8",
+  "versao": "3.2.2",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.2/NFS-Launcher-Setup-3.2.2.exe",
+  "tamanho": 104822730,
+  "sha256": "3f0af8125019c23854c39abda0b53ccefe687218bbc6154b017bfc25e3aba5a7",
   "novidades": {
-    "pt": "Motor novo: o Windows não põe mais o jogo em modo de economia de energia (ajuda em notebook e em Intel com núcleos de economia). Texturas HD leem o disco sem travar o app.",
-    "en": "New engine: Windows no longer puts the game in power-saving mode (helps on laptops and Intel CPUs with efficiency cores). HD Textures read the disk without freezing the app."
+    "pt": "\"Preparar o jogo\" agora vem desligada para todos: o jogo carrega mais rápido e se otimiza enquanto roda, como no Chrome. Se estava ligada, um aviso aparece uma vez; se o desempenho piorar, religue em Configurações > Desempenho. Desenho novo com menos atraso: o sinal de cada quadro chega sem espera e mexer o mouse não segura mais o jogo.",
+    "en": "\"Prepare the game\" is now off for everyone: the game loads faster and optimizes itself while running, like in Chrome. If you had it on, a notice shows once; if performance gets worse, turn it back on in Settings > Performance. New drawing with less delay: the signal for each frame arrives without waiting and moving the mouse no longer holds the game."
   }
 }
