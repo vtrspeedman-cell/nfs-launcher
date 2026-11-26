@@ -938,7 +938,7 @@ def patch_game_activity(t):
                 return;
             }
             // O Blink só mostra o controle depois de um "toque" nele: o eixo pisca por 2 s para não passar batido.
-            System.setProperty("nfs.padPulse", String.valueOf(android.os.SystemClock.uptimeMillis() + 150));
+            System.setProperty("nfs.padPulse", String.valueOf(android.os.SystemClock.uptimeMillis() + 2000));
             System.setProperty("nfs.pad", "1");
             View pad = nfsDronePadView();
             nfsDronePad = pad;
@@ -1202,10 +1202,10 @@ def patch_gamepad(t):
     return sub1(t, '''                } else {
                     GamepadListJni.get()''', '''                } else if (i == MAX_GAMEPADS - 1 && System.getProperty("nfs.pad") != null) {
                     long now = android.os.SystemClock.uptimeMillis();
-                    // 5º eixo, que o jogo não usa: o puxão só serve para o Chromium mostrar o controle (no eixo 3 trocava a câmera).
-                    float[] axes = new float[5];
+                    // Puxão no eixo 3 por 2 s: troca a câmera do carro, mas sem ele o drone não aparece (Bruno, 26/11; no 5º eixo não serviu).
+                    float[] axes = new float[4];
                     String pulse = System.getProperty("nfs.padPulse");
-                    if (pulse != null && now < Long.parseLong(pulse)) axes[4] = 0.6f;
+                    if (pulse != null && now < Long.parseLong(pulse) && (now / 200) % 2 == 0) axes[3] = 0.6f;
                     GamepadListJni.get()
                             .setGamepadData(webGamepadsPtr, i, true, true, "NFS Launcher", 0, 0, now,
                                     axes, new float[17], 17, false);
