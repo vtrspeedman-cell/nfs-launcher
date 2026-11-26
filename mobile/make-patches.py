@@ -939,17 +939,6 @@ def patch_game_activity(t):
             View pad = nfsDronePadView();
             nfsDronePad = pad;
             root.addView(pad, -1, -1);
-            int up = android.view.KeyEvent.KEYCODE_DPAD_UP;
-            // Gambiarra pedida pelo Bruno: o drone só liberou depois de andar um pouco; um toque curto para a frente e depois o F6.
-            pad.postDelayed(() -> { if (nfsDronePad == pad) nfsKey(up, android.view.KeyEvent.ACTION_DOWN); }, 2100);
-            pad.postDelayed(() -> { if (nfsDronePad == pad) nfsKey(up, android.view.KeyEvent.ACTION_UP); }, 2400);
-            pad.postDelayed(
-                    () -> {
-                        if (nfsDronePad != pad) return;
-                        nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
-                        nfsKey(f6, android.view.KeyEvent.ACTION_UP);
-                    },
-                    3000);
         } else {
             View pad = nfsDronePad;
             if (pad == null) return;
@@ -1056,18 +1045,32 @@ def patch_game_activity(t):
                     if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) nfsDrone(false);
                     return true;
                 });
-        // Se o drone não entrou sozinho, este manda o F6 de novo (liga e desliga, como no PC).
-        android.widget.TextView fly = nfsHoldKey("Drone (F6)", android.view.KeyEvent.KEYCODE_F6, d);
-        for (android.widget.TextView b : new android.widget.TextView[] {fly, exit}) {
-            b.setPadding((int) (16 * d), 0, (int) (16 * d), 0);
-            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-2, (int) (44 * d));
-            lp.leftMargin = lp.rightMargin = (int) (6 * d);
-            top.addView(b, lp);
-        }
+        exit.setPadding((int) (16 * d), 0, (int) (16 * d), 0);
+        top.addView(exit, new android.widget.LinearLayout.LayoutParams(-2, (int) (44 * d)));
         android.widget.FrameLayout.LayoutParams tp = new android.widget.FrameLayout.LayoutParams(-2, -2,
                 android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
         tp.topMargin = m;
         layer.addView(top, tp);
+        // O F6 não liga o drone no celular: o jogo só libera depois de andar com o controle; então explica como ativar.
+        android.widget.TextView tip = new android.widget.TextView(this);
+        tip.setText(en
+                ? "To start the drone: drive a little with these on-screen controls, then open the menu (\\u2630) and turn on the Drone."
+                : "Para ligar o drone: ande um pouco com estes controles da tela, depois abra o menu (\\u2630) e ative o Drone.");
+        tip.setTextColor(Color.WHITE);
+        tip.setTextSize(15);
+        tip.setGravity(android.view.Gravity.CENTER);
+        tip.setFocusable(false);
+        tip.setPadding((int) (16 * d), (int) (10 * d), (int) (16 * d), (int) (10 * d));
+        android.graphics.drawable.GradientDrawable tbg = new android.graphics.drawable.GradientDrawable();
+        tbg.setColor(Color.argb(200, 8, 10, 20));
+        tbg.setCornerRadius(10 * d);
+        tip.setBackground(tbg);
+        android.widget.FrameLayout.LayoutParams ip = new android.widget.FrameLayout.LayoutParams((int) (360 * d), -2,
+                android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
+        ip.topMargin = m + (int) (54 * d);
+        layer.addView(tip, ip);
+        tip.setOnClickListener(v -> v.setVisibility(View.GONE));
+        tip.postDelayed(() -> tip.setVisibility(View.GONE), 12000);
         return layer;
     }
 
