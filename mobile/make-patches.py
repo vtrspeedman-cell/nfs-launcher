@@ -885,7 +885,8 @@ def patch_game_activity(t):
                 : code == android.view.KeyEvent.KEYCODE_DPAD_UP ? 103
                 : code == android.view.KeyEvent.KEYCODE_DPAD_LEFT ? 105
                 : code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? 106
-                : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108 : 0;
+                : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108
+                : code == android.view.KeyEvent.KEYCODE_ESCAPE ? 1 : 0;
         v.dispatchKeyEvent(
                 new android.view.KeyEvent(now, now, action, code, 0, 0,
                         android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, sc,
@@ -952,8 +953,8 @@ def patch_game_activity(t):
         } else {
             View pad = nfsDronePad;
             if (pad == null) return;
-            nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
-            nfsKey(f6, android.view.KeyEvent.ACTION_UP);
+            nfsKey(android.view.KeyEvent.KEYCODE_ESCAPE, android.view.KeyEvent.ACTION_DOWN);
+            nfsKey(android.view.KeyEvent.KEYCODE_ESCAPE, android.view.KeyEvent.ACTION_UP);
             root.removeView(pad);
             nfsDronePad = null;
             root.postDelayed(

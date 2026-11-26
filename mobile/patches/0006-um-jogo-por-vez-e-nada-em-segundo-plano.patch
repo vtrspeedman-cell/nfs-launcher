@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..d8d52f1054f34 100644
+index 4e773273b1667..3b57f44b33b3c 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..d8d52f1054f34 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,802 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,803 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -628,7 +628,8 @@ index 4e773273b1667..d8d52f1054f34 100644
 +                : code == android.view.KeyEvent.KEYCODE_DPAD_UP ? 103
 +                : code == android.view.KeyEvent.KEYCODE_DPAD_LEFT ? 105
 +                : code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? 106
-+                : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108 : 0;
++                : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108
++                : code == android.view.KeyEvent.KEYCODE_ESCAPE ? 1 : 0;
 +        v.dispatchKeyEvent(
 +                new android.view.KeyEvent(now, now, action, code, 0, 0,
 +                        android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, sc,
@@ -695,8 +696,8 @@ index 4e773273b1667..d8d52f1054f34 100644
 +        } else {
 +            View pad = nfsDronePad;
 +            if (pad == null) return;
-+            nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
-+            nfsKey(f6, android.view.KeyEvent.ACTION_UP);
++            nfsKey(android.view.KeyEvent.KEYCODE_ESCAPE, android.view.KeyEvent.ACTION_DOWN);
++            nfsKey(android.view.KeyEvent.KEYCODE_ESCAPE, android.view.KeyEvent.ACTION_UP);
 +            root.removeView(pad);
 +            nfsDronePad = null;
 +            root.postDelayed(
@@ -813,7 +814,7 @@ index 4e773273b1667..d8d52f1054f34 100644
      }
  
      @Override
-@@ -338,12 +1135,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +1136,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
