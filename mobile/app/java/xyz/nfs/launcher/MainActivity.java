@@ -1050,9 +1050,9 @@ public class MainActivity extends Activity {
             o.put("prepareGame", prefs.getBoolean("prepareGame", false));
             o.put("hdTextures", prefs.getBoolean("hdTextures", true));
             o.put("lightMode", prefs.getBoolean("lightMode", false));
-            o.put("songButton", prefs.getBoolean("songButton", false));
-            o.put("songX", prefs.getInt("songX", 96));
-            o.put("songY", prefs.getInt("songY", 50));
+            o.put("keyDrawer", prefs.getBoolean("keyDrawer", false));
+            o.put("drawerX", prefs.getInt("drawerX", 100));
+            o.put("drawerY", prefs.getInt("drawerY", 50));
             o.put("tex", texState());
             o.put("crashes", new JSONArray(CrashLog.lines(this, "en".equals(lang()))));
             if (error != null) {
@@ -1100,15 +1100,15 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void setOption(String key, boolean on) {
             if (!"prepareGame".equals(key) && !"hdTextures".equals(key) && !"lightMode".equals(key)
-                    && !"songButton".equals(key)) return;
+                    && !"keyDrawer".equals(key)) return;
             SharedPreferences.Editor ed = prefs.edit().putBoolean(key, on);
             // Modo leve (igual ao PC, lightBasic): desliga as Texturas HD uma vez só, ao ligar; se o jogador religar, fica.
             if ("lightMode".equals(key) && on && !prefs.getBoolean("lightMode", false)) ed.putBoolean("hdTextures", false);
             ed.commit(); // commit: o processo do jogo lê este arquivo ao abrir
             runOnUiThread(MainActivity.this::refreshHome);
         }
-        @JavascriptInterface public void setSongPos(int x, int y) {
-            prefs.edit().putInt("songX", Math.max(0, Math.min(100, x))).putInt("songY", Math.max(0, Math.min(100, y))).commit();
+        @JavascriptInterface public void setDrawerPos(int x, int y) {
+            prefs.edit().putInt("drawerX", x < 50 ? 0 : 100).putInt("drawerY", Math.max(0, Math.min(100, y))).commit();
         }
         @JavascriptInterface public void checkUpdate() { runOnUiThread(MainActivity.this::checkUpdate); }
         @JavascriptInterface public void openUpdates() { runOnUiThread(MainActivity.this::openUpdates); }

@@ -119,7 +119,8 @@
   let texWant = true; // pede a lista publicada ao abrir as Configurações (e de novo se falhou)
   function placeSongDot(x, y) {
     const d = document.getElementById('song-dot');
-    d.style.left = `calc((100% - 30px) * ${x / 100})`;
+    d.classList.toggle('left', x < 50);
+    d.style.left = x < 50 ? '0px' : 'calc(100% - 12px)';
     d.style.top = `calc((100% - 30px) * ${y / 100})`;
   }
 
@@ -259,14 +260,14 @@
     $('s-lightMode').checked = !!st.lightMode;
     $('s-lightMode-l').textContent = t('Modo leve: para celular fraco ou FPS baixo. Põe tudo no mínimo, uma vez: no jogo, todas as opções de Options > Display no mínimo, resolução em 50%, até 16 carros de outros jogadores, faróis só no seu carro e sem filtro anisotrópico; desliga dano de batida, rebaixamento, peças nos outros carros, vinis HQ, estradas mais nítidas, dia, skate e skatista, gráficos no máximo em jogo salvo novo e proporções 3D corrigidas. No app, desliga as Texturas HD. Depois, vá subindo os gráficos e as melhorias no próprio jogo, olhando o FPS: o que você religar fica. Desligando, volta como estava o que você não mudou',
       'Light mode: for weak phones or low FPS. Sets everything to the minimum, once: in the game, every Options > Display setting at the minimum, 50% resolution, up to 16 other players’ cars, headlights only on your car and no anisotropic filtering; turns off crash damage, stance, parts on other cars, HQ vinyls, sharper roads, daytime, skateboard and skater, max graphics on new saves and fixed 3D proportions. In the app, turns off HD Textures. Then raise the graphics and enhancements in the game itself, watching the FPS: whatever you turn back on stays. Turning it off brings back what you did not change');
-    $('set-song-h').textContent = t('Próxima música (NFSU2)', 'Next song (NFSU2)');
-    $('s-songButton').checked = !!st.songButton;
-    $('s-songButton-l').textContent = t('Botão de próxima música na tela do jogo: faz o mesmo que o F7 no PC',
-      'Next song button on the game screen: does the same as F7 on PC');
-    $('song-note').textContent = t('Toque ou arraste no quadro abaixo (a tela do jogo deitada) para escolher onde o botão fica.',
-      'Tap or drag in the box below (the game screen, landscape) to choose where the button goes.');
-    $('song-note').hidden = $('song-pad').hidden = !st.songButton;
-    placeSongDot(st.songX ?? 96, st.songY ?? 50);
+    $('set-song-h').textContent = t('Gaveta de atalhos (NFSU2)', 'Shortcut drawer (NFSU2)');
+    $('s-keyDrawer').checked = !!st.keyDrawer;
+    $('s-keyDrawer-l').textContent = t('Gaveta no canto da tela do jogo, como o Game Turbo: toque ou puxe a alça para abrir. Tem Próxima música (F7), Menu (F9), Drone (F6), Foto (F12), Esconder HUD (F10) e FPS (F8), iguais às teclas do PC',
+      'Drawer on the edge of the game screen, like Game Turbo: tap or pull the tab to open it. Has Next song (F7), Menu (F9), Drone (F6), Photo (F12), Hide HUD (F10) and FPS (F8), same as the PC keys');
+    $('song-note').textContent = t('Toque ou arraste no quadro abaixo (a tela do jogo deitada) para escolher o lado e a altura da alça. Se você mudou essas teclas no jogo, a gaveta usa as originais.',
+      'Tap or drag in the box below (the game screen, landscape) to choose the side and height of the tab. If you changed these keys in the game, the drawer uses the original ones.');
+    $('song-note').hidden = $('song-pad').hidden = !st.keyDrawer;
+    placeSongDot(st.drawerX ?? 100, st.drawerY ?? 50);
     renderTextures();
     $('set-maint-h').textContent = t('Manutenção', 'Maintenance');
     $('maint-note').textContent = t('Limpar o cache fica nos ajustes do Android, em Armazenamento, e não toca nos seus saves. Atenção: nunca use “Limpar dados” ali: ele apaga o login, as configurações e os saves do jogo neste app.',
@@ -377,15 +378,15 @@
   const pad = $('song-pad');
   const songAt = (e, save) => {
     const r = pad.getBoundingClientRect(), dot = 30;
-    const x = Math.round(Math.max(0, Math.min(100, (e.clientX - r.left - dot / 2) / Math.max(1, r.width - dot) * 100)));
+    const x = e.clientX - r.left < r.width / 2 ? 0 : 100;
     const y = Math.round(Math.max(0, Math.min(100, (e.clientY - r.top - dot / 2) / Math.max(1, r.height - dot) * 100)));
     placeSongDot(x, y);
-    if (save) { api.setSongPos(x, y); toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.')); }
+    if (save) { api.setDrawerPos(x, y); toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.')); }
   };
   pad.onpointerdown = (e) => { pad.setPointerCapture(e.pointerId); songAt(e, false); };
   pad.onpointermove = (e) => { if (pad.hasPointerCapture(e.pointerId)) songAt(e, false); };
   pad.onpointerup = (e) => songAt(e, true);
-  for (const key of ['prepareGame', 'hdTextures', 'lightMode', 'songButton']) {
+  for (const key of ['prepareGame', 'hdTextures', 'lightMode', 'keyDrawer']) {
     $(`s-${key}`).onchange = (e) => {
       api.setOption(key, e.target.checked);
       toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.'));

@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..67c129c19a863 100644
+index 4e773273b1667..83a446577f85f 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..67c129c19a863 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,536 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,608 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -474,63 +474,135 @@ index 4e773273b1667..67c129c19a863 100644
 +    private @Nullable View nfsSong;
 +
 +    /**
-+     * NFS Launcher: botão opcional de próxima música (F7 do NFSU2), desligado por padrão, no lugar que o
-+     * jogador escolheu nas Configurações. Manda a tecla F7 como um teclado de verdade; não mexe no site.
++     * NFS Launcher: gaveta opcional de atalhos (teclas F do NFSU2), desligada por padrão, presa na borda que o
++     * jogador escolheu nas Configurações, como o Game Turbo: puxa ou toca na alça e ela abre. Manda as teclas
++     * como um teclado de verdade; não mexe no site.
 +     */
 +    private void nfsSongButton() {
 +        if (nfsSong != null) return;
 +        android.content.SharedPreferences p = getSharedPreferences("nfs", 4 /* MODE_MULTI_PROCESS */);
 +        String game = p.getString("game", "nfsu2");
-+        if (!p.getBoolean("songButton", false) || !("nfsu2".equals(game) || "nfsu2mod".equals(game))) return;
-+        float fx = Math.max(0, Math.min(100, p.getInt("songX", 96))) / 100f;
-+        float fy = Math.max(0, Math.min(100, p.getInt("songY", 50))) / 100f;
++        if (!p.getBoolean("keyDrawer", false) || !("nfsu2".equals(game) || "nfsu2mod".equals(game))) return;
++        boolean en = "en".equals(p.getString("lang", "pt"));
++        boolean left = p.getInt("drawerX", 100) < 50;
++        float fy = Math.max(0, Math.min(100, p.getInt("drawerY", 50))) / 100f;
 +        float d = getResources().getDisplayMetrics().density;
-+        int size = (int) (46 * d);
-+        android.widget.TextView b = new android.widget.TextView(this);
-+        b.setText("\u266B\u00BB");
-+        b.setTextColor(Color.WHITE);
-+        b.setTextSize(17);
-+        b.setGravity(android.view.Gravity.CENTER);
-+        b.setFocusable(false);
-+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-+        bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-+        bg.setColor(Color.argb(120, 8, 10, 20));
-+        bg.setStroke((int) (1.5f * d), Color.argb(150, 255, 255, 255));
-+        b.setBackground(bg);
-+        b.setAlpha(0.8f);
-+        b.setOnTouchListener(
++        int[] keys = {
++            android.view.KeyEvent.KEYCODE_F7, android.view.KeyEvent.KEYCODE_F9, android.view.KeyEvent.KEYCODE_F6,
++            android.view.KeyEvent.KEYCODE_F12, android.view.KeyEvent.KEYCODE_F10, android.view.KeyEvent.KEYCODE_F8};
++        String[] names = en
++                ? new String[] {"\u266B Next song", "\u2630 Menu", "\u2708 Drone", "\u25A3 Photo", "\u25CC Hide HUD", "FPS"}
++                : new String[] {"\u266B Próxima música", "\u2630 Menu", "\u2708 Drone", "\u25A3 Foto", "\u25CC Esconder HUD", "FPS"};
++        String[] fk = {"F7", "F9", "F6", "F12", "F10", "F8"};
++        android.widget.LinearLayout panel = new android.widget.LinearLayout(this);
++        panel.setOrientation(android.widget.LinearLayout.VERTICAL);
++        int pad = (int) (6 * d);
++        panel.setPadding(pad, pad, pad, pad);
++        android.graphics.drawable.GradientDrawable pbg = new android.graphics.drawable.GradientDrawable();
++        pbg.setColor(Color.argb(215, 8, 10, 20));
++        pbg.setStroke((int) d, Color.argb(110, 255, 255, 255));
++        pbg.setCornerRadius(12 * d);
++        panel.setBackground(pbg);
++        Runnable[] close = new Runnable[1];
++        for (int i = 0; i < keys.length; i++) {
++            final int code = keys[i];
++            android.widget.TextView b = new android.widget.TextView(this);
++            b.setText(names[i] + "   " + fk[i]);
++            b.setTextColor(Color.WHITE);
++            b.setTextSize(14);
++            b.setGravity(android.view.Gravity.CENTER_VERTICAL);
++            b.setPadding((int) (12 * d), 0, (int) (12 * d), 0);
++            b.setFocusable(false);
++            android.graphics.drawable.GradientDrawable bbg = new android.graphics.drawable.GradientDrawable();
++            bbg.setColor(Color.argb(60, 255, 255, 255));
++            bbg.setCornerRadius(8 * d);
++            b.setBackground(bbg);
++            b.setOnTouchListener(
++                    (v, e) -> {
++                        int a = e.getActionMasked();
++                        if (a == android.view.MotionEvent.ACTION_DOWN) {
++                            v.setAlpha(0.6f);
++                            v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
++                            nfsKey(code, android.view.KeyEvent.ACTION_DOWN);
++                        } else if (a == android.view.MotionEvent.ACTION_UP
++                                || a == android.view.MotionEvent.ACTION_CANCEL) {
++                            v.setAlpha(1f);
++                            nfsKey(code, android.view.KeyEvent.ACTION_UP);
++                            panel.removeCallbacks(close[0]);
++                            panel.postDelayed(close[0], 5000);
++                        }
++                        return true;
++                    });
++            android.widget.LinearLayout.LayoutParams lp =
++                    new android.widget.LinearLayout.LayoutParams(-1, (int) (40 * d));
++            if (i > 0) lp.topMargin = (int) (5 * d);
++            panel.addView(b, lp);
++        }
++        panel.setVisibility(View.GONE);
++        android.widget.TextView handle = new android.widget.TextView(this);
++        handle.setTextColor(Color.argb(220, 255, 255, 255));
++        handle.setTextSize(20);
++        handle.setGravity(android.view.Gravity.CENTER);
++        handle.setFocusable(false);
++        android.graphics.drawable.GradientDrawable hbg = new android.graphics.drawable.GradientDrawable();
++        hbg.setColor(Color.argb(130, 8, 10, 20));
++        float r = 10 * d;
++        hbg.setCornerRadii(left ? new float[] {0, 0, r, r, r, r, 0, 0} : new float[] {r, r, 0, 0, 0, 0, r, r});
++        handle.setBackground(hbg);
++        int hw = (int) (20 * d), hh = (int) (64 * d), gap = (int) (4 * d), pw = (int) (190 * d);
++        android.widget.FrameLayout layer = new android.widget.FrameLayout(this);
++        layer.addView(handle, new android.widget.FrameLayout.LayoutParams(hw, hh));
++        layer.addView(panel, new android.widget.FrameLayout.LayoutParams(pw, -2));
++        Runnable place =
++                () -> {
++                    int w = layer.getWidth(), h = layer.getHeight();
++                    boolean open = panel.getVisibility() == View.VISIBLE;
++                    int ph = panel.getHeight() > 0 ? panel.getHeight() : (int) (6 * 45 * d + 12 * d);
++                    float hy = fy * Math.max(0, h - hh);
++                    handle.setX(open ? (left ? gap + pw : w - gap - pw - hw) : (left ? 0 : w - hw));
++                    handle.setY(hy);
++                    handle.setText(open == left ? "\u2039" : "\u203A");
++                    panel.setX(left ? gap : w - gap - pw);
++                    panel.setY(Math.max(gap, Math.min(h - ph - gap, hy + hh / 2f - ph / 2f)));
++                };
++        close[0] = () -> {
++            panel.setVisibility(View.GONE);
++            layer.post(place);
++        };
++        float[] down = new float[1];
++        handle.setOnTouchListener(
 +                (v, e) -> {
 +                    int a = e.getActionMasked();
 +                    if (a == android.view.MotionEvent.ACTION_DOWN) {
-+                        v.setAlpha(1f);
-+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-+                        nfsKey(android.view.KeyEvent.ACTION_DOWN);
-+                    } else if (a == android.view.MotionEvent.ACTION_UP
-+                            || a == android.view.MotionEvent.ACTION_CANCEL) {
-+                        v.setAlpha(0.8f);
-+                        nfsKey(android.view.KeyEvent.ACTION_UP);
++                        down[0] = e.getRawX();
++                    } else if (a == android.view.MotionEvent.ACTION_UP) {
++                        float dx = e.getRawX() - down[0];
++                        boolean open = panel.getVisibility() == View.VISIBLE;
++                        // Toque abre ou fecha; puxar para dentro abre, empurrar para a borda fecha.
++                        boolean want = Math.abs(dx) < 8 * d ? !open : (left ? dx > 0 : dx < 0);
++                        panel.setVisibility(want ? View.VISIBLE : View.GONE);
++                        panel.removeCallbacks(close[0]);
++                        if (want) {
++                            v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
++                            panel.postDelayed(close[0], 5000);
++                        }
++                        layer.post(place);
 +                    }
 +                    return true;
 +                });
-+        // Camada do tamanho da tela que não pega toque: só o botão pega; o resto vai para o jogo.
-+        android.widget.FrameLayout layer = new android.widget.FrameLayout(this);
-+        layer.addView(b, new android.widget.FrameLayout.LayoutParams(size, size));
-+        layer.addOnLayoutChangeListener(
-+                (v, l, t, r, bt, ol, ot, or, ob) -> {
-+                    b.setX(fx * Math.max(0, (r - l) - size));
-+                    b.setY(fy * Math.max(0, (bt - t) - size));
-+                });
++        // Camada do tamanho da tela que não pega toque: só a alça e a gaveta pegam; o resto vai para o jogo.
++        layer.addOnLayoutChangeListener((v, l, t, rr, bt, ol, ot, or, ob) -> place.run());
 +        ((android.view.ViewGroup) getWindow().getDecorView()).addView(layer, -1, -1);
 +        nfsSong = layer;
 +    }
 +
-+    private void nfsKey(int action) {
++    private void nfsKey(int code, int action) {
 +        Tab tab = sNfsTab == null ? null : sNfsTab.get();
 +        View v = tab == null ? null : tab.getContentView();
 +        if (v == null) return;
 +        long now = android.os.SystemClock.uptimeMillis();
 +        v.dispatchKeyEvent(
-+                new android.view.KeyEvent(now, now, action, android.view.KeyEvent.KEYCODE_F7, 0, 0,
++                new android.view.KeyEvent(now, now, action, code, 0, 0,
 +                        android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
 +                        android.view.KeyEvent.FLAG_FROM_SYSTEM, android.view.InputDevice.SOURCE_KEYBOARD));
 +    }
@@ -547,7 +619,7 @@ index 4e773273b1667..67c129c19a863 100644
      }
  
      @Override
-@@ -338,12 +869,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +941,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);
