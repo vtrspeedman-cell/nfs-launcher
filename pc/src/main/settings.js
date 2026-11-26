@@ -46,6 +46,7 @@ const DEFAULTS = Object.freeze({
   lightMode: false,         // modo leve: mods pesados e anti-serrilhado do jogo desligados (gameSettings.lightMode)
   lightAuto: false,         // o FPS baixo já ligou (ou ofereceu) o modo leve uma vez (fpsWatch.js)
   gpuOther: false, gpuOtherTried: false,          // jogo na outra placa de vídeo (oferecido quando a placa cai durante o jogo, 20/11). Vale ao reabrir
+  hidDevices: [],           // controles liberados para o WebHID do site ('fabricante:modelo'; permissions.js, 25/11)
 });
 const { GAME_IDS, SECURE_DNS } = require('./config');
 const { MODE_IDS } = require('./imageFilter');
@@ -97,6 +98,7 @@ function sanitize(raw) {
   if (Object.hasOwn(SECURE_DNS, r.secureDns)) out.secureDns = r.secureDns;
   if (Number.isInteger(r.crewInvites) && r.crewInvites >= 0) out.crewInvites = Math.min(r.crewInvites, 99);
   if (Number.isFinite(r.reportSeen) && r.reportSeen >= 0) out.reportSeen = r.reportSeen;
+  out.hidDevices = require('./permissions').sanitizeHidGrants(r.hidDevices);
   out.texParts = require('./texPack').sanitizeChoice(r.texParts);
   for (const k of ['texUiPrev', 'texUiPrevMod', 'texRoadPrev', 'texRoadPrevMod']) if (typeof r[k] === 'string' && r[k].length <= 200 && !/[\r\n]/.test(r[k])) out[k] = r[k];
   // Linhas de antes do modo leve: { ini: {chave: linha}, aa: 'número' }.

@@ -21,7 +21,7 @@ const imageFilter = require('./imageFilter');
 const gpuFallback = require('./gpuFallback');
 const { inTopZone } = require('./corner');
 const { mayBeShortcut, decideKey, shouldCancelClose, wantAltSpaceCatch, ALT_SPACE_ACCELS } = require('./lockPolicy');
-const { allowPermission } = require('./permissions');
+const { allowPermission, addHidGrant, hidGranted } = require('./permissions');
 const diagnostics = require('./diagnostics');
 const crashLog = require('./crashLog');
 const custom = require('./custom');
@@ -30,6 +30,7 @@ const downloader = require('./downloader');
 const { errorKind, offersSecureDns } = require('./connError');
 const { SECURE_DNS } = require('./config');
 const { Presence } = require('./discord');
+const discordLogin = require('./discordLogin');
 const profileLock = require('./profileLock');
 const saveCopy = require('./saveCopy');
 const modFiles = require('./modFiles');
@@ -1442,6 +1443,84 @@ function wireLoginWindow(child) {
   cwc.on('will-redirect', guard);
 }
 
+// Login do Discord do vínculo da aba Names do NFSU2 (discordLogin.js, 25/11): janela própria sobre o app, com uma
+// partição em memória só dela (nada do Discord fica gravado no PC, e o atalho das Texturas HD não segue os
+// redirecionamentos do login). Só navega no Discord e no caminho do vínculo; a volta fecha a janela e abre na view do
+// jogo, que guardou a marca do clique. Modal: o jogo espera na mesma página até o fim.
+let discordWin = null;
+const discordSessions = new WeakSet();
+function openDiscordLogin(url) {
+  if (discordWin && !discordWin.isDestroyed()) {
+    discordWin.webContents.loadURL(url).catch(() => {});
+    discordWin.focus();
+    return;
+  }
+  const game = currentGame;
+  const wa = displays.getDisplayMatching(win.getBounds()).workAreaSize;
+  const child = new BrowserWindow({
+    parent: win, modal: true, width: Math.min(1000, wa.width - 40), height: Math.min(760, wa.height - 40),
+    minimizable: false, fullscreenable: false, autoHideMenuBar: true, backgroundColor: '#111111', icon: ICON, title: 'Discord',
+    webPreferences: { partition: 'nfs-discord', sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: false, devTools: DEV },
+  });
+  discordWin = child;
+  child.setMenu(null);
+  const cwc = child.webContents;
+  if (!discordSessions.has(cwc.session)) {
+    discordSessions.add(cwc.session);
+    cwc.session.setPermissionRequestHandler((_wc, _perm, cb) => cb(false));
+    cwc.session.setPermissionCheckHandler(() => false);
+    cwc.session.on('will-download', (e) => e.preventDefault());
+  }
+  cwc.setWindowOpenHandler(() => ({ action: 'deny' }));
+  const guard = (e, to) => {
+    if (discordLogin.isReturn(to, game)) { e.preventDefault(); finishDiscordLogin(to, game); return; }
+    if (!discordLogin.isFlow(to, game)) e.preventDefault();
+  };
+  cwc.on('will-navigate', (e, url2) => guard(e, e.url || url2));
+  cwc.on('will-redirect', (e, url2, _inPlace, isMainFrame) => { if (e.isMainFrame ?? isMainFrame) guard(e, e.url || url2); });
+  child.on('closed', () => {
+    if (discordWin === child) discordWin = null;
+    if (win && !win.isDestroyed()) win.focus();
+  });
+  cwc.loadURL(url).catch(() => {});
+}
+function finishDiscordLogin(url, game) {
+  const child = discordWin;
+  discordWin = null;
+  setImmediate(() => { if (child && !child.isDestroyed()) child.close(); });
+  if (!gameView || gameView.webContents.isDestroyed() || currentGame !== game) return;
+  const wc = gameView.webContents;
+  const again = discordLogin.sameDocument(wc.getURL(), url); // só o "#" muda: a página não abre de novo sozinha
+  reloadConfirmed = true; // com a partida aberta, o jogador já confirmou ao clicar no botão do site
+  beginLoading();
+  screen = 'loading';
+  refresh();
+  wc.loadURL(url).then(() => { if (again && !wc.isDestroyed()) wc.reload(); }).catch(() => {});
+}
+
+// Controle pelo WebHID do site (controle da Steam, força do volante; 25/11). O Chrome mostra uma lista para escolher:
+// aqui, com um aparelho só (o site já filtra o tipo), ele é usado direto; com mais de um, o app pergunta qual.
+// O escolhido fica lembrado (cfg.hidDevices), para o jogo achar o volante ao abrir, como no Chrome.
+function pickHidDevice(details, callback) {
+  const list = (details && details.deviceList) || [];
+  const from = details && details.frame && details.frame.url;
+  if (!list.length || !isAllowedUrl(String(from || ''))) { callback(); return; }
+  const use = (dev) => {
+    if (!dev) { callback(); return; }
+    cfg.hidDevices = addHidGrant(cfg.hidDevices, dev); // antes do callback: o Chromium confere a permissão logo depois
+    saveCfg();
+    callback(dev.deviceId);
+  };
+  if (list.length === 1) { use(list[0]); return; }
+  const shown = list.slice(0, 6);
+  dialog.showMessageBox(win, {
+    type: 'question', noLink: true, defaultId: 0, cancelId: shown.length,
+    buttons: [...shown.map((d) => d.name || `${d.vendorId}:${d.productId}`), tr('Cancelar', 'Cancel')],
+    title: tr('Controle', 'Controller'),
+    message: tr('Qual controle o jogo deve usar?', 'Which controller should the game use?'),
+  }).then(({ response }) => use(shown[response])).catch(() => callback());
+}
+
 function wireGameContents(wc) {
   // A view escondida (a do outro jogo, em branco) não mexe no carregamento, nos erros nem no filtro do jogo aberto.
   const mine = () => !!gameView && gameView.webContents === wc;
@@ -1460,13 +1539,19 @@ function wireGameContents(wc) {
   // Navegação só dentro do site do jogo aberto (o login/cadastro pode passar por outro endereço do mesmo site).
   wc.setWindowOpenHandler(({ url }) => {
     if (isLoginUrl(url)) return { action: 'allow', overrideBrowserWindowOptions: loginWindowOptions() };
-    if (isAllowedUrl(url, currentGame)) wc.loadURL(url);
+    if (mine() && discordLogin.isStart(url, currentGame)) openDiscordLogin(url);
+    else if (isAllowedUrl(url, currentGame)) wc.loadURL(url);
     else if (isExternalUrl(url)) shell.openExternal(url).catch(() => {});
     return { action: 'deny' };
   });
   wc.on('did-create-window', wireLoginWindow);
   const guard = (e, url) => { if (!isAllowedUrl(url, currentGame)) e.preventDefault(); };
-  wc.on('will-navigate', guard);
+  // O botão do vínculo com o Discord (aba Names do NFSU2) abre o login numa janela à parte (openDiscordLogin).
+  wc.on('will-navigate', (e, url) => {
+    const to = e.url || url;
+    if (mine() && discordLogin.isStart(to, currentGame)) { e.preventDefault(); openDiscordLogin(to); return; }
+    guard(e, to);
+  });
   wc.on('will-redirect', guard);
 
   // Com uma partida aberta, o site pede confirmação antes de sair da página ("beforeunload").
@@ -1854,6 +1939,9 @@ if (gotLock) {
       const ses = session.fromPartition(p);
       ses.setPermissionRequestHandler((_wc, perm, cb, details) => cb(allowPermission(perm, details)));
       ses.setPermissionCheckHandler((_wc, perm, _origin, details) => allowPermission(perm, details));
+      // Controle da Steam e força do volante (WebHID do site, 25/11): só nos sites dos jogos (pickHidDevice).
+      ses.on('select-hid-device', (event, details, callback) => { event.preventDefault(); pickHidDevice(details, callback); });
+      ses.setDevicePermissionHandler((d) => d.deviceType === 'hid' && isAllowedUrl(d.origin) && hidGranted(cfg.hidDevices, d.device));
       gameSessions.set(p, ses);
     }
     const gameSession = gameSessions.get(gameOf(cfg.game).partition);

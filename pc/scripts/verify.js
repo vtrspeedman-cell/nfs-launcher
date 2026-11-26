@@ -207,6 +207,9 @@ check('Permissões do site: só as necessárias (pasta de músicas só leitura)'
   for (const perm of ['media', 'geolocation', 'notifications', 'hid', 'usb', 'serial', 'display-capture', 'clipboard-read', 'openExternal']) {
     assert(!allowPermission(perm, { fileAccessType: 'readable' }), `permissão perigosa liberada: ${perm}`);
   }
+  // WebHID (controle da Steam e força do volante, 25/11): só nos sites dos jogos.
+  assert(allowPermission('hid', { requestingUrl: 'https://nfsu2.xyz/' }) && allowPermission('hid', { securityOrigin: 'https://nfsu2.xyz/' }) &&
+    !allowPermission('hid', { requestingUrl: 'https://evil.example/' }) && !allowPermission('hid', {}), 'WebHID fora dos sites dos jogos');
   assert(!allowPermission('fileSystem', { fileAccessType: 'writable' }), 'escrita em arquivos liberada');
   const m = read('src/main/main.js');
   // Todas as pastas de dados dos jogos (NFSU2 e NFSU2 Modded) com as mesmas regras, e nenhuma sessão aberta fora do laço.
