@@ -886,6 +886,10 @@ def patch_game_activity(t):
                 : code == android.view.KeyEvent.KEYCODE_DPAD_LEFT ? 105
                 : code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? 106
                 : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108
+                : code == android.view.KeyEvent.KEYCODE_F ? 33
+                : code == android.view.KeyEvent.KEYCODE_G ? 34
+                : code == android.view.KeyEvent.KEYCODE_MINUS ? 12
+                : code == android.view.KeyEvent.KEYCODE_EQUALS ? 13
                 : code == android.view.KeyEvent.KEYCODE_ESCAPE ? 1 : 0;
         v.dispatchKeyEvent(
                 new android.view.KeyEvent(now, now, action, code, 0, 0,
@@ -934,7 +938,7 @@ def patch_game_activity(t):
                 return;
             }
             // O Blink só mostra o controle depois de um "toque" nele: o eixo pisca por 2 s para não passar batido.
-            System.setProperty("nfs.padPulse", String.valueOf(android.os.SystemClock.uptimeMillis() + 2000));
+            System.setProperty("nfs.padPulse", String.valueOf(android.os.SystemClock.uptimeMillis() + 150));
             System.setProperty("nfs.pad", "1");
             View pad = nfsDronePadView();
             nfsDronePad = pad;
@@ -1037,40 +1041,64 @@ def patch_game_activity(t):
             cp.setMargins(m, m, m, m);
             layer.addView(cross, cp);
         }
-        android.widget.LinearLayout top = new android.widget.LinearLayout(this);
-        top.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-        android.widget.TextView exit = nfsHoldKey(en ? "Exit drone" : "Sair do drone", 0, d);
-        exit.setOnTouchListener(
-                (v, e) -> {
-                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) nfsDrone(false);
-                    return true;
-                });
-        exit.setPadding((int) (16 * d), 0, (int) (16 * d), 0);
-        top.addView(exit, new android.widget.LinearLayout.LayoutParams(-2, (int) (44 * d)));
-        android.widget.FrameLayout.LayoutParams tp = new android.widget.FrameLayout.LayoutParams(-2, -2,
-                android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
-        tp.topMargin = m;
-        layer.addView(top, tp);
-        // O F6 não liga o drone no celular: o jogo só libera depois de andar com o controle; então explica como ativar.
+        // Barra de baixo, no meio: F, G, -, = e L, cada um uma tecla. Sair do drone = tocar de novo no Drone da gaveta.
+        android.widget.LinearLayout bar = new android.widget.LinearLayout(this);
+        bar.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        int[] bk = {android.view.KeyEvent.KEYCODE_F, android.view.KeyEvent.KEYCODE_G, android.view.KeyEvent.KEYCODE_MINUS,
+            android.view.KeyEvent.KEYCODE_EQUALS, android.view.KeyEvent.KEYCODE_L};
+        String[] bn = {"F", "G", "-", "=", "L"};
+        int bs = (int) (44 * d);
+        for (int i = 0; i < bk.length; i++) {
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(bs, bs);
+            lp.leftMargin = lp.rightMargin = (int) (4 * d);
+            bar.addView(nfsHoldKey(bn[i], bk[i], d), lp);
+        }
+        android.widget.FrameLayout.LayoutParams bp = new android.widget.FrameLayout.LayoutParams(-2, -2,
+                android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+        bp.bottomMargin = m;
+        layer.addView(bar, bp);
+        // O F6 não liga o drone no celular: caixa que explica ativar pelo menu; só fecha depois de marcar "Li".
+        android.widget.LinearLayout box = new android.widget.LinearLayout(this);
+        box.setOrientation(android.widget.LinearLayout.VERTICAL);
+        int bpad = (int) (16 * d);
+        box.setPadding(bpad, bpad, bpad, bpad);
+        android.graphics.drawable.GradientDrawable xbg = new android.graphics.drawable.GradientDrawable();
+        xbg.setColor(Color.argb(235, 8, 10, 20));
+        xbg.setStroke((int) d, Color.argb(120, 255, 255, 255));
+        xbg.setCornerRadius(12 * d);
+        box.setBackground(xbg);
+        box.setClickable(true);
         android.widget.TextView tip = new android.widget.TextView(this);
         tip.setText(en
-                ? "To start the drone: drive a little with these on-screen controls, then open the menu (\\u2630) and turn on the Drone."
-                : "Para ligar o drone: ande um pouco com estes controles da tela, depois abra o menu (\\u2630) e ative o Drone.");
+                ? "To start the drone: drive a little with these on-screen controls, then open the menu (\\u2630) and turn on the Drone.\\nTo leave, tap Drone in the drawer again."
+                : "Para ligar o drone: ande um pouco com estes controles da tela, depois abra o menu (\\u2630) e ative o Drone.\\nPara sair, toque de novo em Drone na gaveta.");
         tip.setTextColor(Color.WHITE);
         tip.setTextSize(15);
-        tip.setGravity(android.view.Gravity.CENTER);
-        tip.setFocusable(false);
-        tip.setPadding((int) (16 * d), (int) (10 * d), (int) (16 * d), (int) (10 * d));
-        android.graphics.drawable.GradientDrawable tbg = new android.graphics.drawable.GradientDrawable();
-        tbg.setColor(Color.argb(200, 8, 10, 20));
-        tbg.setCornerRadius(10 * d);
-        tip.setBackground(tbg);
-        android.widget.FrameLayout.LayoutParams ip = new android.widget.FrameLayout.LayoutParams((int) (360 * d), -2,
+        box.addView(tip);
+        android.widget.CheckBox read = new android.widget.CheckBox(this);
+        read.setText(en ? "I have read it" : "Li e entendi");
+        read.setTextColor(Color.WHITE);
+        read.setButtonTintList(android.content.res.ColorStateList.valueOf(Color.WHITE));
+        android.widget.LinearLayout.LayoutParams rp = new android.widget.LinearLayout.LayoutParams(-2, -2);
+        rp.topMargin = (int) (10 * d);
+        box.addView(read, rp);
+        android.widget.TextView close = nfsHoldKey(en ? "Close" : "Fechar", 0, d);
+        close.setAlpha(0.4f);
+        close.setOnTouchListener(
+                (v, e) -> {
+                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP && read.isChecked()) {
+                        box.setVisibility(View.GONE);
+                    }
+                    return true;
+                });
+        read.setOnCheckedChangeListener((c, on) -> close.setAlpha(on ? 1f : 0.4f));
+        android.widget.LinearLayout.LayoutParams clp = new android.widget.LinearLayout.LayoutParams(-1, (int) (44 * d));
+        clp.topMargin = (int) (10 * d);
+        box.addView(close, clp);
+        android.widget.FrameLayout.LayoutParams xp = new android.widget.FrameLayout.LayoutParams((int) (380 * d), -2,
                 android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
-        ip.topMargin = m + (int) (54 * d);
-        layer.addView(tip, ip);
-        tip.setOnClickListener(v -> v.setVisibility(View.GONE));
-        tip.postDelayed(() -> tip.setVisibility(View.GONE), 12000);
+        xp.topMargin = m;
+        layer.addView(box, xp);
         return layer;
     }
 
@@ -1176,7 +1204,7 @@ def patch_gamepad(t):
                     long now = android.os.SystemClock.uptimeMillis();
                     float[] axes = new float[4];
                     String pulse = System.getProperty("nfs.padPulse");
-                    if (pulse != null && now < Long.parseLong(pulse) && (now / 200) % 2 == 0) axes[3] = 0.6f;
+                    if (pulse != null && now < Long.parseLong(pulse)) axes[3] = 0.6f;
                     GamepadListJni.get()
                             .setGamepadData(webGamepadsPtr, i, true, true, "NFS Launcher", 0, 0, now,
                                     axes, new float[17], 17, false);
