@@ -1,10 +1,10 @@
 {
-  "versao": "1.7.5",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.5/NFS-Launcher-Android-1.7.5.apk",
-  "tamanho": 255511456,
-  "sha256": "006ae88efd6eb73862100a681d35ca66bf4682efaf9a0208717cf23041514edc",
+  "versao": "1.7.6",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.6/NFS-Launcher-Android-1.7.6.apk",
+  "tamanho": 255535987,
+  "sha256": "90706ca220d26e6f69912dc28675065d2a9a1f382ad0f5ee001e464fc41ffd5e",
   "novidades": {
-    "pt": "Vincular o Discord no NFSU2: o login do Discord abre no próprio jogo, ou pelo app do Discord do celular (na primeira vez, ligue os links do jogo nas configurações, como o aviso mostra).",
-    "en": "Link Discord in NFSU2: the Discord login opens right in the game, or through the Discord app on your phone (the first time, turn on the game's links in settings, as the notice shows)."
+    "pt": "Gaveta de atalhos opcional no NFSU2 (como o Game Turbo): Próxima música, Menu, Skate, Drone, Foto, Esconder HUD e FPS num toque, sem esconder os controles de toque do jogo. Ligue em Configurações > Gaveta de atalhos e escolha o lado e a altura. O Drone traz controles na tela (WASD, setas, Shift e F G - = L) e explica como ativá-lo.",
+    "en": "Optional shortcut drawer in NFSU2 (like Game Turbo): Next song, Menu, Skateboard, Drone, Photo, Hide HUD and FPS in one tap, without hiding the game touch controls. Turn it on in Settings > Shortcut drawer and pick the side and height. Drone brings on-screen controls (WASD, arrows, Shift and F G - = L) and explains how to start it."
   }
 }
