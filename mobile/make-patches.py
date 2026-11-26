@@ -729,6 +729,7 @@ def patch_game_activity(t):
     }
 
     private @Nullable View nfsSong;
+    private @Nullable View nfsDronePad;
     private boolean nfsDrawerLeft;
     private float nfsDrawerY = 0.5f;
 
@@ -750,11 +751,12 @@ def patch_game_activity(t):
         float d = getResources().getDisplayMetrics().density;
         int[] keys = {
             android.view.KeyEvent.KEYCODE_F7, android.view.KeyEvent.KEYCODE_F9, android.view.KeyEvent.KEYCODE_L,
+            android.view.KeyEvent.KEYCODE_F6,
             android.view.KeyEvent.KEYCODE_F12, android.view.KeyEvent.KEYCODE_F10, android.view.KeyEvent.KEYCODE_F8};
         String[] names = en
-                ? new String[] {"\\u266B Next song", "\\u2630 Menu", "\\u25AD Skateboard", "\\u25A3 Photo", "\\u25CC Hide HUD", "FPS"}
-                : new String[] {"\\u266B Próxima música", "\\u2630 Menu", "\\u25AD Skate", "\\u25A3 Foto", "\\u25CC Esconder HUD", "FPS"};
-        String[] fk = {"F7", "F9", "L", "F12", "F10", "F8"};
+                ? new String[] {"\\u266B Next song", "\\u2630 Menu", "\\u25AD Skateboard", "\\u2708 Drone", "\\u25A3 Photo", "\\u25CC Hide HUD", "FPS"}
+                : new String[] {"\\u266B Próxima música", "\\u2630 Menu", "\\u25AD Skate", "\\u2708 Drone", "\\u25A3 Foto", "\\u25CC Esconder HUD", "FPS"};
+        String[] fk = {"F7", "F9", "L", "F6", "F12", "F10", "F8"};
         android.widget.LinearLayout panel = new android.widget.LinearLayout(this);
         panel.setOrientation(android.widget.LinearLayout.VERTICAL);
         int pad = (int) (6 * d);
@@ -784,12 +786,17 @@ def patch_game_activity(t):
                         if (a == android.view.MotionEvent.ACTION_DOWN) {
                             v.setAlpha(0.6f);
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-                            nfsKey(code, android.view.KeyEvent.ACTION_DOWN);
+                            if (code != android.view.KeyEvent.KEYCODE_F6) nfsKey(code, android.view.KeyEvent.ACTION_DOWN);
                         } else if (a == android.view.MotionEvent.ACTION_UP
                                 || a == android.view.MotionEvent.ACTION_CANCEL) {
                             v.setAlpha(1f);
-                            nfsKey(code, android.view.KeyEvent.ACTION_UP);
                             panel.removeCallbacks(close[0]);
+                            if (code == android.view.KeyEvent.KEYCODE_F6) {
+                                if (a == android.view.MotionEvent.ACTION_UP) nfsDrone(nfsDronePad == null);
+                                close[0].run();
+                                return true;
+                            }
+                            nfsKey(code, android.view.KeyEvent.ACTION_UP);
                             panel.postDelayed(close[0], 5000);
                         }
                         return true;
@@ -863,18 +870,35 @@ def patch_game_activity(t):
         if (v == null) return;
         long now = android.os.SystemClock.uptimeMillis();
         // O site lê KeyboardEvent.code, que o Chromium tira do scancode (evdev); sem ele o code vem vazio.
-        int sc = code == android.view.KeyEvent.KEYCODE_F7 ? 65
+        int sc = code == android.view.KeyEvent.KEYCODE_F6 ? 64
+                : code == android.view.KeyEvent.KEYCODE_F7 ? 65
                 : code == android.view.KeyEvent.KEYCODE_F8 ? 66
                 : code == android.view.KeyEvent.KEYCODE_F9 ? 67
                 : code == android.view.KeyEvent.KEYCODE_F10 ? 68
                 : code == android.view.KeyEvent.KEYCODE_F12 ? 88
-                : code == android.view.KeyEvent.KEYCODE_L ? 38 : 0;
+                : code == android.view.KeyEvent.KEYCODE_L ? 38
+                : code == android.view.KeyEvent.KEYCODE_W ? 17
+                : code == android.view.KeyEvent.KEYCODE_A ? 30
+                : code == android.view.KeyEvent.KEYCODE_S ? 31
+                : code == android.view.KeyEvent.KEYCODE_D ? 32
+                : code == android.view.KeyEvent.KEYCODE_SHIFT_LEFT ? 42
+                : code == android.view.KeyEvent.KEYCODE_DPAD_UP ? 103
+                : code == android.view.KeyEvent.KEYCODE_DPAD_LEFT ? 105
+                : code == android.view.KeyEvent.KEYCODE_DPAD_RIGHT ? 106
+                : code == android.view.KeyEvent.KEYCODE_DPAD_DOWN ? 108 : 0;
         v.dispatchKeyEvent(
                 new android.view.KeyEvent(now, now, action, code, 0, 0,
                         android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, sc,
                         android.view.KeyEvent.FLAG_FROM_SYSTEM, android.view.InputDevice.SOURCE_KEYBOARD));
-        if (action != android.view.KeyEvent.ACTION_UP) return;
-        // Tecla esconde os controles de toque do site; um toque de dedo (logo cancelado) na borda da alça os traz de volta.
+        if (action == android.view.KeyEvent.ACTION_UP && nfsDronePad == null) nfsTouchBack();
+    }
+
+    /** NFS Launcher: tecla esconde os controles de toque do site; um toque de dedo (logo cancelado) na borda da alça os traz de volta. */
+    private void nfsTouchBack() {
+        Tab tab = sNfsTab == null ? null : sNfsTab.get();
+        View v = tab == null ? null : tab.getContentView();
+        if (v == null) return;
+        long now = android.os.SystemClock.uptimeMillis();
         android.view.MotionEvent.PointerProperties pp = new android.view.MotionEvent.PointerProperties();
         pp.id = 0;
         pp.toolType = android.view.MotionEvent.TOOL_TYPE_FINGER;
@@ -891,6 +915,147 @@ def patch_game_activity(t):
             v.dispatchTouchEvent(m);
             m.recycle();
         }
+    }
+
+    /**
+     * NFS Launcher: o site só libera o drone no celular com um controle conectado (não tem comandos de toque para ele).
+     * Liga um controle de mentira (GamepadList, propriedade "nfs.pad"), aperta F6 e mostra WASD e setas na tela.
+     */
+    private void nfsDrone(boolean on) {
+        android.view.ViewGroup root = (android.view.ViewGroup) getWindow().getDecorView();
+        int f6 = android.view.KeyEvent.KEYCODE_F6;
+        if (on) {
+            if (nfsDronePad != null) return;
+            if (nfsRealPad()) {
+                // Com controle de verdade o site já libera o drone e o jogador voa pelo controle: só o F6.
+                nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
+                nfsKey(f6, android.view.KeyEvent.ACTION_UP);
+                return;
+            }
+            // O Blink só mostra o controle depois de um "toque" nele: o eixo pisca por 2 s para não passar batido.
+            System.setProperty("nfs.padPulse", String.valueOf(android.os.SystemClock.uptimeMillis() + 2000));
+            System.setProperty("nfs.pad", "1");
+            View pad = nfsDronePadView();
+            nfsDronePad = pad;
+            root.addView(pad, -1, -1);
+            int up = android.view.KeyEvent.KEYCODE_DPAD_UP;
+            // Gambiarra pedida pelo Bruno: o drone só liberou depois de andar um pouco; um toque curto para a frente e depois o F6.
+            pad.postDelayed(() -> { if (nfsDronePad == pad) nfsKey(up, android.view.KeyEvent.ACTION_DOWN); }, 2100);
+            pad.postDelayed(() -> { if (nfsDronePad == pad) nfsKey(up, android.view.KeyEvent.ACTION_UP); }, 2400);
+            pad.postDelayed(
+                    () -> {
+                        if (nfsDronePad != pad) return;
+                        nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
+                        nfsKey(f6, android.view.KeyEvent.ACTION_UP);
+                    },
+                    3000);
+        } else {
+            View pad = nfsDronePad;
+            if (pad == null) return;
+            nfsKey(f6, android.view.KeyEvent.ACTION_DOWN);
+            nfsKey(f6, android.view.KeyEvent.ACTION_UP);
+            root.removeView(pad);
+            nfsDronePad = null;
+            root.postDelayed(
+                    () -> {
+                        if (nfsDronePad != null) return;
+                        System.clearProperty("nfs.pad");
+                        nfsTouchBack();
+                    },
+                    500);
+        }
+    }
+
+    private static boolean nfsRealPad() {
+        for (int id : android.view.InputDevice.getDeviceIds()) {
+            android.view.InputDevice dev = android.view.InputDevice.getDevice(id);
+            if (dev == null || dev.isVirtual()) continue;
+            int src = dev.getSources();
+            String name = dev.getName();
+            if (name != null && name.startsWith("uinput")) continue;
+            if ((src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
+                    && (src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+                    && dev.hasKeys(android.view.KeyEvent.KEYCODE_BUTTON_A)[0]) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private View nfsDronePadView() {
+        float d = getResources().getDisplayMetrics().density;
+        boolean en = "en".equals(getSharedPreferences("nfs", 4 /* MODE_MULTI_PROCESS */).getString("lang", "pt"));
+        int s = (int) (58 * d), m = (int) (18 * d);
+        android.widget.FrameLayout layer = new android.widget.FrameLayout(this);
+        int[][] keys = {
+            {android.view.KeyEvent.KEYCODE_W, android.view.KeyEvent.KEYCODE_A,
+                    android.view.KeyEvent.KEYCODE_S, android.view.KeyEvent.KEYCODE_D},
+            {android.view.KeyEvent.KEYCODE_DPAD_UP, android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+                    android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT}};
+        String[][] names = {{"W", "A", "S", "D"}, {"\\u25B2", "\\u25C0", "\\u25BC", "\\u25B6"}};
+        int[] cx = {1, 0, 1, 2}, cy = {0, 1, 2, 1};
+        for (int side = 0; side < 2; side++) {
+            android.widget.FrameLayout cross = new android.widget.FrameLayout(this);
+            for (int i = 0; i < 4; i++) {
+                android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(s, s);
+                lp.leftMargin = cx[i] * s;
+                lp.topMargin = cy[i] * s;
+                cross.addView(nfsHoldKey(names[side][i], keys[side][i], d), lp);
+            }
+            android.widget.FrameLayout.LayoutParams cp = new android.widget.FrameLayout.LayoutParams(3 * s, 3 * s,
+                    android.view.Gravity.BOTTOM | (side == 0 ? android.view.Gravity.START : android.view.Gravity.END));
+            cp.setMargins(m, m, m, m);
+            layer.addView(cross, cp);
+        }
+        android.widget.LinearLayout top = new android.widget.LinearLayout(this);
+        top.setOrientation(android.widget.LinearLayout.HORIZONTAL);
+        android.widget.TextView fast = nfsHoldKey(en ? "Fast (Shift)" : "Rápido (Shift)", android.view.KeyEvent.KEYCODE_SHIFT_LEFT, d);
+        android.widget.TextView exit = nfsHoldKey(en ? "Exit drone" : "Sair do drone", 0, d);
+        exit.setOnTouchListener(
+                (v, e) -> {
+                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) nfsDrone(false);
+                    return true;
+                });
+        // Se o drone não entrou sozinho, este manda o F6 de novo (liga e desliga, como no PC).
+        android.widget.TextView fly = nfsHoldKey("Drone (F6)", android.view.KeyEvent.KEYCODE_F6, d);
+        for (android.widget.TextView b : new android.widget.TextView[] {fly, fast, exit}) {
+            b.setPadding((int) (16 * d), 0, (int) (16 * d), 0);
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-2, (int) (44 * d));
+            lp.leftMargin = lp.rightMargin = (int) (6 * d);
+            top.addView(b, lp);
+        }
+        android.widget.FrameLayout.LayoutParams tp = new android.widget.FrameLayout.LayoutParams(-2, -2,
+                android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
+        tp.topMargin = m;
+        layer.addView(top, tp);
+        return layer;
+    }
+
+    private android.widget.TextView nfsHoldKey(String label, int code, float d) {
+        android.widget.TextView b = new android.widget.TextView(this);
+        b.setText(label);
+        b.setTextColor(Color.WHITE);
+        b.setTextSize(16);
+        b.setGravity(android.view.Gravity.CENTER);
+        b.setFocusable(false);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Color.argb(110, 8, 10, 20));
+        bg.setStroke((int) d, Color.argb(120, 255, 255, 255));
+        bg.setCornerRadius(10 * d);
+        b.setBackground(bg);
+        b.setOnTouchListener(
+                (v, e) -> {
+                    int a = e.getActionMasked();
+                    if (a == android.view.MotionEvent.ACTION_DOWN) {
+                        v.setAlpha(0.6f);
+                        nfsKey(code, android.view.KeyEvent.ACTION_DOWN);
+                    } else if (a == android.view.MotionEvent.ACTION_UP || a == android.view.MotionEvent.ACTION_CANCEL) {
+                        v.setAlpha(1f);
+                        nfsKey(code, android.view.KeyEvent.ACTION_UP);
+                    }
+                    return true;
+                });
+        return b;
     }
 
     /** NFS Launcher: a imagem escolhida pelo jogador, se houver; senão a que vem no app. */
@@ -957,6 +1122,23 @@ def patch_game_activity(t):
             android.os.Process.killProcess(me);
         }
     }''')
+
+
+def patch_gamepad(t):
+    # Controle de mentira para o drone do NFSU2 (ver nfsDrone no CustomTabActivity): só existe com a
+    # propriedade "nfs.pad", no último lugar livre; um puxão curto no analógico direito conta como o
+    # primeiro uso (sem ele o Chromium não mostra o controle à página).
+    return sub1(t, '''                } else {
+                    GamepadListJni.get()''', '''                } else if (i == MAX_GAMEPADS - 1 && System.getProperty("nfs.pad") != null) {
+                    long now = android.os.SystemClock.uptimeMillis();
+                    float[] axes = new float[4];
+                    String pulse = System.getProperty("nfs.padPulse");
+                    if (pulse != null && now < Long.parseLong(pulse) && (now / 200) % 2 == 0) axes[3] = 0.6f;
+                    GamepadListJni.get()
+                            .setGamepadData(webGamepadsPtr, i, true, true, "NFS Launcher", 0, 0, now,
+                                    axes, new float[17], 17, false);
+                } else {
+                    GamepadListJni.get()''')
 
 
 def patch_secure_dns(t):
@@ -1076,7 +1258,8 @@ PATCHES = [
         ('chrome/android/java/src/org/chromium/chrome/browser/tab/TabWebContentsDelegateAndroidImpl.java', patch_no_tabs),
         ('components/background_task_scheduler/internal/android/java/src/org/chromium/components/'
          'background_task_scheduler/internal/BackgroundTaskSchedulerJobService.java', patch_no_jobs),
-        ('components/translate/core/browser/translate_prefs.cc', patch_no_translate)]),
+        ('components/translate/core/browser/translate_prefs.cc', patch_no_translate),
+        ('device/gamepad/android/java/src/org/chromium/device/gamepad/GamepadList.java', patch_gamepad)]),
     ('0007-texturas-hd-do-nfsu2.patch', [
         ('chrome/browser/chrome_content_browser_client.cc', patch_textures)]),
 ]

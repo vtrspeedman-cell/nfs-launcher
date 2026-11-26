@@ -262,8 +262,8 @@
       'Light mode: for weak phones or low FPS. Sets everything to the minimum, once: in the game, every Options > Display setting at the minimum, 50% resolution, up to 16 other players’ cars, headlights only on your car and no anisotropic filtering; turns off crash damage, stance, parts on other cars, HQ vinyls, sharper roads, daytime, skateboard and skater, max graphics on new saves and fixed 3D proportions. In the app, turns off HD Textures. Then raise the graphics and enhancements in the game itself, watching the FPS: whatever you turn back on stays. Turning it off brings back what you did not change');
     $('set-song-h').textContent = t('Gaveta de atalhos (NFSU2)', 'Shortcut drawer (NFSU2)');
     $('s-keyDrawer').checked = !!st.keyDrawer;
-    $('s-keyDrawer-l').textContent = t('Gaveta no canto da tela do jogo, como o Game Turbo: toque ou puxe a alça para abrir. Tem Próxima música (F7), Menu (F9), Skate (L), Foto (F12), Esconder HUD (F10) e FPS (F8), iguais às teclas do PC',
-      'Drawer on the edge of the game screen, like Game Turbo: tap or pull the tab to open it. Has Next song (F7), Menu (F9), Skateboard (L), Photo (F12), Hide HUD (F10) and FPS (F8), same as the PC keys');
+    $('s-keyDrawer-l').textContent = t('Gaveta no canto da tela do jogo, como o Game Turbo: toque ou puxe a alça para abrir. Tem Próxima música (F7), Menu (F9), Skate (L), Drone (F6, com comandos na tela), Foto (F12), Esconder HUD (F10) e FPS (F8), iguais às teclas do PC',
+      'Drawer on the edge of the game screen, like Game Turbo: tap or pull the tab to open it. Has Next song (F7), Menu (F9), Skateboard (L), Drone (F6, with on-screen controls), Photo (F12), Hide HUD (F10) and FPS (F8), same as the PC keys');
     $('song-note').textContent = t('Toque ou arraste no quadro abaixo (a tela do jogo deitada) para escolher o lado e a altura da alça. Se você mudou essas teclas no jogo, a gaveta usa as originais.',
       'Tap or drag in the box below (the game screen, landscape) to choose the side and height of the tab. If you changed these keys in the game, the drawer uses the original ones.');
     $('song-note').hidden = $('song-pad').hidden = !st.keyDrawer;
