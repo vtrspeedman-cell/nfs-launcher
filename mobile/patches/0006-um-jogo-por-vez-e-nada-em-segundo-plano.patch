@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..e927a1ef16dd2 100644
+index 4e773273b1667..67c129c19a863 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..e927a1ef16dd2 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,471 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,536 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -463,11 +463,76 @@ index 4e773273b1667..e927a1ef16dd2 100644
 +
 +    private void nfsHideLoading() {
 +        nfsLoadingDone = true;
++        nfsSongButton();
 +        View box = nfsLoading;
 +        if (box == null) return;
 +        nfsLoading = null;
 +        ((android.animation.ObjectAnimator) box.getTag()).cancel();
 +        ((android.view.ViewGroup) box.getParent()).removeView(box);
++    }
++
++    private @Nullable View nfsSong;
++
++    /**
++     * NFS Launcher: botão opcional de próxima música (F7 do NFSU2), desligado por padrão, no lugar que o
++     * jogador escolheu nas Configurações. Manda a tecla F7 como um teclado de verdade; não mexe no site.
++     */
++    private void nfsSongButton() {
++        if (nfsSong != null) return;
++        android.content.SharedPreferences p = getSharedPreferences("nfs", 4 /* MODE_MULTI_PROCESS */);
++        String game = p.getString("game", "nfsu2");
++        if (!p.getBoolean("songButton", false) || !("nfsu2".equals(game) || "nfsu2mod".equals(game))) return;
++        float fx = Math.max(0, Math.min(100, p.getInt("songX", 96))) / 100f;
++        float fy = Math.max(0, Math.min(100, p.getInt("songY", 50))) / 100f;
++        float d = getResources().getDisplayMetrics().density;
++        int size = (int) (46 * d);
++        android.widget.TextView b = new android.widget.TextView(this);
++        b.setText("\u266B\u00BB");
++        b.setTextColor(Color.WHITE);
++        b.setTextSize(17);
++        b.setGravity(android.view.Gravity.CENTER);
++        b.setFocusable(false);
++        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
++        bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
++        bg.setColor(Color.argb(120, 8, 10, 20));
++        bg.setStroke((int) (1.5f * d), Color.argb(150, 255, 255, 255));
++        b.setBackground(bg);
++        b.setAlpha(0.8f);
++        b.setOnTouchListener(
++                (v, e) -> {
++                    int a = e.getActionMasked();
++                    if (a == android.view.MotionEvent.ACTION_DOWN) {
++                        v.setAlpha(1f);
++                        v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
++                        nfsKey(android.view.KeyEvent.ACTION_DOWN);
++                    } else if (a == android.view.MotionEvent.ACTION_UP
++                            || a == android.view.MotionEvent.ACTION_CANCEL) {
++                        v.setAlpha(0.8f);
++                        nfsKey(android.view.KeyEvent.ACTION_UP);
++                    }
++                    return true;
++                });
++        // Camada do tamanho da tela que não pega toque: só o botão pega; o resto vai para o jogo.
++        android.widget.FrameLayout layer = new android.widget.FrameLayout(this);
++        layer.addView(b, new android.widget.FrameLayout.LayoutParams(size, size));
++        layer.addOnLayoutChangeListener(
++                (v, l, t, r, bt, ol, ot, or, ob) -> {
++                    b.setX(fx * Math.max(0, (r - l) - size));
++                    b.setY(fy * Math.max(0, (bt - t) - size));
++                });
++        ((android.view.ViewGroup) getWindow().getDecorView()).addView(layer, -1, -1);
++        nfsSong = layer;
++    }
++
++    private void nfsKey(int action) {
++        Tab tab = sNfsTab == null ? null : sNfsTab.get();
++        View v = tab == null ? null : tab.getContentView();
++        if (v == null) return;
++        long now = android.os.SystemClock.uptimeMillis();
++        v.dispatchKeyEvent(
++                new android.view.KeyEvent(now, now, action, android.view.KeyEvent.KEYCODE_F7, 0, 0,
++                        android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
++                        android.view.KeyEvent.FLAG_FROM_SYSTEM, android.view.InputDevice.SOURCE_KEYBOARD));
 +    }
 +
 +    /** NFS Launcher: a imagem escolhida pelo jogador, se houver; senão a que vem no app. */
@@ -482,7 +547,7 @@ index 4e773273b1667..e927a1ef16dd2 100644
      }
  
      @Override
-@@ -338,12 +804,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +869,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);

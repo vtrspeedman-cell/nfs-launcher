@@ -117,6 +117,12 @@
   // Texturas HD (NFSU2): baixadas pelo app, em 1x ou 2x; cada parte escolhe TexWizard, NextGen ou Original.
   const MOD_LABEL = { texwizard: 'TexWizard', nextgen: 'NextGen' };
   let texWant = true; // pede a lista publicada ao abrir as Configurações (e de novo se falhou)
+  function placeSongDot(x, y) {
+    const d = document.getElementById('song-dot');
+    d.style.left = `calc((100% - 30px) * ${x / 100})`;
+    d.style.top = `calc((100% - 30px) * ${y / 100})`;
+  }
+
   function renderTextures() {
     const x = st.tex || {};
     if (texWant && x.offer !== 'loading') { texWant = false; if (x.offer !== 'ok') api.texLoad(); }
@@ -253,6 +259,14 @@
     $('s-lightMode').checked = !!st.lightMode;
     $('s-lightMode-l').textContent = t('Modo leve: para celular fraco ou FPS baixo. Põe tudo no mínimo, uma vez: no jogo, todas as opções de Options > Display no mínimo, resolução em 50%, até 16 carros de outros jogadores, faróis só no seu carro e sem filtro anisotrópico; desliga dano de batida, rebaixamento, peças nos outros carros, vinis HQ, estradas mais nítidas, dia, skate e skatista, gráficos no máximo em jogo salvo novo e proporções 3D corrigidas. No app, desliga as Texturas HD. Depois, vá subindo os gráficos e as melhorias no próprio jogo, olhando o FPS: o que você religar fica. Desligando, volta como estava o que você não mudou',
       'Light mode: for weak phones or low FPS. Sets everything to the minimum, once: in the game, every Options > Display setting at the minimum, 50% resolution, up to 16 other players’ cars, headlights only on your car and no anisotropic filtering; turns off crash damage, stance, parts on other cars, HQ vinyls, sharper roads, daytime, skateboard and skater, max graphics on new saves and fixed 3D proportions. In the app, turns off HD Textures. Then raise the graphics and enhancements in the game itself, watching the FPS: whatever you turn back on stays. Turning it off brings back what you did not change');
+    $('set-song-h').textContent = t('Próxima música (NFSU2)', 'Next song (NFSU2)');
+    $('s-songButton').checked = !!st.songButton;
+    $('s-songButton-l').textContent = t('Botão de próxima música na tela do jogo: faz o mesmo que o F7 no PC',
+      'Next song button on the game screen: does the same as F7 on PC');
+    $('song-note').textContent = t('Toque ou arraste no quadro abaixo (a tela do jogo deitada) para escolher onde o botão fica.',
+      'Tap or drag in the box below (the game screen, landscape) to choose where the button goes.');
+    $('song-note').hidden = $('song-pad').hidden = !st.songButton;
+    placeSongDot(st.songX ?? 96, st.songY ?? 50);
     renderTextures();
     $('set-maint-h').textContent = t('Manutenção', 'Maintenance');
     $('maint-note').textContent = t('Limpar o cache fica nos ajustes do Android, em Armazenamento, e não toca nos seus saves. Atenção: nunca use “Limpar dados” ali: ele apaga o login, as configurações e os saves do jogo neste app.',
@@ -360,7 +374,18 @@
   $('e-retry').onclick = () => api.retry();
   $('e-dns').onclick = () => api.trySecureDns();
   $('e-home').onclick = () => api.clearError();
-  for (const key of ['prepareGame', 'hdTextures', 'lightMode']) {
+  const pad = $('song-pad');
+  const songAt = (e, save) => {
+    const r = pad.getBoundingClientRect(), dot = 30;
+    const x = Math.round(Math.max(0, Math.min(100, (e.clientX - r.left - dot / 2) / Math.max(1, r.width - dot) * 100)));
+    const y = Math.round(Math.max(0, Math.min(100, (e.clientY - r.top - dot / 2) / Math.max(1, r.height - dot) * 100)));
+    placeSongDot(x, y);
+    if (save) { api.setSongPos(x, y); toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.')); }
+  };
+  pad.onpointerdown = (e) => { pad.setPointerCapture(e.pointerId); songAt(e, false); };
+  pad.onpointermove = (e) => { if (pad.hasPointerCapture(e.pointerId)) songAt(e, false); };
+  pad.onpointerup = (e) => songAt(e, true);
+  for (const key of ['prepareGame', 'hdTextures', 'lightMode', 'songButton']) {
     $(`s-${key}`).onchange = (e) => {
       api.setOption(key, e.target.checked);
       toast(t('Vale na próxima vez que o jogo abrir.', 'Applies the next time the game opens.'));
