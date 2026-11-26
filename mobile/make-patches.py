@@ -749,12 +749,13 @@ def patch_game_activity(t):
         nfsDrawerY = fy;
         float d = getResources().getDisplayMetrics().density;
         int[] keys = {
-            android.view.KeyEvent.KEYCODE_F7, android.view.KeyEvent.KEYCODE_F9, android.view.KeyEvent.KEYCODE_F6,
+            android.view.KeyEvent.KEYCODE_F7, android.view.KeyEvent.KEYCODE_F9, android.view.KeyEvent.KEYCODE_L,
+            android.view.KeyEvent.KEYCODE_F6,
             android.view.KeyEvent.KEYCODE_F12, android.view.KeyEvent.KEYCODE_F10, android.view.KeyEvent.KEYCODE_F8};
         String[] names = en
-                ? new String[] {"\\u266B Next song", "\\u2630 Menu", "\\u2708 Drone", "\\u25A3 Photo", "\\u25CC Hide HUD", "FPS"}
-                : new String[] {"\\u266B Próxima música", "\\u2630 Menu", "\\u2708 Drone", "\\u25A3 Foto", "\\u25CC Esconder HUD", "FPS"};
-        String[] fk = {"F7", "F9", "F6", "F12", "F10", "F8"};
+                ? new String[] {"\\u266B Next song", "\\u2630 Menu", "\\u25AD Skateboard", "\\u2708 Drone (gamepad)", "\\u25A3 Photo", "\\u25CC Hide HUD", "FPS"}
+                : new String[] {"\\u266B Próxima música", "\\u2630 Menu", "\\u25AD Skate", "\\u2708 Drone (controle)", "\\u25A3 Foto", "\\u25CC Esconder HUD", "FPS"};
+        String[] fk = {"F7", "F9", "L", "F6", "F12", "F10", "F8"};
         android.widget.LinearLayout panel = new android.widget.LinearLayout(this);
         panel.setOrientation(android.widget.LinearLayout.VERTICAL);
         int pad = (int) (6 * d);
@@ -818,7 +819,7 @@ def patch_game_activity(t):
                 () -> {
                     int w = layer.getWidth(), h = layer.getHeight();
                     boolean open = panel.getVisibility() == View.VISIBLE;
-                    int ph = panel.getHeight() > 0 ? panel.getHeight() : (int) (6 * 45 * d + 12 * d);
+                    int ph = panel.getHeight() > 0 ? panel.getHeight() : (int) (keys.length * 45 * d + 12 * d);
                     float hy = fy * Math.max(0, h - hh);
                     handle.setX(open ? (left ? gap + pw : w - gap - pw - hw) : (left ? 0 : w - hw));
                     handle.setY(hy);
@@ -868,7 +869,8 @@ def patch_game_activity(t):
                 : code == android.view.KeyEvent.KEYCODE_F8 ? 66
                 : code == android.view.KeyEvent.KEYCODE_F9 ? 67
                 : code == android.view.KeyEvent.KEYCODE_F10 ? 68
-                : code == android.view.KeyEvent.KEYCODE_F12 ? 88 : 0;
+                : code == android.view.KeyEvent.KEYCODE_F12 ? 88
+                : code == android.view.KeyEvent.KEYCODE_L ? 38 : 0;
         v.dispatchKeyEvent(
                 new android.view.KeyEvent(now, now, action, code, 0, 0,
                         android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, sc,
