@@ -65,6 +65,10 @@ Automatizados, na pasta `pc`: `npm test` (141 testes) e `npm run verify` (27 ver
 | 46m | Notebook só com a placa integrada (3.1.6): abrir o NFSU2. Na tela inicial, "Usar a outra placa de vídeo" e "Voltar à placa de antes" | O jogo abre sem "WebGPU indisponível" (o app não força mais a placa forte). Sem adaptador, o app tenta a outra placa sozinho uma vez e reabre; o botão troca e reabre. |
 | 46n | Celular (1.7.3): tela inicial > Editor de save, escolher NFSU2 ou Modded, mudar algo, Aplicar no jogo; depois Restaurar | Botões em grade 2x2 sem cortar; o editor abre com o save; o jogo mostra a mudança; Restaurar volta o save de antes. |
 | 46o | PC 3.2.2 e celular 1.7.4, com "Preparar o jogo" ligada antes: abrir o app | Aviso uma vez na tela inicial de que a opção foi desligada; não volta a aparecer; religar fica ligado. PC: comparar no F8 com a 3.2.1 no mesmo trecho |
+| 46p | PC 3.2.3: NFSU2 > Names > "Link Discord" e Saves > "Log in with Discord" | Abre a janela do Discord no app (login, senha ou QR); ao autorizar, ela fecha e o jogo mostra a conta vinculada. Cancelar volta ao jogo sem erro. Pelo navegador padrão do PC o vínculo também funciona, mas fica no navegador |
+| 46q | PC 3.2.3: volante ou controle que pede WebHID no jogo | Escolhe o aparelho sozinho; na próxima vez não pergunta de novo |
+| 46r | Celular 1.7.5: "Link Discord" no NFSU2, sem o app do Discord | Login do Discord abre no próprio jogo, sem barra; ao autorizar, volta à página do jogo com a conta vinculada |
+| 46s | Celular 1.7.5: com o app do Discord instalado | Pergunta "App do Discord" ou "Entrar aqui". Na primeira vez, pede para ligar os links do jogo nas configurações; depois de autorizar no app do Discord, volta ao jogo vinculado. Jogo fechado no meio: aviso para abrir e vincular de novo. Vincular pelo Chrome do celular continua no Chrome |
 
 ## Celular (Android)
 

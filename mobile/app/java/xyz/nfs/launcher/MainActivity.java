@@ -1245,6 +1245,8 @@ public class MainActivity extends Activity {
                         .setDefaultColorSchemeParams(new CustomTabColorSchemeParams.Builder()
                                 .setToolbarColor(Color.parseColor("#0B0D17"))
                                 .setNavigationBarColor(Color.BLACK).build())
+                        // Vincular o Discord: o login dele abre no próprio jogo, sem barra de navegador.
+                        .setAdditionalTrustedOrigins(java.util.Arrays.asList("https://discord.com"))
                         .build(session)
                         .getIntent();
                 twa.setComponent(new ComponentName(getPackageName(), MOTOR_ENTRY));

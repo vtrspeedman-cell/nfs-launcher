@@ -41,7 +41,7 @@ index 6b9413f634e59..fe982f261bbb7 100644
        asset_deps += invoker.asset_deps
      }
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/base/SplitCompatApplication.java b/chrome/android/java/src/org/chromium/chrome/browser/base/SplitCompatApplication.java
-index b2eff462cf575..8bee575ef97e2 100644
+index b2eff462cf575..87d25c807b203 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/base/SplitCompatApplication.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/base/SplitCompatApplication.java
 @@ -221,7 +221,7 @@ public class SplitCompatApplication extends Application {

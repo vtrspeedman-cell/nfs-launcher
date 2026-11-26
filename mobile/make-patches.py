@@ -148,6 +148,20 @@ def patch_manifest(t):
               <category android:name="android.intent.category.LAUNCHER" />
           </intent-filter>
       </activity>
+      <!-- NFS Launcher: volta do app do Discord ao jogo (vincular o Discord). -->
+      <activity android:name="org.chromium.chrome.browser.customtabs.CustomTabActivity$NfsDiscordBack"
+          android:exported="true"
+          android:excludeFromRecents="true"
+          android:noHistory="true"
+          android:taskAffinity=""
+          android:theme="@android:style/Theme.NoDisplay">
+          <intent-filter>
+              <action android:name="android.intent.action.VIEW" />
+              <category android:name="android.intent.category.DEFAULT" />
+              <category android:name="android.intent.category.BROWSABLE" />
+              <data android:scheme="https" android:host="nfsu2.xyz" android:path="/names/discord/back" />
+          </intent-filter>
+      </activity>
       <!-- Modo de jogo do Android 13+: o app cuida do próprio desempenho; o sistema não reduz resolução nem FPS. -->
       <meta-data android:name="android.game_mode_config" android:resource="@xml/nfs_game_mode_config" />
 
@@ -245,7 +259,8 @@ def patch_game_activity(t):
     # - fechada de vez (voltar, "Voltar ao início", outro jogo, tirada da lista de apps abertos): encerra o
     #   navegador INTEIRO (página, GPU, áudio), para nada ficar rodando e o próximo jogo abrir limpo;
     # - ao abrir: CD girando até o jogo aparecer e recarga sem cache (versão nova do site, login e saves ficam);
-    # - falha ao abrir ou jogo caído: volta à tela inicial, que mostra o erro em frase simples.
+    # - falha ao abrir ou jogo caído: volta à tela inicial, que mostra o erro em frase simples;
+    # - vincular o Discord no NFSU2: login aqui mesmo ou pelo app do Discord (a volta chega pelo NfsDiscordBack).
     t = sub1(t, '''        if (tab != null) maybeCreateHistoryTabHelper(tab);
 ''', '''        if (tab != null) maybeCreateHistoryTabHelper(tab);
         if (tab != null) nfsWatch(tab);
@@ -262,6 +277,7 @@ def patch_game_activity(t):
         nfsVisible = true;
         nfsShowLoading();
         nfsGameState(true);
+        nfsDiscordResume();
     }
 
     private boolean nfsVisible;
@@ -321,6 +337,8 @@ def patch_game_activity(t):
     private void nfsWatch(Tab tab) {
         if (nfsWatching) return;
         nfsWatching = true;
+        sNfsGame = new java.lang.ref.WeakReference<>(this);
+        sNfsTab = new java.lang.ref.WeakReference<>(tab);
         nfsApplyDns();
         tab.addObserver(
                 new org.chromium.chrome.browser.tab.TabObserver() {
@@ -328,6 +346,11 @@ def patch_game_activity(t):
                     public void onDidFinishNavigationInPrimaryMainFrame(
                             Tab t, org.chromium.content_public.browser.NavigationHandle nav) {
                         if (nav.isSameDocument()) return;
+                        // Login do Discord: erro nas páginas dele não fecha o jogo.
+                        if (nfsDiscordHost(nav.getUrl().getHost())) {
+                            if (nav.hasCommitted() && nav.errorCode() == 0) nfsDiscordSeen(nav.getUrl());
+                            return;
+                        }
                         int code = nav.errorCode();
                         if (code != 0 && code != -3) { // -3 = interrompida (a própria recarga faz isso)
                             // Uma segunda tentativa: a troca de DNS pode ainda não valer na primeira carga.
@@ -379,6 +402,244 @@ def patch_game_activity(t):
     private static boolean nfsGameHost(String h) {
         return "nfsu2.xyz".equals(h) || "www.nfsu2.xyz".equals(h)
                 || "nfsu2mod.xyz".equals(h) || "www.nfsu2mod.xyz".equals(h);
+    }
+
+    // NFS Launcher: vincular o Discord. O login abre aqui mesmo (discord.com é origem confiável da TWA);
+    // quem tem o app do Discord pode usar ele, e a volta (/names/discord/back) chega pelo NfsDiscordBack.
+    private static java.lang.ref.WeakReference<CustomTabActivity> sNfsGame;
+    private static java.lang.ref.WeakReference<Tab> sNfsTab;
+    private static String sNfsDiscordState;
+    private static long sNfsDiscordAt;
+    private static String sNfsForwarded;
+    private static long sNfsForwardedAt;
+    private static final long NFS_DISCORD_MS = 10 * 60 * 1000;
+    private @Nullable String nfsDiscordWaiting;
+
+    static boolean nfsDiscordHost(@Nullable String h) {
+        if (h == null) return false;
+        return "discord.com".equals(h) || h.endsWith(".discord.com")
+                || "discordapp.com".equals(h) || h.endsWith(".discordapp.com");
+    }
+
+    private boolean nfsEn() {
+        return "en".equals(getSharedPreferences("nfs", 4 /* MODE_MULTI_PROCESS */).getString("lang", "pt"));
+    }
+
+    /** Página de autorização do Discord aberta no jogo: guarda o pedido e oferece o app do Discord. */
+    @SuppressWarnings("deprecation")
+    private void nfsDiscordSeen(org.chromium.url.GURL g) {
+        android.net.Uri u = android.net.Uri.parse(g.getSpec());
+        String path = u.getPath();
+        if ("/login".equals(path)) {
+            String to = u.getQueryParameter("redirect_to");
+            if (to == null || !to.startsWith("/oauth2/authorize")) return;
+            u = android.net.Uri.parse("https://discord.com" + to);
+        } else if (!"/oauth2/authorize".equals(path)) {
+            return;
+        }
+        String state = u.getQueryParameter("state");
+        if (state == null || state.isEmpty() || state.equals(sNfsDiscordState)) return;
+        sNfsDiscordState = state;
+        sNfsDiscordAt = System.currentTimeMillis();
+        nfsDiscordFile(state + "\\n" + sNfsDiscordAt);
+        Intent app = new Intent(Intent.ACTION_VIEW, u).addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage("com.discord");
+        if (getPackageManager().queryIntentActivities(app, 0).isEmpty()) return;
+        final String url = u.toString();
+        boolean en = nfsEn();
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(en ? "Link Discord" : "Vincular o Discord")
+                .setMessage(en ? "Use the Discord app on this phone, or sign in right here?"
+                        : "Usar o app do Discord deste celular ou entrar aqui mesmo?")
+                .setPositiveButton(en ? "Discord app" : "App do Discord", (d, w) -> nfsUseDiscordApp(url))
+                .setNegativeButton(en ? "Sign in here" : "Entrar aqui", null)
+                .show();
+    }
+
+    private void nfsDiscordFile(String s) {
+        try {
+            java.nio.file.Files.write(new java.io.File(getFilesDir(), "nfs-discord").toPath(),
+                    s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.io.IOException e) {
+            // Sem o arquivo: só a volta com o jogo aberto funciona.
+        }
+    }
+
+    private void nfsUseDiscordApp(String url) {
+        if (nfsLinksAllowed()) {
+            nfsLaunchDiscord(url);
+            return;
+        }
+        nfsDiscordWaiting = url;
+        boolean en = nfsEn();
+        new android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(en ? "Link Discord" : "Vincular o Discord")
+                .setMessage(en
+                        ? "For Discord to bring you back to the game, NFS Launcher needs to open the game's links: on the next screen, turn on \\"Open supported links\\", tap \\"Add link\\", check what shows up and confirm. Then come back here."
+                        : "Para o Discord trazer você de volta ao jogo, o NFS Launcher precisa abrir os links do jogo: na próxima tela, ligue \\"Abrir links compatíveis\\", toque em \\"Adicionar link\\", marque o que aparecer e confirme. Depois, volte aqui.")
+                .setPositiveButton(en ? "Open settings" : "Abrir configurações", (d, w) -> nfsOpenLinkSettings())
+                .setNegativeButton(en ? "Sign in here" : "Entrar aqui", (d, w) -> nfsDiscordWaiting = null)
+                .setOnCancelListener(d -> nfsDiscordWaiting = null)
+                .show();
+    }
+
+    private void nfsOpenLinkSettings() {
+        android.net.Uri pkg = android.net.Uri.parse("package:" + getPackageName());
+        try {
+            startActivity(new Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, pkg));
+        } catch (RuntimeException e) {
+            try {
+                startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, pkg));
+            } catch (RuntimeException e2) {
+                nfsDiscordWaiting = null;
+            }
+        }
+    }
+
+    /** Volta das configurações: com a permissão, segue pelo app do Discord; sem, fica o login aqui. */
+    private void nfsDiscordResume() {
+        final String url = nfsDiscordWaiting;
+        if (url == null) return;
+        nfsDiscordWaiting = null;
+        getWindow().getDecorView().post(() -> {
+            if (nfsLinksAllowed()) {
+                nfsLaunchDiscord(url);
+            } else {
+                boolean en = nfsEn();
+                android.widget.Toast.makeText(this, en
+                        ? "Without this permission, Discord can't bring you back to the game. Sign in to Discord right here."
+                        : "Sem essa permissão, o Discord não traz você de volta ao jogo. Entre no Discord aqui mesmo.",
+                        android.widget.Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void nfsLaunchDiscord(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    .addCategory(Intent.CATEGORY_BROWSABLE).setPackage("com.discord")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (RuntimeException e) {
+            // Sem o app do Discord: o login continua aqui.
+        }
+    }
+
+    private boolean nfsLinksAllowed() {
+        try {
+            android.content.pm.verify.domain.DomainVerificationManager m =
+                    getSystemService(android.content.pm.verify.domain.DomainVerificationManager.class);
+            if (m == null) return false;
+            android.content.pm.verify.domain.DomainVerificationUserState s =
+                    m.getDomainVerificationUserState(getPackageName());
+            if (s == null || !s.isLinkHandlingAllowed()) return false;
+            Integer st = s.getHostToStateMap().get("nfsu2.xyz");
+            return st != null
+                    && st != android.content.pm.verify.domain.DomainVerificationUserState.DOMAIN_STATE_NONE;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** NFS Launcher: volta do app do Discord (/names/discord/back) para o jogo que pediu o vínculo. */
+    public static class NfsDiscordBack extends android.app.Activity {
+        @Override
+        protected void onCreate(@Nullable android.os.Bundle b) {
+            super.onCreate(b);
+            try {
+                nfsBack(getIntent() == null ? null : getIntent().getData());
+            } catch (RuntimeException e) {
+                // Nada a fazer: a tela some.
+            }
+            finish();
+        }
+
+        @SuppressWarnings("deprecation")
+        private void nfsBack(@Nullable android.net.Uri u) {
+            if (u == null || !"https".equals(u.getScheme()) || !"nfsu2.xyz".equals(u.getHost())
+                    || u.getPort() != -1 || u.getUserInfo() != null
+                    || !"/names/discord/back".equals(u.getPath())) {
+                return;
+            }
+            String state = u.getQueryParameter("state");
+            long now = System.currentTimeMillis();
+            boolean en = "en".equals(getSharedPreferences("nfs", 4).getString("lang", "pt"));
+            CustomTabActivity game = sNfsGame == null ? null : sNfsGame.get();
+            Tab tab = sNfsTab == null ? null : sNfsTab.get();
+            java.io.File f = new java.io.File(getFilesDir(), "nfs-discord");
+            if (state != null && state.equals(sNfsDiscordState) && now - sNfsDiscordAt < NFS_DISCORD_MS
+                    && game != null && !game.isFinishing() && !game.isDestroyed()
+                    && tab != null && !tab.isDestroyed()) {
+                sNfsDiscordState = null;
+                nfsClear(f);
+                tab.loadUrl(new LoadUrlParams(u.toString()));
+                android.app.ActivityManager am = getSystemService(android.app.ActivityManager.class);
+                if (am != null) am.moveTaskToFront(game.getTaskId(), 0);
+                return;
+            }
+            String[] saved = nfsRead(f).split("\\n");
+            long at = 0;
+            try {
+                if (saved.length == 2) at = Long.parseLong(saved[1].trim());
+            } catch (NumberFormatException e) {
+                at = 0;
+            }
+            if (state != null && saved.length == 2 && state.equals(saved[0].trim())
+                    && now - at >= 0 && now - at < NFS_DISCORD_MS) {
+                nfsClear(f);
+                android.widget.Toast.makeText(this, en
+                        ? "The game had been closed. Open it again and link Discord once more."
+                        : "O jogo tinha sido fechado. Abra de novo e vincule o Discord outra vez.",
+                        android.widget.Toast.LENGTH_LONG).show();
+                startActivity(new Intent().setClassName(getPackageName(), "xyz.nfs.launcher.MainActivity")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                return;
+            }
+            // Não foi o jogo que pediu: segue para o navegador padrão do celular.
+            String url = u.toString();
+            if (url.equals(sNfsForwarded) && now - sNfsForwardedAt < 5000) return;
+            sNfsForwarded = url;
+            sNfsForwardedAt = now;
+            android.content.pm.PackageManager pm = getPackageManager();
+            Intent probe = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://nfsu2.xyz/"))
+                    .addCategory(Intent.CATEGORY_BROWSABLE);
+            String browser = null;
+            android.content.pm.ResolveInfo def =
+                    pm.resolveActivity(probe, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+            if (def != null && def.activityInfo != null && !"android".equals(def.activityInfo.packageName)
+                    && !getPackageName().equals(def.activityInfo.packageName)) {
+                browser = def.activityInfo.packageName;
+            }
+            if (browser == null) {
+                Intent any = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://example.org/"))
+                        .addCategory(Intent.CATEGORY_BROWSABLE);
+                for (android.content.pm.ResolveInfo r : pm.queryIntentActivities(any, 0)) {
+                    if (r.activityInfo != null && !getPackageName().equals(r.activityInfo.packageName)) {
+                        browser = r.activityInfo.packageName;
+                        break;
+                    }
+                }
+            }
+            if (browser == null) return;
+            startActivity(new Intent(Intent.ACTION_VIEW, u).addCategory(Intent.CATEGORY_BROWSABLE)
+                    .setPackage(browser).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+
+        private static String nfsRead(java.io.File f) {
+            try {
+                return new String(java.nio.file.Files.readAllBytes(f.toPath()),
+                        java.nio.charset.StandardCharsets.UTF_8);
+            } catch (java.io.IOException e) {
+                return "";
+            }
+        }
+
+        private static void nfsClear(java.io.File f) {
+            try {
+                java.nio.file.Files.write(f.toPath(), new byte[0]);
+            } catch (java.io.IOException e) {
+                // Fica velho: passa dos 10 minutos e não vale mais.
+            }
+        }
     }
 
     /** NFS Launcher: fecha o jogo e volta à tela inicial, que mostra o erro em frase simples. */
