@@ -1,10 +1,10 @@
 {
-  "versao": "3.2.2",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.2/NFS-Launcher-Setup-3.2.2.exe",
-  "tamanho": 104822730,
-  "sha256": "3f0af8125019c23854c39abda0b53ccefe687218bbc6154b017bfc25e3aba5a7",
+  "versao": "3.2.3",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.3/NFS-Launcher-Setup-3.2.3.exe",
+  "tamanho": 104825885,
+  "sha256": "92efa1aab06d02bf0a0e3abf7e0f071f2567031d2c116c018540373b8b04979d",
   "novidades": {
-    "pt": "\"Preparar o jogo\" agora vem desligada para todos: o jogo carrega mais rápido e se otimiza enquanto roda, como no Chrome. Se estava ligada, um aviso aparece uma vez; se o desempenho piorar, religue em Configurações > Desempenho. Desenho novo com menos atraso: o sinal de cada quadro chega sem espera e mexer o mouse não segura mais o jogo.",
-    "en": "\"Prepare the game\" is now off for everyone: the game loads faster and optimizes itself while running, like in Chrome. If you had it on, a notice shows once; if performance gets worse, turn it back on in Settings > Performance. New drawing with less delay: the signal for each frame arrives without waiting and moving the mouse no longer holds the game."
+    "pt": "Vincular o Discord no NFSU2: \"Link Discord\" (Names) e \"Log in with Discord\" (Saves) abrem a janela do Discord no app, com senha ou QR, e ela fecha sozinha ao autorizar. Volantes e controles que o jogo pede são escolhidos sozinhos e lembrados.",
+    "en": "Link Discord in NFSU2: \"Link Discord\" (Names) and \"Log in with Discord\" (Saves) open the Discord window in the app, with password or QR, and it closes by itself once you authorize. Wheels and controllers the game asks for are picked automatically and remembered."
   }
 }

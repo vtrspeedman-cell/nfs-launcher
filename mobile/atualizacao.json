@@ -1,10 +1,10 @@
 {
-  "versao": "1.7.4",
-  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.4/NFS-Launcher-Android-1.7.4.apk",
-  "tamanho": 255516379,
-  "sha256": "efb7f4333949cad6a0bd4bd6daaeefe598f3de37bae2ef87498ac704a2f22132",
+  "versao": "1.7.5",
+  "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/android-1.7.5/NFS-Launcher-Android-1.7.5.apk",
+  "tamanho": 255511456,
+  "sha256": "006ae88efd6eb73862100a681d35ca66bf4682efaf9a0208717cf23041514edc",
   "novidades": {
-    "pt": "\"Preparar o jogo\" agora vem desligada para todos: o jogo carrega mais rápido e se otimiza enquanto roda, como no Chrome. Se estava ligada, um aviso aparece uma vez; se o desempenho piorar, religue em Configurações.",
-    "en": "\"Prepare the game\" is now off for everyone: the game loads faster and optimizes itself while running, like in Chrome. If you had it on, a notice shows once; if performance gets worse, turn it back on in Settings."
+    "pt": "Vincular o Discord no NFSU2: o login do Discord abre no próprio jogo, ou pelo app do Discord do celular (na primeira vez, ligue os links do jogo nas configurações, como o aviso mostra).",
+    "en": "Link Discord in NFSU2: the Discord login opens right in the game, or through the Discord app on your phone (the first time, turn on the game's links in settings, as the notice shows)."
   }
 }
