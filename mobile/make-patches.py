@@ -995,22 +995,61 @@ def patch_game_activity(t):
                     android.view.KeyEvent.KEYCODE_DPAD_DOWN, android.view.KeyEvent.KEYCODE_DPAD_RIGHT}};
         String[][] names = {{"W", "A", "S", "D"}, {"\\u25B2", "\\u25C0", "\\u25BC", "\\u25B6"}};
         int[] cx = {1, 0, 1, 2}, cy = {0, 1, 2, 1};
+        int shift = android.view.KeyEvent.KEYCODE_SHIFT_LEFT;
         for (int side = 0; side < 2; side++) {
             android.widget.FrameLayout cross = new android.widget.FrameLayout(this);
+            // No WASD, o Shift fica em cima do W (uma linha a mais), e puxar o W para cima também liga o Shift.
+            int row = side == 0 ? 1 : 0;
             for (int i = 0; i < 4; i++) {
                 android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(s, s);
                 lp.leftMargin = cx[i] * s;
-                lp.topMargin = cy[i] * s;
-                cross.addView(nfsHoldKey(names[side][i], keys[side][i], d), lp);
+                lp.topMargin = (cy[i] + row) * s;
+                android.widget.TextView k = nfsHoldKey(names[side][i], keys[side][i], d);
+                if (side == 0 && i == 0) {
+                    // W fica apertado; puxar para cima soma o Shift, para a esquerda o A, para a direita o D.
+                    int w = keys[0][0];
+                    int[] extra = {shift, keys[0][1], keys[0][3]};
+                    boolean[] on = {false, false, false};
+                    k.setOnTouchListener(
+                            (v, e) -> {
+                                int a = e.getActionMasked();
+                                if (a == android.view.MotionEvent.ACTION_DOWN) {
+                                    nfsKey(w, android.view.KeyEvent.ACTION_DOWN);
+                                } else if (a == android.view.MotionEvent.ACTION_MOVE) {
+                                    float x = e.getX(), y = e.getY(), t = s * 0.3f;
+                                    boolean[] want = {y < -t, x < -t, x > v.getWidth() + t};
+                                    for (int j = 0; j < 3; j++) {
+                                        if (want[j] != on[j]) {
+                                            on[j] = want[j];
+                                            nfsKey(extra[j], on[j] ? android.view.KeyEvent.ACTION_DOWN : android.view.KeyEvent.ACTION_UP);
+                                        }
+                                    }
+                                } else if (a == android.view.MotionEvent.ACTION_UP || a == android.view.MotionEvent.ACTION_CANCEL) {
+                                    for (int j = 0; j < 3; j++) {
+                                        if (on[j]) nfsKey(extra[j], android.view.KeyEvent.ACTION_UP);
+                                        on[j] = false;
+                                    }
+                                    nfsKey(w, android.view.KeyEvent.ACTION_UP);
+                                }
+                                return true;
+                            });
+                }
+                cross.addView(k, lp);
             }
-            android.widget.FrameLayout.LayoutParams cp = new android.widget.FrameLayout.LayoutParams(3 * s, 3 * s,
+            if (side == 0) {
+                android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(s, s);
+                lp.leftMargin = s;
+                android.widget.TextView f = nfsHoldKey("\\u21E7 Shift", shift, d);
+                f.setTextSize(13);
+                cross.addView(f, lp);
+            }
+            android.widget.FrameLayout.LayoutParams cp = new android.widget.FrameLayout.LayoutParams(3 * s, (3 + row) * s,
                     android.view.Gravity.BOTTOM | (side == 0 ? android.view.Gravity.START : android.view.Gravity.END));
             cp.setMargins(m, m, m, m);
             layer.addView(cross, cp);
         }
         android.widget.LinearLayout top = new android.widget.LinearLayout(this);
         top.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-        android.widget.TextView fast = nfsHoldKey(en ? "Fast (Shift)" : "Rápido (Shift)", android.view.KeyEvent.KEYCODE_SHIFT_LEFT, d);
         android.widget.TextView exit = nfsHoldKey(en ? "Exit drone" : "Sair do drone", 0, d);
         exit.setOnTouchListener(
                 (v, e) -> {
@@ -1019,7 +1058,7 @@ def patch_game_activity(t):
                 });
         // Se o drone não entrou sozinho, este manda o F6 de novo (liga e desliga, como no PC).
         android.widget.TextView fly = nfsHoldKey("Drone (F6)", android.view.KeyEvent.KEYCODE_F6, d);
-        for (android.widget.TextView b : new android.widget.TextView[] {fly, fast, exit}) {
+        for (android.widget.TextView b : new android.widget.TextView[] {fly, exit}) {
             b.setPadding((int) (16 * d), 0, (int) (16 * d), 0);
             android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(-2, (int) (44 * d));
             lp.leftMargin = lp.rightMargin = (int) (6 * d);
