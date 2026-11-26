@@ -1,5 +1,5 @@
 diff --git a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
-index 4e773273b1667..92227eac35502 100644
+index 4e773273b1667..9d9ba5648e96b 100644
 --- a/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 +++ b/chrome/android/java/src/org/chromium/chrome/browser/customtabs/CustomTabActivity.java
 @@ -116,6 +116,7 @@ public class CustomTabActivity extends BaseCustomTabActivity {
@@ -10,7 +10,7 @@ index 4e773273b1667..92227eac35502 100644
      }
  
      private void maybeCreateHistoryTabHelper(Tab tab) {
-@@ -308,6 +309,792 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -308,6 +309,795 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStart() {
          super.onStart();
          if (mTimeoutHandler != null) mTimeoutHandler.onStart();
@@ -709,8 +709,11 @@ index 4e773273b1667..92227eac35502 100644
 +            android.view.InputDevice dev = android.view.InputDevice.getDevice(id);
 +            if (dev == null || dev.isVirtual()) continue;
 +            int src = dev.getSources();
-+            if ((src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
-+                    || (src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK) {
++            String name = dev.getName();
++            if (name != null && name.startsWith("uinput")) continue;
++            if ((src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
++                    && (src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
++                    && dev.hasKeys(android.view.KeyEvent.KEYCODE_BUTTON_A)[0]) {
 +                return true;
 +            }
 +        }
@@ -803,7 +806,7 @@ index 4e773273b1667..92227eac35502 100644
      }
  
      @Override
-@@ -338,12 +1125,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
+@@ -338,12 +1128,50 @@ public class CustomTabActivity extends BaseCustomTabActivity {
      public void onStop() {
          super.onStop();
          if (mTimeoutHandler != null) mTimeoutHandler.onStop(this);

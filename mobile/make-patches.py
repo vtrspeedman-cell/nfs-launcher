@@ -966,8 +966,11 @@ def patch_game_activity(t):
             android.view.InputDevice dev = android.view.InputDevice.getDevice(id);
             if (dev == null || dev.isVirtual()) continue;
             int src = dev.getSources();
-            if ((src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
-                    || (src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK) {
+            String name = dev.getName();
+            if (name != null && name.startsWith("uinput")) continue;
+            if ((src & android.view.InputDevice.SOURCE_JOYSTICK) == android.view.InputDevice.SOURCE_JOYSTICK
+                    && (src & android.view.InputDevice.SOURCE_GAMEPAD) == android.view.InputDevice.SOURCE_GAMEPAD
+                    && dev.hasKeys(android.view.KeyEvent.KEYCODE_BUTTON_A)[0]) {
                 return true;
             }
         }
