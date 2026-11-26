@@ -1,8 +1,8 @@
 {
   "versao": "3.2.3",
   "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.3/NFS-Launcher-Setup-3.2.3.exe",
-  "tamanho": 104825885,
-  "sha256": "92efa1aab06d02bf0a0e3abf7e0f071f2567031d2c116c018540373b8b04979d",
+  "tamanho": 104825910,
+  "sha256": "342f94660449caea25c5576080f748b78c6cd4f9c19eb93cfc375be76d1e102f",
   "novidades": {
     "pt": "Vincular o Discord no NFSU2: \"Link Discord\" (Names) e \"Log in with Discord\" (Saves) abrem a janela do Discord no app, com senha ou QR, e ela fecha sozinha ao autorizar. Volantes e controles que o jogo pede são escolhidos sozinhos e lembrados.",
     "en": "Link Discord in NFSU2: \"Link Discord\" (Names) and \"Log in with Discord\" (Saves) open the Discord window in the app, with password or QR, and it closes by itself once you authorize. Wheels and controllers the game asks for are picked automatically and remembered."

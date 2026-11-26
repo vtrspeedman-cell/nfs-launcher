@@ -1484,9 +1484,24 @@ function openDiscordLogin(url) {
   });
   cwc.loadURL(url).catch(() => {});
 }
+// O site grava no começo do login o cookie "nfsu2-discord" (Path=/names/discord) e confere esse cookie quando o jogo
+// entrega o bilhete (POST /names/discord/link ou /recover). Sem ele na partição do jogo, o site recusa o bilhete
+// ("O login com o Discord demorou demais"): o app copia os cookies do caminho do vínculo da janela do login.
+async function copyDiscordCookies(from, to, url) {
+  const origin = new URL(url).origin;
+  const list = await from.cookies.get({ url: `${origin}${discordLogin.PATH}` }).catch(() => []);
+  for (const c of list) {
+    if (!String(c.path || '/').startsWith('/names/discord')) continue;
+    await to.cookies.set({
+      url: `${origin}${c.path}`, name: c.name, value: c.value, path: c.path, secure: c.secure, httpOnly: c.httpOnly,
+      sameSite: c.sameSite, ...(c.expirationDate ? { expirationDate: c.expirationDate } : {}),
+    }).catch(() => {});
+  }
+}
 function finishDiscordLogin(url, game) {
   const child = discordWin;
   discordWin = null;
+  const fromSes = child && !child.isDestroyed() ? child.webContents.session : null;
   setImmediate(() => { if (child && !child.isDestroyed()) child.close(); });
   if (!gameView || gameView.webContents.isDestroyed() || currentGame !== game) return;
   const wc = gameView.webContents;
@@ -1495,7 +1510,10 @@ function finishDiscordLogin(url, game) {
   beginLoading();
   screen = 'loading';
   refresh();
-  wc.loadURL(url).then(() => { if (again && !wc.isDestroyed()) wc.reload(); }).catch(() => {});
+  (fromSes ? copyDiscordCookies(fromSes, wc.session, url) : Promise.resolve())
+    .then(() => wc.loadURL(url))
+    .then(() => { if (again && !wc.isDestroyed()) wc.reload(); })
+    .catch(() => {});
 }
 
 // Controle pelo WebHID do site (controle da Steam, força do volante; 25/11). O Chrome mostra uma lista para escolher:
