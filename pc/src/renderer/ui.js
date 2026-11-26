@@ -308,7 +308,7 @@
     const notes = u.notes ? t(u.notes.pt, u.notes.en || u.notes.pt) : '';
     if (found) {
       $('update-text').textContent = u.status === 'ready'
-        ? t(`Versão ${u.version} pronta${notes ? `: ${notes}` : ''}. Ela também é instalada quando você fechar o app.`, `Version ${u.version} is ready${notes ? `: ${notes}` : ''}. It also installs when you close the app.`)
+        ? t(`Versão ${u.version} pronta${notes ? `: ${notes}` : ''}. Ela só é instalada quando você clicar em Atualizar agora.`, `Version ${u.version} is ready${notes ? `: ${notes}` : ''}. It only installs when you click Update now.`)
         : u.status === 'downloading' ? t(`Baixando a versão ${u.version}… ${u.pct || 0}%`, `Downloading version ${u.version}… ${u.pct || 0}%`)
         : u.failed ? t(`Versão ${u.version} encontrada. O download parou (internet?) e continua sozinho.`, `Version ${u.version} found. The download stopped (internet?) and resumes by itself.`)
         : t(`Versão ${u.version} encontrada. O download continua quando você sair do jogo.`, `Version ${u.version} found. The download continues when you leave the game.`);

@@ -765,7 +765,8 @@ function customImages() {
 // Pedido do Bruno (08/11): o app se atualiza sozinho. Ao abrir, ao voltar à tela inicial e de hora em hora fora do jogo,
 // lê pc/atualizacao.json do repositório. Versão nova: baixa o instalador em segundo plano (nunca durante o jogo: para
 // e continua depois de onde parou), confere o SHA-256 e mostra "Atualizar agora" na tela inicial. Se o jogador
-// fechar o app sem clicar, a atualização é instalada ao fechar, sem abrir nada. Nada do PC é enviado.
+// fechar o app sem clicar, nada é instalado (Bruno, 26/11: só instala com o clique, para quem quiser ficar numa versão
+// que funciona). Nada do PC é enviado.
 const UPDATE_EVERY_MS = 60 * 60 * 1000;
 let updateTimer = null;
 let updateChecking = false;
@@ -828,7 +829,7 @@ async function downloadUpdate() {
     });
     updateFile = dest;
     updateInfo = { ...updateInfo, status: 'ready', pct: 100 };
-    if (screen === 'none') notify(tr(`A versão ${u.version} do NFS Launcher está pronta. Ela é instalada quando você fechar o app.`, `NFS Launcher ${u.version} is ready. It installs when you close the app.`));
+    if (screen === 'none') notify(tr(`A versão ${u.version} do NFS Launcher está pronta. Para instalar, clique em Atualizar agora na tela inicial.`, `NFS Launcher ${u.version} is ready. To install it, click Update now on the home screen.`));
   } catch (e) {
     // Parou por causa do jogo (ou da rede): continua de onde parou na próxima verificação.
     updateInfo = { ...updateInfo, status: 'new', failed: !(e && e.name === 'AbortError') };
@@ -1872,7 +1873,7 @@ function registerIpc() {
   handle('update:check', () => checkUpdates(true));
   handle('update:install', () => {
     if (updateInfo.status !== 'ready') return { ok: false, error: tr('A atualização ainda não está pronta.', 'The update is not ready yet.') };
-    if (!installUpdate(true)) return { ok: false, error: tr('Não deu para abrir o instalador. Feche o app: ele tenta de novo ao fechar.', 'Could not start the installer. Close the app: it tries again when closing.') };
+    if (!installUpdate(true)) return { ok: false, error: tr('Não deu para abrir o instalador. Tente de novo.', 'Could not start the installer. Try again.') };
     quitApp();
     return { ok: true };
   });
@@ -1975,8 +1976,7 @@ if (gotLock) {
 
   app.on('before-quit', () => { quitting = true; });
   app.on('will-quit', () => {
-    // Atualização baixada e o jogador fechou o app: instala agora, sem reabrir (não ao reabrir por uma opção).
-    if (!relaunching && updateInfo.status === 'ready') installUpdate(false);
+    // Atualização baixada não se instala ao fechar: só pelo clique em "Atualizar agora" (Bruno, 26/11).
     globalShortcut.unregisterAll();
     presence.set(null);
     if (psbId !== null && powerSaveBlocker.isStarted(psbId)) powerSaveBlocker.stop(psbId);

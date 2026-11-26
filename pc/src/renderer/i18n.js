@@ -60,7 +60,7 @@ const EN = {
   hCustom: 'Customization',
   customNote: 'Replace the home screen <b>background</b> and the <b>cover</b> (the disc) of each game with a PNG or JPG image from your PC. The cover is round: the app uses the middle square of the image. “Default” goes back to the original image.',
   hUpdate: 'Updates',
-  updNote: 'The app downloads new versions by itself, outside the game, and checks the file. It installs when you click <b>Update now</b> on the home screen or when you close the app. Nothing from your PC is sent.',
+  updNote: 'The app downloads new versions by itself, outside the game, and checks the file. It only installs when you click <b>Update now</b> on the home screen; closing or restarting the app does not install it. Nothing from your PC is sent.',
   updCheck: 'Check now', updOpen: 'Open the versions page', updGet: 'Update now',
   hSaves: 'Save copies (NFSU2)',
   savesNote: 'When it opens, the app keeps a copy of your save, only if it changed. The last 2 versions stay, only on your PC, and nothing is sent. The app never puts a copy back by itself. <b>Only restore if you lost your save:</b> a copy may be older than your game and replaces what is in it. To bring one back: in the game, under <b>Saved games &gt; Restore</b>, pick the newest file in the folder.',

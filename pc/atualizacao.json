@@ -1,10 +1,10 @@
 {
   "versao": "3.2.3",
   "arquivo": "https://github.com/vtrspeedman-cell/nfs-launcher/releases/download/pc-3.2.3/NFS-Launcher-Setup-3.2.3.exe",
-  "tamanho": 104825910,
-  "sha256": "342f94660449caea25c5576080f748b78c6cd4f9c19eb93cfc375be76d1e102f",
+  "tamanho": 104825865,
+  "sha256": "9e79294cbcb3e09160f1541d46dba0507bcf042405e7fb8cdb97f2e4e869f399",
   "novidades": {
-    "pt": "Vincular o Discord no NFSU2: \"Link Discord\" (Names) e \"Log in with Discord\" (Saves) abrem a janela do Discord no app, com senha ou QR, e ela fecha sozinha ao autorizar. Volantes e controles que o jogo pede são escolhidos sozinhos e lembrados.",
-    "en": "Link Discord in NFSU2: \"Link Discord\" (Names) and \"Log in with Discord\" (Saves) open the Discord window in the app, with password or QR, and it closes by itself once you authorize. Wheels and controllers the game asks for are picked automatically and remembered."
+    "pt": "Vincular o Discord no NFSU2: \"Link Discord\" (Names) e \"Log in with Discord\" (Saves) abrem a janela do Discord no app, com senha ou QR, e ela fecha sozinha ao autorizar. Volantes e controles que o jogo pede são escolhidos sozinhos e lembrados. Atualizações agora só instalam quando você clica em Atualizar agora: fechar ou reabrir o app não instala mais.",
+    "en": "Link Discord in NFSU2: \"Link Discord\" (Names) and \"Log in with Discord\" (Saves) open the Discord window in the app, with password or QR, and it closes by itself once you authorize. Wheels and controllers the game asks for are picked automatically and remembered. Updates now only install when you click Update now: closing or reopening the app no longer installs them."
   }
 }
