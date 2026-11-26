@@ -729,6 +729,8 @@ def patch_game_activity(t):
     }
 
     private @Nullable View nfsSong;
+    private boolean nfsDrawerLeft;
+    private float nfsDrawerY = 0.5f;
 
     /**
      * NFS Launcher: gaveta opcional de atalhos (teclas F do NFSU2), desligada por padrão, presa na borda que o
@@ -743,6 +745,8 @@ def patch_game_activity(t):
         boolean en = "en".equals(p.getString("lang", "pt"));
         boolean left = p.getInt("drawerX", 100) < 50;
         float fy = Math.max(0, Math.min(100, p.getInt("drawerY", 50))) / 100f;
+        nfsDrawerLeft = left;
+        nfsDrawerY = fy;
         float d = getResources().getDisplayMetrics().density;
         int[] keys = {
             android.view.KeyEvent.KEYCODE_F7, android.view.KeyEvent.KEYCODE_F9, android.view.KeyEvent.KEYCODE_F6,
@@ -858,10 +862,35 @@ def patch_game_activity(t):
         View v = tab == null ? null : tab.getContentView();
         if (v == null) return;
         long now = android.os.SystemClock.uptimeMillis();
+        // O site lê KeyboardEvent.code, que o Chromium tira do scancode (evdev); sem ele o code vem vazio.
+        int sc = code == android.view.KeyEvent.KEYCODE_F6 ? 64
+                : code == android.view.KeyEvent.KEYCODE_F7 ? 65
+                : code == android.view.KeyEvent.KEYCODE_F8 ? 66
+                : code == android.view.KeyEvent.KEYCODE_F9 ? 67
+                : code == android.view.KeyEvent.KEYCODE_F10 ? 68
+                : code == android.view.KeyEvent.KEYCODE_F12 ? 88 : 0;
         v.dispatchKeyEvent(
                 new android.view.KeyEvent(now, now, action, code, 0, 0,
-                        android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, 0,
+                        android.view.KeyCharacterMap.VIRTUAL_KEYBOARD, sc,
                         android.view.KeyEvent.FLAG_FROM_SYSTEM, android.view.InputDevice.SOURCE_KEYBOARD));
+        if (action != android.view.KeyEvent.ACTION_UP) return;
+        // Tecla esconde os controles de toque do site; um toque de dedo (logo cancelado) na borda da alça os traz de volta.
+        android.view.MotionEvent.PointerProperties pp = new android.view.MotionEvent.PointerProperties();
+        pp.id = 0;
+        pp.toolType = android.view.MotionEvent.TOOL_TYPE_FINGER;
+        android.view.MotionEvent.PointerCoords pc = new android.view.MotionEvent.PointerCoords();
+        pc.x = nfsDrawerLeft ? 0 : v.getWidth() - 1;
+        pc.y = nfsDrawerY * v.getHeight();
+        pc.pressure = 1;
+        pc.size = 1;
+        for (int a : new int[] {android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_CANCEL}) {
+            android.view.MotionEvent m = android.view.MotionEvent.obtain(now, now, a, 1,
+                    new android.view.MotionEvent.PointerProperties[] {pp},
+                    new android.view.MotionEvent.PointerCoords[] {pc}, 0, 0, 1, 1, 0, 0,
+                    android.view.InputDevice.SOURCE_TOUCHSCREEN, 0);
+            v.dispatchTouchEvent(m);
+            m.recycle();
+        }
     }
 
     /** NFS Launcher: a imagem escolhida pelo jogador, se houver; senão a que vem no app. */
