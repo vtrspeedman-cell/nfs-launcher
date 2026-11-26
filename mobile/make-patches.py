@@ -1202,9 +1202,10 @@ def patch_gamepad(t):
     return sub1(t, '''                } else {
                     GamepadListJni.get()''', '''                } else if (i == MAX_GAMEPADS - 1 && System.getProperty("nfs.pad") != null) {
                     long now = android.os.SystemClock.uptimeMillis();
-                    float[] axes = new float[4];
+                    // 5º eixo, que o jogo não usa: o puxão só serve para o Chromium mostrar o controle (no eixo 3 trocava a câmera).
+                    float[] axes = new float[5];
                     String pulse = System.getProperty("nfs.padPulse");
-                    if (pulse != null && now < Long.parseLong(pulse)) axes[3] = 0.6f;
+                    if (pulse != null && now < Long.parseLong(pulse)) axes[4] = 0.6f;
                     GamepadListJni.get()
                             .setGamepadData(webGamepadsPtr, i, true, true, "NFS Launcher", 0, 0, now,
                                     axes, new float[17], 17, false);

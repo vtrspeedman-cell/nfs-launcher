@@ -1049,18 +1049,19 @@ index 6ac314678155e..2914c31b8dc76 100644
  
  bool TranslatePrefs::IsTranslateAllowedByPolicy() const {
 diff --git a/device/gamepad/android/java/src/org/chromium/device/gamepad/GamepadList.java b/device/gamepad/android/java/src/org/chromium/device/gamepad/GamepadList.java
-index b9add30f5b5e8..5b2846b20bf86 100644
+index b9add30f5b5e8..5a565e7774255 100644
 --- a/device/gamepad/android/java/src/org/chromium/device/gamepad/GamepadList.java
 +++ b/device/gamepad/android/java/src/org/chromium/device/gamepad/GamepadList.java
-@@ -325,6 +325,14 @@ public class GamepadList {
+@@ -325,6 +325,15 @@ public class GamepadList {
                                      device.getButtons(),
                                      device.getButtonsLength(),
                                      device.supportsDualRumble());
 +                } else if (i == MAX_GAMEPADS - 1 && System.getProperty("nfs.pad") != null) {
 +                    long now = android.os.SystemClock.uptimeMillis();
-+                    float[] axes = new float[4];
++                    // 5º eixo, que o jogo não usa: o puxão só serve para o Chromium mostrar o controle (no eixo 3 trocava a câmera).
++                    float[] axes = new float[5];
 +                    String pulse = System.getProperty("nfs.padPulse");
-+                    if (pulse != null && now < Long.parseLong(pulse)) axes[3] = 0.6f;
++                    if (pulse != null && now < Long.parseLong(pulse)) axes[4] = 0.6f;
 +                    GamepadListJni.get()
 +                            .setGamepadData(webGamepadsPtr, i, true, true, "NFS Launcher", 0, 0, now,
 +                                    axes, new float[17], 17, false);
