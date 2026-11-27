@@ -31,6 +31,9 @@ const ALL = {
   pc: { tag: 'pc-' + pcV, name: 'NFS Launcher PC ' + pcV, latest: 'true', files: [path.join(D, `NFS-Launcher-Setup-${pcV}.exe`)],
     body: () => notes('pc/atualizacao.json') + '\n\nSHA-256: ' + sha(path.join(D, `NFS-Launcher-Setup-${pcV}.exe`)) },
 };
+ALL.motor = { tag: 'motor-156.0.8078.49', name: 'Motor do PC (backup para montar)', latest: 'false',
+  body: () => 'Backup para remontar o app do PC sem compilar o Chromium: motor-final (Electron 45.1.0 / Chromium 156.0.8078.49 com as correções de pc/motor) e o perfil PGO nfs-jogo.profdata. Como usar: docs/reconstruir.md.',
+  files: ['C:/e/backup/motor-final-3.2.3.zip', 'C:/e/backup/pgo-nfs-jogo.zip'] };
 const pick = process.argv.slice(2);
 const RELEASES = (pick.length ? pick : ['texturas', 'android', 'pc']).map(k => ALL[k]);
 

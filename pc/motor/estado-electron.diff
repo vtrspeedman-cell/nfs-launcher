@@ -1,0 +1,31 @@
+diff --git a/shell/browser/extensions/electron_component_extension_resource_manager.cc b/shell/browser/extensions/electron_component_extension_resource_manager.cc
+index 193ea2a..7268c7c 100644
+--- a/shell/browser/extensions/electron_component_extension_resource_manager.cc
++++ b/shell/browser/extensions/electron_component_extension_resource_manager.cc
+@@ -23,14 +23,15 @@
+ #include "extensions/browser/extension_config_map_factory.h"
+ #include "extensions/buildflags/buildflags.h"
+ #include "extensions/common/extension_id.h"
++#include "electron/buildflags/buildflags.h"
+ #include "pdf/buildflags.h"
+ #include "ui/base/resource/resource_bundle.h"
+ 
+-#if BUILDFLAG(ENABLE_PDF)
++#if BUILDFLAG(ENABLE_PDF_VIEWER)
+ #include <utility>
+ 
+ #include "chrome/browser/pdf/pdf_extension_util.h"
+-#endif  // BUILDFLAG(ENABLE_PDF)
++#endif  // BUILDFLAG(ENABLE_PDF_VIEWER)
+ 
+ static_assert(BUILDFLAG(ENABLE_EXTENSIONS_CORE));
+ 
+@@ -90,7 +91,7 @@ ElectronComponentExtensionResourceManager::Data::Data() {
+   AddComponentResourceEntries(kComponentExtensionResources);
+   AddComponentResourceEntries(kExtraComponentExtensionResources);
+ 
+-#if BUILDFLAG(ENABLE_PDF)
++#if BUILDFLAG(ENABLE_PDF_VIEWER)
+   AddComponentResourceEntries(pdf_extension_util::GetResources(
+       pdf_extension_util::PdfViewerContext::kPdfViewer));
+ 

@@ -1,0 +1,705 @@
+diff --git a/base/process/process_win.cc b/base/process/process_win.cc
+index 6c683cfd9d..b8cf199b67 100644
+--- a/base/process/process_win.cc
++++ b/base/process/process_win.cc
+@@ -321,7 +321,7 @@ bool Process::SetPriority(Priority priority) {
+   if (FeatureList::IsEnabled(kUseEcoQoSForBackgroundProcess)) {
+     win::SetProcessEcoQoSState(Handle(),
+                                priority == Priority::kUserBlocking
+-                                   ? win::ProcessPowerState::kUnset
++                                   ? win::ProcessPowerState::kDisabled  // NFS: HighQoS
+                                    : win::ProcessPowerState::kEnabled);
+   }
+ 
+diff --git a/components/services/storage/dom_storage/local_storage_impl.cc b/components/services/storage/dom_storage/local_storage_impl.cc
+index fbf2e6067d..8b22e1cec1 100644
+--- a/components/services/storage/dom_storage/local_storage_impl.cc
++++ b/components/services/storage/dom_storage/local_storage_impl.cc
+@@ -15,10 +15,13 @@
+ 
+ #include "base/byte_size.h"
+ #include "base/files/file_path.h"
++#include "base/files/file_util.h"
+ #include "base/functional/bind.h"
+ #include "base/memory/raw_ptr.h"
+ #include "base/metrics/histogram_functions.h"
+ #include "base/strings/strcat.h"
++#include "base/strings/string_number_conversions.h"
++#include "base/time/time.h"
+ #include "base/strings/stringprintf.h"
+ #include "base/system/sys_info.h"
+ #include "base/task/thread_pool.h"
+@@ -485,6 +488,14 @@ void LocalStorageImpl::OnDatabaseOpened(
+   }
+ 
+   if (!outcome.open_status.ok()) {
++    // NFS: erro de trava ou de disco nunca apaga: nesta sessao fica so na memoria.
++    if (!in_memory_ && !outcome.open_status.IsCorruption()) {
++      database_.reset();
++      tried_to_recreate_during_open_ = true;
++      InitiateConnection(/*in_memory_only=*/true,
++                         /*destroy_existing_db_for_recovery=*/false);
++      return;
++    }
+     // If we failed to open the database, try to delete and recreate the
+     // database, or ultimately fallback to an in-memory database.
+     DeleteAndRecreateDatabase(DomStorageRecoveryReason::kOpenFailure);
+@@ -570,8 +581,17 @@ void LocalStorageImpl::DeleteAndRecreateDatabase(
+ 
+   // `!in_memory_` means the old database was on-disk and must be destroyed
+   // before reopening.
+-  InitiateConnection(recreate_in_memory,
+-                     /*destroy_existing_db_for_recovery=*/!in_memory_);
++  // NFS: destruir o banco apaga as configuracoes do site; antes fica uma copia. Sem copia, so na memoria.
++  bool destroy = !in_memory_;
++  if (destroy) {
++    const base::FilePath pasta = storage_partition_directory_.AppendASCII("Local Storage");
++    if (!base::CopyDirectory(pasta, pasta.AddExtensionASCII("guardado-" + base::NumberToString(base::Time::Now().InMillisecondsSinceUnixEpoch())),
++                             true)) {
++      recreate_in_memory = true;
++      destroy = false;
++    }
++  }
++  InitiateConnection(recreate_in_memory, destroy);
+ }
+ 
+ LocalStorageImpl::StorageAreaHolder* LocalStorageImpl::GetOrCreateStorageArea(
+diff --git a/content/gpu/gpu_main.cc b/content/gpu/gpu_main.cc
+index bdedeac1cc..7a04fa5413 100644
+--- a/content/gpu/gpu_main.cc
++++ b/content/gpu/gpu_main.cc
+@@ -272,6 +272,9 @@ int GpuMain(MainFunctionParams parameters) {
+   // performance.
+   base::win::SetProcessTimerThrottleState(
+       base::GetCurrentProcessHandle(), base::win::ProcessPowerState::kDisabled);
++  // NFS: processo grafico nunca em modo de economia (EcoQoS).
++  base::win::SetProcessEcoQoSState(base::GetCurrentProcessHandle(),
++                                   base::win::ProcessPowerState::kDisabled);
+ 
+   // COM is used by some Windows Media Foundation calls made on this thread and
+   // must be MTA so we don't have to worry about pumping messages to handle
+diff --git a/storage/browser/file_system/obfuscated_file_util.cc b/storage/browser/file_system/obfuscated_file_util.cc
+index 29b7a2300a..ee4349d040 100644
+--- a/storage/browser/file_system/obfuscated_file_util.cc
++++ b/storage/browser/file_system/obfuscated_file_util.cc
+@@ -1354,6 +1354,11 @@ base::FileErrorOr<base::FilePath> ObfuscatedFileUtil::GetDirectoryForStorageKey(
+   base::FilePath directory_name;
+   std::string id = GetIdentifierFromOrigin(storage_key.origin());
+ 
++  // NFS: banco ocupado (outra copia fechando): falha em vez de achar que a pasta e orfa.
++  std::vector<SandboxOriginDatabaseInterface::OriginRecord> origins;
++  if (!origin_database_->ListAllOrigins(&origins)) {
++    return base::unexpected(base::File::FILE_ERROR_FAILED);
++  }
+   bool exists_in_db = origin_database_->HasOriginPath(id);
+   if (!exists_in_db && !create) {
+     return base::unexpected(base::File::FILE_ERROR_NOT_FOUND);
+@@ -1365,7 +1370,9 @@ base::FileErrorOr<base::FilePath> ObfuscatedFileUtil::GetDirectoryForStorageKey(
+   base::FilePath path = file_system_directory_.Append(directory_name);
+   bool exists_in_fs = delegate_->DirectoryExists(path);
+   if (!exists_in_db && exists_in_fs) {
+-    if (!delegate_->DeleteFileOrDirectory(path, true)) {
++    // NFS: nunca apaga save; guarda com outro nome.
++    if (is_incognito() ? !delegate_->DeleteFileOrDirectory(path, true)
++                       : !base::Move(path, path.AddExtensionASCII("guardado-" + base::NumberToString(base::Time::Now().InMillisecondsSinceUnixEpoch())))) {
+       return base::unexpected(base::File::FILE_ERROR_FAILED);
+     }
+     exists_in_fs = false;
+diff --git a/storage/browser/file_system/sandbox_directory_database.cc b/storage/browser/file_system/sandbox_directory_database.cc
+index e368ea7e99..dd7e1db75a 100644
+--- a/storage/browser/file_system/sandbox_directory_database.cc
++++ b/storage/browser/file_system/sandbox_directory_database.cc
+@@ -722,6 +722,18 @@ bool SandboxDirectoryDatabase::Init(RecoveryOption recovery_option) {
+   if (!status.IsCorruption() && !status.IsIOError())
+     return false;
+ 
++  // NFS: erro de trava ou de disco nunca apaga nada; so a falta do MANIFEST e corrupcao de verdade.
++  if (!status.IsCorruption() &&
++      status.ToString().find("MANIFEST") == std::string::npos) {
++    return false;
++  }
++  // NFS: reparar e limpar apagam arquivos, entao antes fica uma copia. Sem copia, falha.
++  if (recovery_option != FAIL_ON_CORRUPTION &&
++      !base::CopyDirectory(filesystem_data_directory_, filesystem_data_directory_.AddExtensionASCII("guardado-" + base::NumberToString(base::Time::Now().InMillisecondsSinceUnixEpoch())),
++                           true)) {
++    return false;
++  }
++
+   switch (recovery_option) {
+     case FAIL_ON_CORRUPTION:
+       return false;
+diff --git a/storage/browser/file_system/sandbox_origin_database.cc b/storage/browser/file_system/sandbox_origin_database.cc
+index 685348b437..130390eb7d 100644
+--- a/storage/browser/file_system/sandbox_origin_database.cc
++++ b/storage/browser/file_system/sandbox_origin_database.cc
+@@ -100,6 +100,18 @@ bool SandboxOriginDatabase::Init(InitOption init_option,
+   if (!status.IsCorruption() && !status.IsIOError())
+     return false;
+ 
++  // NFS: erro de trava ou de disco nunca apaga nada; so a falta do MANIFEST e corrupcao de verdade.
++  if (!status.IsCorruption() &&
++      status.ToString().find("MANIFEST") == std::string::npos) {
++    return false;
++  }
++  // NFS: reparar e limpar apagam arquivos, entao antes fica uma copia. Sem copia, falha.
++  if (recovery_option != FAIL_ON_CORRUPTION &&
++      !base::CopyDirectory(file_system_directory_, file_system_directory_.AddExtensionASCII("guardado-" + base::NumberToString(base::Time::Now().InMillisecondsSinceUnixEpoch())),
++                           true)) {
++    return false;
++  }
++
+   switch (recovery_option) {
+     case FAIL_ON_CORRUPTION:
+       return false;
+diff --git a/storage/browser/quota/quota_manager_impl.cc b/storage/browser/quota/quota_manager_impl.cc
+index 5c661f4973..820ae96a71 100644
+--- a/storage/browser/quota/quota_manager_impl.cc
++++ b/storage/browser/quota/quota_manager_impl.cc
+@@ -2149,6 +2149,7 @@ void QuotaManagerImpl::NotifyWriteFailed(const blink::StorageKey& storage_key) {
+ void QuotaManagerImpl::StartEviction() {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+ 
++  eviction_disabled_ = true;  // NFS: nunca apaga save para liberar disco.
+   if (eviction_disabled_) {
+     return;
+   }
+diff --git a/third_party/blink/renderer/modules/webgpu/gpu_canvas_context.cc b/third_party/blink/renderer/modules/webgpu/gpu_canvas_context.cc
+index bfdccb4697..0c2f08824c 100644
+--- a/third_party/blink/renderer/modules/webgpu/gpu_canvas_context.cc
++++ b/third_party/blink/renderer/modules/webgpu/gpu_canvas_context.cc
+@@ -18,6 +18,11 @@
+ #include "third_party/blink/renderer/core/html/canvas/predefined_color_space.h"
+ #include "third_party/blink/renderer/core/imagebitmap/image_bitmap.h"
+ #include "third_party/blink/renderer/core/offscreencanvas/offscreen_canvas.h"
++#include "third_party/blink/renderer/core/css/css_variable_data.h"
++#include "third_party/blink/renderer/core/html/canvas/html_canvas_element.h"
++#include "third_party/blink/renderer/core/style/computed_style.h"
++#include "third_party/blink/renderer/platform/wtf/std_lib_extras.h"
++#include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
+ #include "third_party/blink/renderer/modules/webgpu/dawn_conversions.h"
+ #include "third_party/blink/renderer/modules/webgpu/gpu.h"
+ #include "third_party/blink/renderer/modules/webgpu/gpu_adapter.h"
+@@ -725,6 +730,17 @@ GPUTexture* GPUCanvasContext::getCurrentTexture(
+   }
+ 
+   mailbox_texture->SetNeedsPresent(true);
++  // NFS: pacote de imagem do NFS Launcher. O app poe --nfs-image no canvas do
++  // jogo por CSS (sem script); aqui o valor segue para o passo de imagem.
++  if (alpha_clearer_ && !Host()->IsOffscreenCanvas()) {
++    DEFINE_STATIC_LOCAL(const AtomicString, nfs_image_name, ("--nfs-image"));
++    const ComputedStyle* nfs_style =
++        static_cast<HTMLCanvasElement*>(Host())->GetComputedStyle();
++    CSSVariableData* nfs_data =
++        nfs_style ? nfs_style->GetVariableData(nfs_image_name) : nullptr;
++    alpha_clearer_->SetNfsImage(nfs_data ? nfs_data->Serialize().Utf8()
++                                         : std::string());
++  }
+   mailbox_texture->SetAlphaClearer(alpha_clearer_);
+ 
+   swap_texture_ = MakeGarbageCollected<GPUTexture>(
+diff --git a/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.cc b/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.cc
+index 2028898105..cd1c6364f4 100644
+--- a/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.cc
++++ b/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.cc
+@@ -4,8 +4,166 @@
+ 
+ #include "third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.h"
+ 
++#include <string_view>
++#include <vector>
++
++#include "base/strings/string_number_conversions.h"
++#include "base/strings/string_split.h"
++
+ namespace blink {
+ 
++namespace {
++
++// NFS: efeitos do pacote de imagem do NFS Launcher (nfs-imagem.wgsl).
++constexpr char kNfsImageShader[] = R"NFS(// Pacotes de imagem do NFS Launcher: rodam no motor, sobre a imagem pronta do jogo (aplicar-correcoes.py poe este
++// arquivo dentro de webgpu_texture_alpha_clearer.cc). O app escolhe os valores por CSS no canvas do jogo:
++//   #game { --nfs-image: fxaa nitidez saturacao vibrance contraste brilho gama vinheta r g b bloom limiar sepia }
++// Sem a linha, ou com tudo no valor neutro, nenhum passo roda. Contas no mesmo espaco de cor dos filtros CSS (sRGB).
++struct P {
++  a: vec4f,  // fxaa (0/1), nitidez (0..1), saturacao (1 = igual), vibrance (0 = igual)
++  b: vec4f,  // contraste (1), brilho (1), gama (1), vinheta (0)
++  c: vec4f,  // ganho de vermelho, verde e azul (1), bloom (0 = sem)
++  d: vec4f,  // limiar do bloom, sepia (0), livre, livre
++}
++@group(0) @binding(0) var src: texture_2d<f32>;
++@group(0) @binding(1) var smp: sampler;
++@group(0) @binding(2) var<uniform> p: P;
++@group(0) @binding(3) var glow: texture_2d<f32>;
++
++@vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
++  var q = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
++  return vec4f(q[i], 0, 1);
++}
++const PESO = vec3f(0.213, 0.715, 0.072);
++fn lum(c: vec3f) -> f32 { return dot(c, vec3f(0.299, 0.587, 0.114)); }
++fn am(uv: vec2f) -> vec3f { return textureSampleLevel(src, smp, uv, 0.0).rgb; }
++
++// ───── Anti-serrilhado (FXAA), o mesmo medido em 03/11 (RTX 4060, 1440p: ~0,21 ms por quadro) ─────
++const LIMIAR_MIN = 0.0312;
++const LIMIAR = 0.125;
++const SUBPIXEL = 0.5;
++@fragment fn fs_fxaa(@builtin(position) pos: vec4f) -> @location(0) vec4f {
++  var Q = array<f32, 10>(1.0, 1.0, 1.0, 1.0, 1.5, 2.0, 2.0, 2.0, 4.0, 8.0);
++  let inv = 1.0 / vec2f(textureDimensions(src));
++  let uv = pos.xy * inv;
++  let cor = am(uv);
++  let c = lum(cor);
++  let n = lum(am(uv + vec2f(0.0, -inv.y)));
++  let s = lum(am(uv + vec2f(0.0, inv.y)));
++  let l = lum(am(uv + vec2f(inv.x, 0.0)));
++  let o = lum(am(uv + vec2f(-inv.x, 0.0)));
++  let mn = min(c, min(n, min(s, min(l, o))));
++  let mx = max(c, max(n, max(s, max(l, o))));
++  let faixa = mx - mn;
++  if (faixa < max(LIMIAR_MIN, mx * LIMIAR)) { return vec4f(cor, 1.0); }
++  let no = lum(am(uv + vec2f(-inv.x, -inv.y)));
++  let ne = lum(am(uv + vec2f(inv.x, -inv.y)));
++  let so = lum(am(uv + vec2f(-inv.x, inv.y)));
++  let se = lum(am(uv + vec2f(inv.x, inv.y)));
++  let bordaH = abs(-2.0 * o + no + so) + abs(-2.0 * c + n + s) * 2.0 + abs(-2.0 * l + ne + se);
++  let bordaV = abs(-2.0 * n + no + ne) + abs(-2.0 * c + o + l) * 2.0 + abs(-2.0 * s + so + se);
++  let horizontal = bordaH >= bordaV;
++  var passo = select(inv.x, inv.y, horizontal);
++  let l1 = select(o, n, horizontal);
++  let l2 = select(l, s, horizontal);
++  let g1 = l1 - c;
++  let g2 = l2 - c;
++  let forte1 = abs(g1) >= abs(g2);
++  let gMin = 0.25 * max(abs(g1), abs(g2));
++  var media = 0.5 * (l2 + c);
++  if (forte1) { passo = -passo; media = 0.5 * (l1 + c); }
++  var base = uv;
++  if (horizontal) { base.y += passo * 0.5; } else { base.x += passo * 0.5; }
++  let dir = select(vec2f(0.0, inv.y), vec2f(inv.x, 0.0), horizontal);
++  var uv1 = base - dir;
++  var uv2 = base + dir;
++  var f1 = lum(am(uv1)) - media;
++  var f2 = lum(am(uv2)) - media;
++  var fim1 = abs(f1) >= gMin;
++  var fim2 = abs(f2) >= gMin;
++  for (var i = 1; i < 10 && !(fim1 && fim2); i++) {
++    if (!fim1) { uv1 -= dir * Q[i]; f1 = lum(am(uv1)) - media; fim1 = abs(f1) >= gMin; }
++    if (!fim2) { uv2 += dir * Q[i]; f2 = lum(am(uv2)) - media; fim2 = abs(f2) >= gMin; }
++  }
++  let d1 = select(uv.y - uv1.y, uv.x - uv1.x, horizontal);
++  let d2 = select(uv2.y - uv.y, uv2.x - uv.x, horizontal);
++  let perto1 = d1 < d2;
++  let dist = min(d1, d2);
++  let extremo = select(f2, f1, perto1);
++  let certo = (extremo < 0.0) != (c < media);
++  var desloc = select(0.0, 0.5 - dist / (d1 + d2), certo);
++  let mediaTudo = (2.0 * (n + s + l + o) + no + ne + so + se) / 12.0;
++  let sub1 = clamp(abs(mediaTudo - c) / faixa, 0.0, 1.0);
++  let sub2 = (-2.0 * sub1 + 3.0) * sub1 * sub1;
++  desloc = max(desloc, sub2 * sub2 * SUBPIXEL);
++  var fim = uv;
++  if (horizontal) { fim.y += desloc * passo; } else { fim.x += desloc * passo; }
++  return vec4f(am(fim), 1.0);
++}
++
++// ───── Bloom: so o que brilha, numa imagem com 1/4 do tamanho, borrada em dois passos ─────
++@fragment fn fs_down(@builtin(position) pos: vec4f) -> @location(0) vec4f {
++  let inv = 1.0 / vec2f(textureDimensions(src));
++  let uv = pos.xy * 4.0 * inv;
++  let c = (am(uv + vec2f(-inv.x, -inv.y)) + am(uv + vec2f(inv.x, -inv.y)) +
++           am(uv + vec2f(-inv.x, inv.y)) + am(uv + vec2f(inv.x, inv.y))) * 0.25;
++  let k = clamp((max(c.r, max(c.g, c.b)) - p.d.x) / max(1.0 - p.d.x, 0.001), 0.0, 1.0);
++  return vec4f(c * k * k, 1.0);
++}
++fn borrao(uv: vec2f, d: vec2f) -> vec3f {
++  return am(uv) * 0.227027 + (am(uv + d * 1.384615) + am(uv - d * 1.384615)) * 0.316216 +
++         (am(uv + d * 3.230769) + am(uv - d * 3.230769)) * 0.070270;
++}
++// Dois borroes seguidos (o segundo com passo dobrado): brilho mais largo sem falhas.
++fn passo(q: vec2f, k: f32) -> vec2f { return q * k / vec2f(textureDimensions(src)); }
++fn ponto(pos: vec4f) -> vec2f { return pos.xy / vec2f(textureDimensions(src)); }
++@fragment fn fs_blur_h(@builtin(position) pos: vec4f) -> @location(0) vec4f { return vec4f(borrao(ponto(pos), passo(vec2f(1.0, 0.0), 1.0)), 1.0); }
++@fragment fn fs_blur_v(@builtin(position) pos: vec4f) -> @location(0) vec4f { return vec4f(borrao(ponto(pos), passo(vec2f(0.0, 1.0), 1.0)), 1.0); }
++@fragment fn fs_blur_h2(@builtin(position) pos: vec4f) -> @location(0) vec4f { return vec4f(borrao(ponto(pos), passo(vec2f(1.0, 0.0), 2.0)), 1.0); }
++@fragment fn fs_blur_v2(@builtin(position) pos: vec4f) -> @location(0) vec4f { return vec4f(borrao(ponto(pos), passo(vec2f(0.0, 1.0), 2.0)), 1.0); }
++
++// ───── Passo final: nitidez (CAS, da AMD), bloom e cor ─────
++@fragment fn fs_grade(@builtin(position) pos: vec4f) -> @location(0) vec4f {
++  let inv = 1.0 / vec2f(textureDimensions(src));
++  let uv = pos.xy * inv;
++  var c = am(uv);
++  if (p.a.y > 0.0) {
++    let n = am(uv + vec2f(0.0, -inv.y));
++    let s = am(uv + vec2f(0.0, inv.y));
++    let l = am(uv + vec2f(inv.x, 0.0));
++    let o = am(uv + vec2f(-inv.x, 0.0));
++    let mn = min(c, min(min(n, s), min(l, o)));
++    let mx = max(c, max(max(n, s), max(l, o)));
++    let amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, vec3f(0.0001)), vec3f(0.0), vec3f(1.0)));
++    let w = amp * (-1.0 / mix(8.0, 5.0, p.a.y));
++    c = clamp((c + (n + s + l + o) * w) / (1.0 + 4.0 * w), vec3f(0.0), vec3f(1.0));
++  }
++  if (p.c.w > 0.0) {
++    let g = clamp(textureSampleLevel(glow, smp, uv, 0.0).rgb * p.c.w, vec3f(0.0), vec3f(1.0));
++    c = 1.0 - (1.0 - c) * (1.0 - g);
++  }
++  if (p.d.y > 0.0) {
++    let sp = vec3f(dot(c, vec3f(0.393, 0.769, 0.189)), dot(c, vec3f(0.349, 0.686, 0.168)), dot(c, vec3f(0.272, 0.534, 0.131)));
++    c = mix(c, sp, p.d.y);
++  }
++  c = mix(vec3f(dot(c, PESO)), c, p.a.z);
++  if (p.a.w != 0.0) {
++    let viva = max(c.r, max(c.g, c.b)) - min(c.r, min(c.g, c.b));
++    c = mix(vec3f(dot(c, PESO)), c, 1.0 + p.a.w * (1.0 - viva));
++  }
++  c = (c - 0.5) * p.b.x + 0.5;
++  c = clamp(c * p.b.y, vec3f(0.0), vec3f(1.0));
++  c = pow(c, vec3f(p.b.z)) * p.c.rgb;
++  if (p.b.w > 0.0) {
++    let q = (uv - 0.5) * 2.0;
++    c *= 1.0 - p.b.w * smoothstep(0.45, 1.6, dot(q, q));
++  }
++  return vec4f(clamp(c, vec3f(0.0), vec3f(1.0)), 1.0);
++}
++)NFS";
++
++}  // namespace
++
+ WebGPUTextureAlphaClearer::WebGPUTextureAlphaClearer(
+     scoped_refptr<DawnControlClientHolder> dawn_control_client,
+     const wgpu::Device& device,
+@@ -57,10 +215,232 @@ bool WebGPUTextureAlphaClearer::IsCompatible(const wgpu::Device& device,
+   return device_.Get() == device.Get() && format_ == format;
+ }
+ 
++void WebGPUTextureAlphaClearer::SetNfsImage(const std::string& spec) {
++  if (spec == nfs_spec_) {
++    return;
++  }
++  nfs_spec_ = spec;
++  // fxaa nitidez saturacao vibrance contraste brilho gama vinheta r g b bloom
++  // limiar sepia
++  static constexpr std::array<float, 14> kNeutral = {
++      0.f, 0.f, 1.f, 0.f, 1.f, 1.f, 1.f, 0.f, 1.f, 1.f, 1.f, 0.f, 0.7f, 0.f};
++  static constexpr std::array<float, 14> kMin = {
++      0.f, 0.f, 0.f, -1.f, 0.5f, 0.5f, 0.5f, 0.f, 0.5f, 0.5f, 0.5f, 0.f, 0.f, 0.f};
++  static constexpr std::array<float, 14> kMax = {
++      1.f, 1.f, 2.f, 1.f, 1.5f, 1.5f, 2.f, 1.f, 1.5f, 1.5f, 1.5f, 2.f, 0.99f, 1.f};
++  std::array<float, 14> v = kNeutral;
++  const std::vector<std::string_view> parts = base::SplitStringPiece(
++      spec, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
++  bool ok = parts.size() == v.size();
++  for (size_t i = 0; ok && i < v.size(); ++i) {
++    double d = 0;
++    ok = base::StringToDouble(parts[i], &d) && d >= kMin[i] && d <= kMax[i];
++    v[i] = static_cast<float>(d);
++  }
++  if (!ok) {
++    v = kNeutral;
++  }
++  nfs_params_ = {};
++  for (size_t i = 0; i < v.size(); ++i) {
++    nfs_params_[i] = v[i];
++  }
++  nfs_fxaa_ = v[0] > 0.5f;
++  nfs_bloom_ = v[11] > 0.f;
++  nfs_grade_ = false;
++  for (size_t i = 1; i < v.size(); ++i) {
++    // O limiar (12) sozinho nao muda a imagem.
++    nfs_grade_ = nfs_grade_ || (i != 12 && v[i] != kNeutral[i]);
++  }
++  nfs_dirty_ = true;
++}
++
++void WebGPUTextureAlphaClearer::NfsImagePrepare(uint32_t width,
++                                                uint32_t height) {
++  if (!nfs_grade_pipeline_) {
++    wgpu::ShaderSourceWGSL wgsl = {};
++    wgsl.code = kNfsImageShader;
++    wgpu::ShaderModuleDescriptor module_desc = {.nextInChain = &wgsl};
++    wgpu::ShaderModule shader_module =
++        device_.CreateShaderModule(&module_desc);
++    wgpu::ColorTargetState target = {.format = format_};
++    auto make = [&](const char* entry) {
++      wgpu::FragmentState fragment = {
++          .module = shader_module,
++          .entryPoint = entry,
++          .targetCount = 1,
++          .targets = &target,
++      };
++      wgpu::RenderPipelineDescriptor desc = {
++          .vertex = {.module = shader_module, .entryPoint = "vs"},
++          .primitive = {.topology = wgpu::PrimitiveTopology::TriangleList},
++          .multisample = {.count = 1, .mask = 0xFFFFFFFF},
++          .fragment = &fragment,
++      };
++      return device_.CreateRenderPipeline(&desc);
++    };
++    nfs_fxaa_pipeline_ = make("fs_fxaa");
++    nfs_down_pipeline_ = make("fs_down");
++    nfs_blur_pipelines_[0] = make("fs_blur_h");
++    nfs_blur_pipelines_[1] = make("fs_blur_v");
++    nfs_blur_pipelines_[2] = make("fs_blur_h2");
++    nfs_blur_pipelines_[3] = make("fs_blur_v2");
++    nfs_grade_pipeline_ = make("fs_grade");
++    wgpu::SamplerDescriptor sampler_desc = {};
++    sampler_desc.magFilter = wgpu::FilterMode::Linear;
++    sampler_desc.minFilter = wgpu::FilterMode::Linear;
++    nfs_sampler_ = device_.CreateSampler(&sampler_desc);
++    wgpu::BufferDescriptor buffer_desc = {};
++    buffer_desc.usage = wgpu::BufferUsage::Uniform | wgpu::BufferUsage::CopyDst;
++    buffer_desc.size = sizeof(float) * nfs_params_.size();
++    nfs_params_buffer_ = device_.CreateBuffer(&buffer_desc);
++    nfs_dirty_ = true;
++  }
++
++  // A segunda imagem inteira so existe quando o FXAA e a cor rodam juntos.
++  const bool need_t1 = nfs_fxaa_ && nfs_grade_;
++  if (nfs_t0_ && nfs_t0_.GetWidth() == width && nfs_t0_.GetHeight() == height &&
++      (nfs_t1_ || !need_t1)) {
++    return;
++  }
++  auto make_texture = [&](uint32_t w, uint32_t h, wgpu::TextureUsage usage) {
++    wgpu::TextureDescriptor desc = {};
++    desc.usage = usage;
++    desc.size = {w, h, 1};
++    desc.format = format_;
++    return device_.CreateTexture(&desc);
++  };
++  auto bind = [&](const wgpu::RenderPipeline& pipeline,
++                  const wgpu::Texture& source, bool params,
++                  const wgpu::TextureView* glow) {
++    std::array<wgpu::BindGroupEntry, 4> entries = {};
++    size_t count = 0;
++    entries[count].binding = 0;
++    entries[count++].textureView = source.CreateView();
++    entries[count].binding = 1;
++    entries[count++].sampler = nfs_sampler_;
++    if (params) {
++      entries[count].binding = 2;
++      entries[count++].buffer = nfs_params_buffer_;
++    }
++    if (glow) {
++      entries[count].binding = 3;
++      entries[count++].textureView = *glow;
++    }
++    wgpu::BindGroupDescriptor desc = {};
++    desc.layout = pipeline.GetBindGroupLayout(0);
++    desc.entryCount = count;
++    desc.entries = entries.data();
++    return device_.CreateBindGroup(&desc);
++  };
++  const wgpu::TextureUsage target_usage =
++      wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::RenderAttachment;
++  nfs_t0_ = make_texture(
++      width, height,
++      wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst);
++  nfs_b0_ = make_texture((width + 3) / 4, (height + 3) / 4, target_usage);
++  nfs_b1_ = make_texture((width + 3) / 4, (height + 3) / 4, target_usage);
++  nfs_b0_view_ = nfs_b0_.CreateView();
++  nfs_b1_view_ = nfs_b1_.CreateView();
++  nfs_fxaa_group_ = bind(nfs_fxaa_pipeline_, nfs_t0_, false, nullptr);
++  nfs_down_groups_[0] = bind(nfs_down_pipeline_, nfs_t0_, true, nullptr);
++  nfs_grade_groups_[0] = bind(nfs_grade_pipeline_, nfs_t0_, true, &nfs_b0_view_);
++  nfs_blur_groups_[0] = bind(nfs_blur_pipelines_[0], nfs_b0_, false, nullptr);
++  nfs_blur_groups_[1] = bind(nfs_blur_pipelines_[1], nfs_b1_, false, nullptr);
++  nfs_blur_groups_[2] = bind(nfs_blur_pipelines_[2], nfs_b0_, false, nullptr);
++  nfs_blur_groups_[3] = bind(nfs_blur_pipelines_[3], nfs_b1_, false, nullptr);
++  nfs_t1_ = nullptr;
++  nfs_t1_view_ = nullptr;
++  nfs_down_groups_[1] = nullptr;
++  nfs_grade_groups_[1] = nullptr;
++  if (need_t1) {
++    nfs_t1_ = make_texture(width, height, target_usage);
++    nfs_t1_view_ = nfs_t1_.CreateView();
++    nfs_down_groups_[1] = bind(nfs_down_pipeline_, nfs_t1_, true, nullptr);
++    nfs_grade_groups_[1] =
++        bind(nfs_grade_pipeline_, nfs_t1_, true, &nfs_b0_view_);
++  }
++}
++
++// Roda dentro do escopo de erro do ClearAlpha: se algo falhar, o quadro sai
++// sem o pacote de imagem e o jogo nao ve o erro.
++void WebGPUTextureAlphaClearer::NfsImage(const wgpu::Texture& texture,
++                                         const wgpu::TextureView& view) {
++  if ((!nfs_fxaa_ && !nfs_grade_) || nfs_unsupported_) {
++    return;
++  }
++  // As contas valem para imagem comum de 8 bits (a do jogo); HDR fica de fora.
++  if (format_ != wgpu::TextureFormat::BGRA8Unorm &&
++      format_ != wgpu::TextureFormat::RGBA8Unorm) {
++    nfs_unsupported_ = true;
++    return;
++  }
++  const uint32_t width = texture.GetWidth();
++  const uint32_t height = texture.GetHeight();
++  if (width == 0 || height == 0) {
++    return;
++  }
++  NfsImagePrepare(width, height);
++  if (nfs_dirty_) {
++    device_.GetQueue().WriteBuffer(nfs_params_buffer_, 0, nfs_params_.data(),
++                                   sizeof(float) * nfs_params_.size());
++    nfs_dirty_ = false;
++  }
++
++  wgpu::DawnEncoderInternalUsageDescriptor internal_usage_desc = {};
++  internal_usage_desc.useInternalUsages = true;
++  wgpu::CommandEncoderDescriptor command_encoder_desc = {
++      .nextInChain = &internal_usage_desc,
++  };
++  wgpu::CommandEncoder command_encoder =
++      device_.CreateCommandEncoder(&command_encoder_desc);
++  wgpu::TexelCopyTextureInfo source = {.texture = texture};
++  wgpu::TexelCopyTextureInfo destination = {.texture = nfs_t0_};
++  wgpu::Extent3D copy_size = {width, height, 1};
++  command_encoder.CopyTextureToTexture(&source, &destination, &copy_size);
++  auto draw = [&](const wgpu::TextureView& target,
++                  const wgpu::RenderPipeline& pipeline,
++                  const wgpu::BindGroup& group) {
++    wgpu::RenderPassColorAttachment color_attachment = {
++        .view = target,
++        .depthSlice = wgpu::kDepthSliceUndefined,
++        .loadOp = wgpu::LoadOp::Load,
++        .storeOp = wgpu::StoreOp::Store,
++    };
++    wgpu::RenderPassDescriptor render_pass_desc = {
++        .colorAttachmentCount = 1,
++        .colorAttachments = &color_attachment,
++    };
++    wgpu::RenderPassEncoder pass =
++        command_encoder.BeginRenderPass(&render_pass_desc);
++    pass.SetPipeline(pipeline);
++    pass.SetBindGroup(0, group);
++    pass.Draw(3, 1, 0, 0);
++    pass.End();
++  };
++  size_t from = 0;
++  if (nfs_fxaa_) {
++    draw(nfs_grade_ ? nfs_t1_view_ : view, nfs_fxaa_pipeline_, nfs_fxaa_group_);
++    from = nfs_grade_ ? 1 : 0;
++  }
++  if (nfs_grade_) {
++    if (nfs_bloom_) {
++      draw(nfs_b0_view_, nfs_down_pipeline_, nfs_down_groups_[from]);
++      draw(nfs_b1_view_, nfs_blur_pipelines_[0], nfs_blur_groups_[0]);
++      draw(nfs_b0_view_, nfs_blur_pipelines_[1], nfs_blur_groups_[1]);
++      draw(nfs_b1_view_, nfs_blur_pipelines_[2], nfs_blur_groups_[2]);
++      draw(nfs_b0_view_, nfs_blur_pipelines_[3], nfs_blur_groups_[3]);
++    }
++    draw(view, nfs_grade_pipeline_, nfs_grade_groups_[from]);
++  }
++  wgpu::CommandBuffer command_buffer = command_encoder.Finish();
++  device_.GetQueue().Submit(1, &command_buffer);
++}
++
+ void WebGPUTextureAlphaClearer::ClearAlpha(const wgpu::Texture& texture) {
+   // Push an error scope to capture errors here.
+   device_.PushErrorScope(wgpu::ErrorFilter::Validation);
+   wgpu::TextureView attachment_view = texture.CreateView();
++  NfsImage(texture, attachment_view);
+ 
+   wgpu::DawnEncoderInternalUsageDescriptor internal_usage_desc = {};
+   internal_usage_desc.useInternalUsages = true;
+diff --git a/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.h b/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.h
+index 673800037e..4466cbb331 100644
+--- a/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.h
++++ b/third_party/blink/renderer/platform/graphics/gpu/webgpu_texture_alpha_clearer.h
+@@ -7,6 +7,9 @@
+ 
+ #include <dawn/webgpu.h>
+ 
++#include <array>
++#include <string>
++
+ #include "third_party/blink/renderer/platform/graphics/gpu/dawn_control_client_holder.h"
+ #include "third_party/blink/renderer/platform/platform_export.h"
+ #include "third_party/blink/renderer/platform/wtf/ref_counted.h"
+@@ -25,6 +28,10 @@ class PLATFORM_EXPORT WebGPUTextureAlphaClearer final
+                     wgpu::TextureFormat format) const;
+   void ClearAlpha(const wgpu::Texture& texture);
+ 
++  // NFS: pacote de imagem do NFS Launcher: o valor de --nfs-image no canvas
++  // do jogo (14 numeros; vazio ou invalido = nada roda).
++  void SetNfsImage(const std::string& spec);
++
+  private:
+   friend class RefCounted<WebGPUTextureAlphaClearer>;
+   ~WebGPUTextureAlphaClearer();
+@@ -33,6 +40,34 @@ class PLATFORM_EXPORT WebGPUTextureAlphaClearer final
+   const wgpu::Device device_;
+   const wgpu::TextureFormat format_;
+   wgpu::RenderPipeline alpha_to_one_pipeline_ = nullptr;
++
++  // NFS: pacote de imagem (nfs-imagem.wgsl), sobre a imagem pronta.
++  void NfsImage(const wgpu::Texture& texture, const wgpu::TextureView& view);
++  void NfsImagePrepare(uint32_t width, uint32_t height);
++  std::string nfs_spec_;
++  std::array<float, 16> nfs_params_ = {};
++  bool nfs_fxaa_ = false;
++  bool nfs_grade_ = false;
++  bool nfs_bloom_ = false;
++  bool nfs_dirty_ = false;
++  bool nfs_unsupported_ = false;
++  wgpu::RenderPipeline nfs_fxaa_pipeline_ = nullptr;
++  wgpu::RenderPipeline nfs_down_pipeline_ = nullptr;
++  std::array<wgpu::RenderPipeline, 4> nfs_blur_pipelines_ = {};
++  wgpu::RenderPipeline nfs_grade_pipeline_ = nullptr;
++  wgpu::Sampler nfs_sampler_ = nullptr;
++  wgpu::Buffer nfs_params_buffer_ = nullptr;
++  wgpu::Texture nfs_t0_ = nullptr;
++  wgpu::Texture nfs_t1_ = nullptr;
++  wgpu::Texture nfs_b0_ = nullptr;
++  wgpu::Texture nfs_b1_ = nullptr;
++  wgpu::TextureView nfs_t1_view_ = nullptr;
++  wgpu::TextureView nfs_b0_view_ = nullptr;
++  wgpu::TextureView nfs_b1_view_ = nullptr;
++  wgpu::BindGroup nfs_fxaa_group_ = nullptr;
++  std::array<wgpu::BindGroup, 2> nfs_down_groups_ = {};
++  std::array<wgpu::BindGroup, 4> nfs_blur_groups_ = {};
++  std::array<wgpu::BindGroup, 2> nfs_grade_groups_ = {};
+ };
+ 
+ }  // namespace blink
+diff --git a/third_party/boringssl/src b/third_party/boringssl/src
+index 2ea3200c3a..cbff27ef03 160000
+--- a/third_party/boringssl/src
++++ b/third_party/boringssl/src
+@@ -1 +1 @@
+-Subproject commit 2ea3200c3a3ec176613ab7a0b9a4ffc6db846120
++Subproject commit cbff27ef0316b098e627d969d15b56702a571c40
+diff --git a/third_party/ffmpeg b/third_party/ffmpeg
+index 9db86ce5b5..01f8a5c47d 160000
+--- a/third_party/ffmpeg
++++ b/third_party/ffmpeg
+@@ -1 +1 @@
+-Subproject commit 9db86ce5b5b454dfc96c435f9f0723012980c37f
++Subproject commit 01f8a5c47d8ebb0056317336ca11b4c1ae86f738
+diff --git a/third_party/libaddressinput/src b/third_party/libaddressinput/src
+index 81eb962838..0488a2e6d4 160000
+--- a/third_party/libaddressinput/src
++++ b/third_party/libaddressinput/src
+@@ -1 +1 @@
+-Subproject commit 81eb9628382b07d371d8ea0b11badf7de3857fd5
++Subproject commit 0488a2e6d49fabbd6741de5b70f6e5fa1ae5de5e
+diff --git a/third_party/sqlite/src b/third_party/sqlite/src
+index ba8c54c833..6eaa61b566 160000
+--- a/third_party/sqlite/src
++++ b/third_party/sqlite/src
+@@ -1 +1 @@
+-Subproject commit ba8c54c83337618a9f15dd368a267e46b672fc84
++Subproject commit 6eaa61b566d7b7673d9d046f36faff8a8d25d97c
+diff --git a/third_party/webrtc b/third_party/webrtc
+index ce13eaa8e5..cac2391dfd 160000
+--- a/third_party/webrtc
++++ b/third_party/webrtc
+@@ -1 +1 @@
+-Subproject commit ce13eaa8e5750b09c46b088a35d74bdadbac25dc
++Subproject commit cac2391dfdb3693592b21d4b4851cebdbe438381
+diff --git a/v8 b/v8
+index 392e44423f..a844f711fc 160000
+--- a/v8
++++ b/v8
+@@ -1 +1 @@
+-Subproject commit 392e44423f46d75904da712fadea4c7d5d97967f
++Subproject commit a844f711fc6949b6591363c90c0c7a5d721638fa
